@@ -1,0 +1,173 @@
+# PROJECT CONTEXT FILE
+> ISTRUZIONI PER L'AI: Questo file è la "Fonte di Verità" per lo sviluppo di "Space Inc.". Contiene le specifiche tecniche, matematiche e di design. Leggilo attentamente prima di scrivere codice.
+
+## 1. 🎯 Obiettivo del Progetto
+Sviluppare **"Space Inc."**, un videogioco Mobile Optimized per Android e iOs di tipo **Idle/Clicker** ambientato nello spazio.
+* **Ispirazione:** Dinamiche simili a *Egg Inc.* ma con un'atmosfera "Zen", maestosa (stile *Interstellar*), rilassante e con grafica e animazioni appaganti.
+* **Core Loop:** Il giocatore preme il pulsante per generare energia (che viene prodotta in maniera diversa a seconda dello scenario in cui si trova(Da Definire)) -> Costruisce generatori -> Potenzia la logistica e la velocità di produzione di energia (collo di bottiglia) -> Espande l'impero dal singolo pianeta al multiverso.
+* **Differenziazione:** Niente droni/veicoli fisici che creano lag. La logistica è visiva: colonizzazione progressiva dei pianeti e delle lune, successivamente flussi di energia (particelle), cavi che vibrano, raggi di luce (Tethers) (quando si raggiungono le relative ricerche)
+
+## 2. 🛠 Tech Stack & Strumenti
+* **Engine:** Unity (C#)
+* **Matematica:** `BreakInfinity.cs` (Obbligatorio per gestire numeri > 10^308). I tipi nativi `int/float/double` sono vietati per le valute di gioco.
+* **Visual:** Unity Particle System (Shuriken/VFX Graph) per i flussi di energia. Shader Graph per effetti planetari.
+* **Audio:** Audio Mixer con audio che si ispira al film Interstellar e al gioco Egg Inc.
+* **Salvataggio:** JSON serializzato + Encoding Base64 (per sicurezza base).
+
+## 3. 🏗 Struttura Logica (Architettura)
+* **GameManager (Singleton):** Gestisce il loop economico, il calcolo offline e il 'reset quantistico' (corrispettivo del Prestige di Egg Inc).
+* **Managers:**
+    * `AdaptiveAudioManager`: Gestisce i layer audio (Void, Hum, Pulse, Choir) in base al progresso.
+    * `SaveSystem`: Gestisce serializzazione/deserializzazione DTO.
+    * `VFXManager`: Gestisce i sistemi particellari al "Tap".
+* **DTO (Data Transfer Objects):** Classi pure (es. `SaveData`) che usano `string` per salvare i `BigDouble`.
+
+## 4. 📝 Regole & Convenzioni di Sviluppo
+1.  **Matematica:** Usa SEMPRE `BigDouble`. Mai usare float per soldi o produzione.
+2.  **Performance:**
+    * Niente `Instantiate` durante il gioco attivo. Usa Particle Systems per i flussi di energia.
+    * Non calcolare la produzione nell'`Update()`. Usa un sistema a eventi (`OnUpgradePurchased`) per ricalcolare le variabili cached (`_incomePerSec`).
+3.  **UI/UX Zen:**
+    * Niente numeri che "esplodono" a schermo in modo caotico.
+    * Notazione scientifica o letterale pulita (1k, 1M, 1B, 1T).
+    * Colori neon su sfondo scuro (spazio profondo).
+4.  **Audio:** Il suono non deve stancare. Usa scale pentatoniche per i suoni del "Tap" (random pitch leggero).
+
+## 5. 📐 Modelli Matematici & Game Design
+### A. Le 3 Variabili (Bottlenecks)
+Il guadagno effettivo è il **MINIMO** tra Produzione e Logistica.
+1.  **Generazione (Habitats):** Pannelli solari, Reattori geotermici.
+2.  **Logistica (Shipping):** Cavi, Raggi laser, Tethers (limita la velocità di guadagno online e offline) (Se saturi, l'energia va persa -> Feedback visivo "Sistema instabile").
+3.  **Stoccaggio (Silos):** Batterie (limita il guadagno offline).
+4. Al raggiungimento di un certo livello di energia e logistica è possibile avviare dei viaggi spaziali per raggiungere lo scenario Successivo (il viaggio spaziale sarà visualizzato come la traiettoria seguita dalla 'nave spaziale' e richiederà un certo tempo che dipende dalle ricerche di energia e logistica ottenute.
+
+### B. Formule di Crescita
+* **Costo Edifici:** `Costo = Base * (1.15 ^ Livello)` (1.15 è il "ritmo dolce").
+* **Tech Jumps:** Moltiplicatore 1.50x per cambi di tecnologia (es. da Solare a Fusione).
+* **Reset Quantistico (Crediti Scienza):**
+    $$Crediti = \left( \frac{LifetimeEarnings}{1.000.000} \right)^{0.5}$$
+    *Nota: Rallenta la crescita esponenziale. 1 Credito = +10% Bonus Globale.*
+
+### C. Gerarchia Scenari
+* **deve esserci l'impressione che gli scenari si trovino a distanze sempre maggiori (per giustificare la crescita incrementale del tempo per raggiungere lo scenario successivo).
+
+Pianeta (Terra)
+Luna (Estendi)
+Fascia Asteroidi
+Stella al centro del sistema planetario
+Nube Interstellare 
+Ramo galattico
+Nucleo della galassia
+Galassia (intera)
+Cluster
+Universo
+Multiverso (?)
+
+### D. Audio Adattivo (Layering)
+Il volume dei layer musicali dipende dalla % di completamento del pianeta:
+1.  **Void (Always ON):** Rumore marrone/vento.
+2.  **Hum (Early Game):** Synth basso caldo.
+3.  **Pulse (Mid Game):** Sequenza ritmica/arpeggi.
+4.  **Choir (End Game):** Coro etereo/Archi (Prestige ready).
+
+### E. Grafica
+La grafica deve essere appagante e fluida ma al contempo gestibile dai dispositivi android, cioè Mobile Optimized
+1.  **la visuale è sempre dallo spazio e inquadra pianeti, stelle, galassie, etc
+2.  ** Per i pianeti più si progredisce con le ricerche e la logistica, più il pianeta appare "colonizzato" dallo spazio
+3.  ** Ia colonizzazione deve essere semplice da creare (no oggetti solidi) e solo molti punti di luce (energia) collegati da linee (logistica) che appaiono sulla superficie del pianeta progressivamente partendo dal punto iniziale.
+3.1 ** l'obbiettivo visivo e quello di “colorare” pianeti, stelle e un po’ alla volta l'universo 
+4.  ** per le stelle la colonizzazione è fatta da tasselli (esagonali? Triangolari?) che si aggiungono uno alla volta per creare una sfera di Dyson fino a circondare tutta la stella
+5.. ** Quando ci sono i prerequisiti per raggiungere la scena successiva viene lanciato un viaggio nello spazio in direzione del nuovo oggetto (pianeta, stella, ecc.). Graficamente viene visualizzato un punto che parte dalla superficie del pianeta e viaggia nello spazio, rimane visivamente evidente la traiettoria percorsa.
+
+📝 Stato Avanzamento: Space Inc. (Aggiornamento)
+1. Architettura Tecnica
+Engine & Tools: Progetto configurato su Unity 6.3. Importata libreria BreakInfinity.cs.
+
+GameManager (Singleton): Creato il gestore centrale persistente che mantiene lo stato dell'economia. Implementato come Singleton (GameManager.Instance).
+
+Tipo Dati: Tutte le variabili economiche (valuta, costi, produzione) utilizzano rigorosamente BigDouble per supportare numeri infiniti.
+
+2. Logica Economica (Core Loop)
+Le 3 Variabili Chiave implementate nel GameManager:
+CurrentEnergy: L'energia accumulata.
+GenerationRate (Habitat): La capacità di produrre energia.
+LogisticsCap (Shipping): La capacità massima di trasporto (Collo di Bottiglia) .
+
+Meccanica del Bottleneck: Implementata la logica per cui il guadagno effettivo è Min(GenerationRate, LogisticsCap). Se la produzione supera la logistica, l'eccedenza viene persa.
+Sistema di Crescita (Upgrades):
+Habitat (Solar Panel): Aumenta la produzione. Costo scalabile con formula Base * 1.15^Level.
+Logistics (Cables): Aumenta la capacità di trasporto. Costo scalabile con formula Base * 1.50^Level.
+Input Attivo: Implementato il metodo HandleManualTap() per generare energia cliccando.
+
+3. Interfaccia Utente (UI/UX)
+
+UIManager: Creato script UIManager dedicato alla gestione della grafica, disaccoppiato dalla logica tramite pattern a Eventi (OnEconomyUpdated).
+
+Formattazione: Implementato algoritmo FormatNumber per convertire i BigDouble in formati leggibili (1k, 1M, 1B, 1T).
+
+Elementi UI Collegati:
+ScoreText: Mostra energia totale.
+IncomeText: Mostra guadagno/sec. Feedback Visivo: Diventa ROSSO se c'è un collo di bottiglia (Produzione > Logistica).
+LogisticsText: Mostra lo stato "Produzione / Capacità".
+
+Bottoni: Implementati bottoni funzionanti per Tap manuale, acquisto Habitat e acquisto Logistica. 
+
+Implementazione Scenario 1 (Terra)
+
+4. Gerarchia e Setup Scena
+Camera: Sfondo Solid Color Nero Profondo (#050505) per stile "Deep Space".
+
+Struttura:
+
+World Origin: Contenitore principale (0,0,0).
+Planet_Terra: Sfera centrale fissa.
+Lighting_Rig: Contenitore rotante che ospita il sistema solare.
+Sun_Mesh: Sfera visiva della stella (Materiale Unlit/Emissivo, Cast Shadows: Off).
+Sun_Light: Luce Direzionale figlia della stella, orientata verso l'origine.
+
+2. Visuals & Shader (Stile Interstellar)
+Shader_Planet (URP Shader Graph):
+Superficie: Generata proceduralmente tramite Simple Noise mixato con due colori (Oceano Scuro/Terra Neon) via Lerp.
+Rilievo: Nodo Normal From Height applicato al Noise per simulare montagne e crateri dinamici.
+Atmosfera Realistica: Effetto Fresnel mascherato tramite Dot Product (Normale vs Direzione Luce Solare) per apparire solo sul lato illuminato ("Mezzaluna").
+Shadows: Lato in ombra forzato al nero assoluto spegnendo le fonti di luce residua.
+
+Environment:
+Lighting: Ambient Color #000000, Environment Reflections 0.
+Starfield: Particle System 3D (Shape: Sphere, Radius: 100) con Prewarm attivo e dimensioni random (0.1 - 0.3) per profondità.
+Post-Processing: Bloom attivo (Threshold 0.9, Intensity 1.5) per effetto glow neon su atmosfera e stella.
+
+5. Layout della schermata di gioco
+
+Creato un layout della schermata di gioco con i testi delle informazioni in alto e i tasti in basso
+
+6. Implementati i movimenti della Camera tramite lo script PlanetOrbitCamera.cs nel tuo progetto Unity:
+2. Modifiche al Codice e Logica
+Abbiamo sviluppato lo script in tre passaggi evolutivi:
+Logica di base: Calcolo della posizione tramite rotazione di un vettore negativo (-distance) attorno al centro del pianeta.
+Blocco dell'asse verticale: Abbiamo forzato la rotazione usando Quaternion.Euler(0, angolo, 0), impedendo alla camera di andare sopra o sotto il pianeta.
+Aggiunta dell'Inerzia (Smoothing): Abbiamo separato l'Angolo Target (dove il dito vuole andare) dall'Angolo Corrente (dove si trova la camera), collegandoli con una funzione di interpolazione (Mathf.Lerp). Questo crea l'effetto di decelerazione dolce quando si lascia il dito.
+3. Configurazione Tecnica di Unity (Bugfix)
+Abbiamo risolto un conflitto critico riguardante il sistema di Input:
+Problema: Errore InvalidOperationException dovuto al tentativo di usare il vecchio codice di input (Input.GetTouch) mentre il progetto era settato solo sul "New Input System".
+Soluzione: Nelle Project Settings > Player, abbiamo impostato Active Input Handling su Both. Questo garantisce la compatibilità sia con il vecchio che con il nuovo sistema, eliminando gli errori e permettendo di ignorare il warning di "deprecazione".
+4. Stato Attuale
+Script: PlanetOrbitCamera.cs completo e funzionante.
+Funzionalità:
+Rotazione orizzontale infinita.
+Supporto ibrido Mouse/Touch.
+Movimento fluido con smorzamento (variabile damping).
+Camera sempre rivolta verso il centro del pianeta (LookAt).
+
+Prossime cose da implementare:
+2. Creare elenco delle variabili utilizzate
+3. GitHub per lavoro efficiente
+
+Idee da considerare
+Il tasto per creare energia in realtà non aumenta l'energia di +1 bensì aumenta il tasso di generazione di energia fintanto che viene tenuto premuto. L'andamento è 
+
+Più aumenta la produzione di energia (sia con le ricerche e sia con il tasto, la luce emessa dalle luci del pianeta passa da calda a fredda blu per indicare aumento di efficienza
+
+Sostituire 
+
+
