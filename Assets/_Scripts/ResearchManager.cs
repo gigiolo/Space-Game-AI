@@ -4,93 +4,139 @@ using BreakInfinity;
 
 public class ResearchManager : MonoBehaviour
 {
-    [Header("Configurazione UI")]
-    public GameObject menuPanel;        // Il pannello nero intero
-    public Transform listContent;       // L'oggetto "Content" della ScrollView
-    public ResearchSlotUI slotPrefab;   // Il prefab creato in Fase 2
+    [Header("UI References")]
+    public GameObject menuPanel;        
+    public Transform listContent;       
+    public ResearchSlotUI slotPrefab;    
 
-    [Header("Database Ricerche")]
-    // Qui creeremo le ricerche direttamente dall'Inspector
+    [Header("Database")]
     public List<ResearchItem> allResearches; 
 
     private void Start()
     {
-        menuPanel.SetActive(false); // Nascondi menu all'avvio
-        InitializeResearches();     // Crea la lista
+        if(menuPanel) menuPanel.SetActive(false); 
+        InitializeResearches();
+        
+        if(GameManager.Instance)
+            GameManager.Instance.OnEconomyUpdated += UpdateAllSlots;
+    }
+    
+    private void OnDestroy()
+    {
+        if(GameManager.Instance)
+            GameManager.Instance.OnEconomyUpdated -= UpdateAllSlots;
     }
 
-    // Crea le righe visive basandosi sulla lista dati
     void InitializeResearches()
     {
         foreach (Transform child in listContent) Destroy(child.gameObject);
 
         foreach (var research in allResearches)
         {
-            // 1. Crea l'oggetto
             GameObject newSlot = Instantiate(slotPrefab.gameObject, listContent);
-
-            // ---------------------------------------------------------
-            // 👇 AGGIUNGI QUESTE 3 RIGHE ESATTE 👇
-            // ---------------------------------------------------------
             
-            // Forza la scala a 1 (risolve il problema "invisibile")
             newSlot.transform.localScale = Vector3.one; 
             
-            // Forza la posizione Z a 0 (risolve il problema "lontano/dietro")
-            newSlot.transform.localPosition = new Vector3(newSlot.transform.localPosition.x, newSlot.transform.localPosition.y, 0);
-            
-            // ---------------------------------------------------------
-
-            // 2. Configura lo script
             newSlot.GetComponent<ResearchSlotUI>().Setup(research, OnBuyResearch);
         }
     }
 
-    // Questa funzione viene chiamata quando clicchi "Acquista"
     void OnBuyResearch(ResearchItem item)
     {
+        if (item.IsMaxed()) return;
+
         BigDouble cost = item.GetCost();
 
-        // 1. Controlla se hai abbastanza soldi (dal GameManager)
-        if (GameManager.Instance.CurrentEnergy >= cost)
+        if (GameManager.Instance.TrySpend(cost))
         {
-            // 2. Paga
-            GameManager.Instance.CurrentEnergy -= cost; // O usa un metodo SpendEnergy()
-            
-            // 3. Aumenta livello e potenzia
             item.currentLevel++;
-            ApplyEffect(item); 
-
-            // 4. Aggiorna la grafica di TUTTI gli slot (perché i prezzi cambiano o i soldi scendono)
-            UpdateAllSlots();
-        }
-        else
-        {
-            Debug.Log("Non hai abbastanza energia!");
+            // Applichiamo l'effetto incrementale (solo per questo livello)
+            ApplySingleLevelEffect(item); 
+            
+            GameManager.Instance.UpdateCapsFromResearch();
+            UpdateAllSlots(); 
         }
     }
 
-    void ApplyEffect(ResearchItem item)
+    // Usato quando compri UN livello (aggiunge solo il bonus di quel livello)
+    void ApplySingleLevelEffect(ResearchItem item)
     {
-        // Qui colleghi l'effetto al gioco vero
-        if(item.id == "habitat_speed")
+        if (item.target == ResearchTarget.GlobalProduction && item.type == ResearchType.Multiplier)
         {
-            GameManager.Instance.GenerationRate *= 1.15; // Esempio
+            GameManager.Instance.ResearchMultiplier *= (1 + item.bonusValue);
         }
-        // Aggiungi altri if per altre ricerche
+        else if (item.type == ResearchType.Additive)
+        {
+            if (item.target == ResearchTarget.LogisticsCapacity)
+                GameManager.Instance.LogisticsResearchBonus += item.bonusValue;
+            else if (item.target == ResearchTarget.StorageCapacity)
+                GameManager.Instance.StorageResearchBonus += item.bonusValue;
+        }
     }
 
     void UpdateAllSlots()
     {
+        if(!menuPanel.activeSelf) return;
+
         foreach(Transform child in listContent)
         {
             child.GetComponent<ResearchSlotUI>().RefreshUI();
         }
     }
 
-    // Chiama questa funzione dal Tasto Arancione in basso a sx
     public void ToggleMenu()
     {
         menuPanel.SetActive(!menuPanel.activeSelf);
+        if(menuPanel.activeSelf) UpdateAllSlots();
+    }
+
+    // --- LOGICA DI RICALCOLO (CHIAMATA DAL LOADGAME) ---
+    // Questa è la parte critica che mancava o era incompleta
+    public void RecalculateAllResearches()
+    {
+        // 1. Resetta TUTTI i bonus nel GameManager a zero/base
+        GameManager.Instance.ResearchMultiplier = 1;
+        GameManager.Instance.LogisticsResearchBonus = 0;
+        GameManager.Instance.StorageResearchBonus = 0;
+        
+        // 2. Ricalcola basandosi sul livello attuale di ogni ricerca
+        foreach (var item in allResearches)
+        {
+            if (item.currentLevel > 0)
+            {
+                ApplyEffectBasedOnTotalLevel(item);
+            }
+        }
+        
+        // 3. Aggiorna UI e Caps
+        GameManager.Instance.ForceUIUpdate();
+        UpdateAllSlots();
+    }
+
+    void ApplyEffectBasedOnTotalLevel(ResearchItem item)
+    {
+        // A. MOLTIPLICATORI (Produzione)
+        if (item.target == ResearchTarget.GlobalProduction && item.type == ResearchType.Multiplier)
+        {
+            // Formula: (1 + bonus)^livello
+            BigDouble totalMult = BigDouble.Pow(1 + item.bonusValue, item.currentLevel);
+            GameManager.Instance.ResearchMultiplier *= totalMult;
+        }
+
+        // B. ADDITIVI (Logistica / Storage)
+        else if (item.type == ResearchType.Additive)
+        {
+            // Formula: Bonus * Livello
+            double totalAdditive = item.bonusValue * item.currentLevel;
+
+            if (item.target == ResearchTarget.LogisticsCapacity)
+            {
+                GameManager.Instance.LogisticsResearchBonus += totalAdditive;
+            }
+            else if (item.target == ResearchTarget.StorageCapacity)
+            {
+                GameManager.Instance.StorageResearchBonus += totalAdditive;
+            }
+        }
     }
 }

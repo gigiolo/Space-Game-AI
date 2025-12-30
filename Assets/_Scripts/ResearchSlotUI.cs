@@ -14,48 +14,44 @@ public class ResearchSlotUI : MonoBehaviour
     public Image iconImage;
 
     private ResearchItem _myData;
+    // Qui definiamo che la Setup vuole una "Action" (un metodo), non il Manager intero
     private System.Action<ResearchItem> _buyAction;
 
-    // Questa funzione riempie la riga con i dati
     public void Setup(ResearchItem item, System.Action<ResearchItem> onBuyClick)
     {
         _myData = item;
         _buyAction = onBuyClick;
 
-        titleText.text = item.title;
-        descText.text = item.description;
-        if(item.icon != null) iconImage.sprite = item.icon;
+        if (titleText) titleText.text = item.title;
+        if (descText) descText.text = item.description;
+        if (item.icon != null && iconImage) iconImage.sprite = item.icon;
 
-        // Configura il click del bottone
         buyButton.onClick.RemoveAllListeners();
         buyButton.onClick.AddListener(() => _buyAction(_myData));
 
         RefreshUI();
     }
 
+    // Questo metodo DEVE essere public
     public void RefreshUI()
-{
-    // 1. Sicurezza Dati: Se non ci sono dati, fermati.
-    if (_myData == null) return;
+    {
+        if (_myData == null) return;
 
-    // 2. Sicurezza Prezzo: Scrivi SOLO se costText è collegato
-    if (costText != null) 
-    {
-        costText.text = _myData.GetCost().ToString("F0") + " Energy";
+        if (costText != null) 
+        {
+            // Se è maxato, mostra "MAX", altrimenti il prezzo
+            if (_myData.IsMaxed())
+                costText.text = "MAX";
+            else
+                costText.text = _myData.GetCost().ToString("F0") + " Energy";
+        }
+        
+        if (progressBar != null)
+        {
+            if (_myData.maxLevel > 0)
+                progressBar.value = (float)_myData.currentLevel / _myData.maxLevel;
+            else
+                progressBar.value = 0; 
+        }
     }
-    else 
-    {
-        // Questo messaggio apparirà in console se ti sei dimenticato il collegamento!
-        Debug.LogWarning("Attenzione: Manca il collegamento a 'Cost Text' nel Prefab!");
-    }
-    
-    // 3. Sicurezza Livello/Barra
-    if (progressBar != null)
-    {
-        if (_myData.maxLevel > 0)
-            progressBar.value = (float)_myData.currentLevel / _myData.maxLevel;
-        else
-            progressBar.value = 0; 
-    }
-}
 }

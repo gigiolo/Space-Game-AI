@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d6415a2892676a48a269cba91752385, type: 3}
+  m_Name: Theme_NeonCyber
+  m_EditorClassIdentifier: Assembly-CSharp::UITheme
+  backgroundDark: {r: 0.043137256, g: 0.05490196, b: 0.09019608, a: 1}
+  backgroundLight: {r: 0.101960786, g: 0.13725491, b: 0.22745098, a: 1}
+  primaryAction: {r: 0.05482948, g: 1, b: 0, a: 1}
+  secondaryAction: {r: 0.7372549, g: 0.07450981, b: 0.99607843, a: 1}
+  destructiveAction: {r: 1, g: 0.16470589, b: 0.42745098, a: 1}
+  textMain: {r: 0.99728537, g: 1, b: 0, a: 1}
+  textHighlight: {r: 0.1469543, g: 1, b: 0, a: 1}
+  mainFont: {fileID: 11400000, guid: 54b1d5fb33cf8cd46be58c19d3af12ab, type: 2}
