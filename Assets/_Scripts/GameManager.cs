@@ -14,7 +14,7 @@ public class GameManager : MonoBehaviour
     public ResearchManager targetResearchManager; 
 
     [Header("--- UI THEME ---")]
-    public UITheme activeTheme; // Qui trascinerai il file Theme_NeonCyber
+    public UITheme activeTheme; 
 
     [Header("--- BILANCIAMENTO ---")]
     public BigDouble emitterBaseCost = 10;
@@ -57,7 +57,11 @@ public class GameManager : MonoBehaviour
 
     // EVENTI
     public event Action OnEconomyUpdated;
-    public event Action OnOfflineProductionCalculated; // Nuovo evento per aprire il popup
+    public event Action OnOfflineProductionCalculated;
+
+    // --- OTTIMIZZAZIONE PERFORMANCE ---
+    private float _uiRefreshTimer = 0f;
+    private float _uiRefreshRate = 0.05f; // Aggiorna la UI ~20 volte al secondo invece di 60/120
 
     // FORMULE
     public BigDouble RawProductionRate 
@@ -80,6 +84,10 @@ public class GameManager : MonoBehaviour
         if (Instance == null) { Instance = this; DontDestroyOnLoad(gameObject); }
         else { Destroy(gameObject); }
         
+        // --- FIX FRAME RATE ---
+        QualitySettings.vSyncCount = 0; // Disabilita VSync per permettere FPS alti
+        Application.targetFrameRate = 120; // Targetta 120 FPS su schermi supportati
+        
         InitializeGame();
     }
 
@@ -100,6 +108,7 @@ public class GameManager : MonoBehaviour
     private void Update()
     {
         // Core Loop: Produzione
+        // Calcoliamo la matematica ad ogni frame per massima precisione
         BigDouble income = EffectiveIncomePerSec;
         
         if (income > 0)
@@ -112,7 +121,15 @@ public class GameManager : MonoBehaviour
 
                 if (CurrentEnergy > StorageCap) CurrentEnergy = StorageCap;
                 
-                OnEconomyUpdated?.Invoke(); 
+                // --- FIX UI LAG ---
+                // Aggiorniamo i testi della UI solo ogni tot millisecondi
+                // Questo riduce drasticamente il lavoro del Garbage Collector
+                _uiRefreshTimer += Time.deltaTime;
+                if (_uiRefreshTimer >= _uiRefreshRate)
+                {
+                    OnEconomyUpdated?.Invoke(); 
+                    _uiRefreshTimer = 0f;
+                }
             }
         }
     }
@@ -122,7 +139,6 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
-        // Inizializza il tema grafico globale
         if (activeTheme != null)
         {
             ThemedUIElement.SetGlobalTheme(activeTheme);
@@ -148,7 +164,7 @@ public class GameManager : MonoBehaviour
         data.lifetimeEarnings = LifetimeEarnings.ToString();
         data.emitterCount = EmitterCount;
         data.logisticsLevel = LogisticsLevel;
-        data.lastSaveTime = DateTime.Now.ToString(); // Salviamo data/ora attuale
+        data.lastSaveTime = DateTime.Now.ToString(); 
 
         if (targetResearchManager != null)
         {
@@ -185,7 +201,7 @@ public class GameManager : MonoBehaviour
         EmitterCount = data.emitterCount;
         LogisticsLevel = data.logisticsLevel;
 
-        // 3. Ripristino Ricerche (PRIMA di calcolare l'offline, perché influenzano il guadagno)
+        // 3. Ripristino Ricerche
         if (targetResearchManager != null && data.researches != null)
         {
             foreach (var savedRes in data.researches)
@@ -213,47 +229,34 @@ public class GameManager : MonoBehaviour
 
     private void HandleOfflineProgress(string lastSaveTimeStr)
     {
-        // 1. Controllo di sicurezza sulla stringa
         if (string.IsNullOrEmpty(lastSaveTimeStr)) return;
 
-        // 2. Tentiamo di leggere la data
         DateTime lastSaveTime;
         if (!DateTime.TryParse(lastSaveTimeStr, out lastSaveTime))
         {
-            return; // Data non valida, usciamo
+            return; 
         }
 
-        // --- ECCO LE RIGHE CHE MANCAVANO ---
-        // Calcoliamo la differenza di tempo tra ADESSO e L'ULTIMO SALVATAGGIO
         TimeSpan timeAway = DateTime.Now - lastSaveTime;
         double secondsAway = timeAway.TotalSeconds;
-        // -----------------------------------
 
-        // 3. Logica del guadagno (Usa 1 secondo per i test, poi rimetti 60)
         if (secondsAway > 1) 
         {
-            // A. Quanto avresti potuto guadagnare in teoria
             BigDouble potentialEarnings = EffectiveIncomePerSec * secondsAway * offlineProductionRatio;
 
-            // B. Quanto spazio avevi libero nelle batterie
             BigDouble spaceAvailable = StorageCap - CurrentEnergy;
             if (spaceAvailable < 0) spaceAvailable = 0;
 
-            // C. Il guadagno reale è il minore tra i due
             BigDouble actualEarnings = BigDouble.Min(potentialEarnings, spaceAvailable);
 
-            // D. Se c'era del potenziale (anche se le batterie erano piene), mostriamo il popup
             if (potentialEarnings > 0) 
             {
-                // Applichiamo i soldi
                 CurrentEnergy += actualEarnings;
                 LifetimeEarnings += actualEarnings;
                 
-                // Salviamo i dati per la UI
                 LastOfflineEarnings = actualEarnings;
-                LastOfflineTimeSpan = timeAway; // Ora 'timeAway' esiste ed è corretto
+                LastOfflineTimeSpan = timeAway;
 
-                // Lanciamo l'evento per aprire il popup
                 OnOfflineProductionCalculated?.Invoke();
             }
         }
@@ -274,7 +277,9 @@ public class GameManager : MonoBehaviour
         if (_isHoldingButton != isHolding)
         {
             _isHoldingButton = isHolding;
-            OnEconomyUpdated?.Invoke(); 
+            // Qui lasciamo che l'Update gestisca il refresh grafico per non sovraccaricare
+            // Ma se vuoi feedback istantaneo puoi decommentare la riga sotto:
+            // OnEconomyUpdated?.Invoke(); 
         }
     }
 
@@ -285,7 +290,7 @@ public class GameManager : MonoBehaviour
         {
             EmitterCount++;
             RecalculateCaps(); 
-            OnEconomyUpdated?.Invoke();
+            OnEconomyUpdated?.Invoke(); // Qui forziamo l'update perché il click è un evento raro
         }
     }
 
@@ -296,7 +301,7 @@ public class GameManager : MonoBehaviour
         {
             LogisticsLevel++;
             RecalculateCaps();
-            OnEconomyUpdated?.Invoke();
+            OnEconomyUpdated?.Invoke(); // Qui forziamo l'update
         }
     }
 
@@ -330,23 +335,15 @@ public class GameManager : MonoBehaviour
     {
         OnEconomyUpdated?.Invoke();
     }
-    // Unica versione corretta di OnApplicationPause
+
     private void OnApplicationPause(bool pauseStatus)
     {
         if (pauseStatus)
         {
-            // CASO 1: L'app sta andando in PAUSA/BACKGROUND
-            // L'utente ha premuto Home o ha cambiato app.
-            // Dobbiamo salvare tutto subito!
             SaveGame();
         }
         else
         {
-            // CASO 2: L'app sta tornando ATTIVA (RESUME)
-            // L'utente ha riaperto l'app dopo averla ridotta a icona.
-            
-            // Ricaricando il gioco, il GameManager leggerà l'orario dell'ultimo salvataggio (fatto nel Caso 1),
-            // confronterà con l'ora attuale e farà scattare il calcolo offline.
             LoadGame();
         }
     }
