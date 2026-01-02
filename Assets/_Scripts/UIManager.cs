@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.EventSystems; // Fondamentale per il Hold
+using UnityEngine.EventSystems; 
 using TMPro;        
 using BreakInfinity; 
 
@@ -10,17 +10,20 @@ public class UIManager : MonoBehaviour
     public TextMeshProUGUI scoreText;            
     public TextMeshProUGUI incomeText;           
     public TextMeshProUGUI logisticsStatusText; 
-    public TextMeshProUGUI storageText; // NUOVO: Serve indicatore Storage
+    public TextMeshProUGUI storageText; 
 
     [Header("Bottom Deck")]
-    // Sostituiamo il semplice Button con un EventTrigger o gestore custom
     public GameObject mainEnergyButtonObj; 
-    public Button buyEmitterButton; // Ex Habitat
+    public Button buyEmitterButton; 
     public Button buyLogisticsButton;            
     
+    [Header("RESET QUANTISTICO")] // <--- NUOVA SEZIONE
+    public Button prestigeButton;
+    public TextMeshProUGUI prestigeInfoText; // Testo dentro o sopra il bottone (es: "Prestige for +5 Nodes")
+
     [Header("Visual Feedback")]
-    public Image logisticsButtonImage;           
-    public Color normalColor = Color.white;      
+    public Image logisticsButtonImage;            
+    public Color normalColor = Color.white;       
     public Color warningColor = new Color(1f, 0.3f, 0.3f); 
     public TextMeshProUGUI emitterCostText;
     public TextMeshProUGUI logisticsCostText;
@@ -38,14 +41,16 @@ public class UIManager : MonoBehaviour
             if(buyEmitterButton) buyEmitterButton.onClick.AddListener(gm.BuyEmitter);
             if(buyLogisticsButton) buyLogisticsButton.onClick.AddListener(gm.BuyLogistics);
             
-            // Setup Hold Button (Event Trigger manuale)
+            // Setup Bottone PRESTIGIO
+            if(prestigeButton) prestigeButton.onClick.AddListener(gm.PerformQuantumReset);
+            
+            // Setup Hold Button
             SetupHoldButton();
 
             RefreshUI();
         }
     }
     
-    // Configura il sistema "Tieni premuto"
     void SetupHoldButton()
     {
         if (mainEnergyButtonObj == null) return;
@@ -53,13 +58,11 @@ public class UIManager : MonoBehaviour
         EventTrigger trigger = mainEnergyButtonObj.GetComponent<EventTrigger>();
         if (trigger == null) trigger = mainEnergyButtonObj.AddComponent<EventTrigger>();
 
-        // Evento Down
         EventTrigger.Entry entryDown = new EventTrigger.Entry();
         entryDown.eventID = EventTriggerType.PointerDown;
         entryDown.callback.AddListener((data) => { gm.SetHoldState(true); });
         trigger.triggers.Add(entryDown);
 
-        // Evento Up
         EventTrigger.Entry entryUp = new EventTrigger.Entry();
         entryUp.eventID = EventTriggerType.PointerUp;
         entryUp.callback.AddListener((data) => { gm.SetHoldState(false); });
@@ -73,47 +76,38 @@ public class UIManager : MonoBehaviour
 
     public void RefreshUI()
     {
-        // Sicurezza: se il GameManager non è ancora pronto, esci
         if (gm == null) return;
 
-        // 1. ENERGIA ATTUALE (Score Text)
-        // Mostra solo l'energia che possiedi in questo momento
-        if (scoreText)
-            scoreText.text = $"{FormatNumber(gm.CurrentEnergy)} Energy";
+        // 1. ENERGIA E INCOME
+        if (scoreText) scoreText.text = $"{FormatNumber(gm.CurrentEnergy)} Energy";
+        if (storageText) storageText.text = $"Max Cap: {FormatNumber(gm.StorageCap)}";
+        if (incomeText) incomeText.text = $"+{FormatNumber(gm.EffectiveIncomePerSec)}/s";
 
-        // 2. CAPACITÀ MASSIMA (Il nuovo testo "StorageCapText")
-        // Mostra quanto puoi accumulare al massimo
-        if (storageText)
-            storageText.text = $"Max Cap: {FormatNumber(gm.StorageCap)}";
-
-        // 3. INCOME (Guadagno al secondo)
-        // Grazie alla modifica precedente, ora vedrai i decimali (es. +1.10/s)
-        if (incomeText)
-            incomeText.text = $"+{FormatNumber(gm.EffectiveIncomePerSec)}/s";
-
-        // 4. STATO LOGISTICA
-        // Mostra Produzione Potenziale vs Capacità di Trasporto
+        // 2. LOGISTICA
         if (logisticsStatusText)
             logisticsStatusText.text = $"Prod: {FormatNumber(gm.RawProductionRate)} | Log: {FormatNumber(gm.LogisticsCap)}";
 
-        // 5. AGGIORNAMENTO COSTI DEI PULSANTI
-        // Aggiorna il prezzo scritto sopra i bottoni di acquisto
-        if (emitterCostText) 
-            emitterCostText.text = "Emitter: " + FormatNumber(gm.GetEmitterCost());
+        // 3. COSTI BOTTONI
+        if (emitterCostText) emitterCostText.text = "Emitter: " + FormatNumber(gm.GetEmitterCost());
+        if (logisticsCostText) logisticsCostText.text = "Logistics: " + FormatNumber(gm.GetLogisticsCost());
+        
+        // 4. RESET QUANTISTICO (NUOVO)
+        if (prestigeInfoText)
+        {
+            BigDouble potentialNodes = gm.CalculatePotentialNodes();
+            // Mostra anche quanti ne hai già accumulati
+            prestigeInfoText.text = $"RESET (Current: {gm.ScientificNodes})\nGain: <color=#00FFFF>+{FormatNumber(potentialNodes)} Nodes</color>";
+            
+            // Opzionale: Disabilita il tasto se guadagni 0
+            if (prestigeButton) prestigeButton.interactable = potentialNodes > 0;
+        }
 
-        if (logisticsCostText) 
-            logisticsCostText.text = "Logistics: " + FormatNumber(gm.GetLogisticsCost());
-
-        // 6. CONTROLLO VISIVO COLLO DI BOTTIGLIA
-        // Cambia il colore se la produzione supera la logistica
         CheckBottleneck();
     }
 
     void CheckBottleneck()
     {
-        // Il bottleneck c'è se la produzione POTENZIALE supera la Logistica
         bool isBottleneck = gm.RawProductionRate > gm.LogisticsCap;
-        
         Color targetColor = isBottleneck ? warningColor : normalColor;
 
         if(incomeText) incomeText.color = targetColor;

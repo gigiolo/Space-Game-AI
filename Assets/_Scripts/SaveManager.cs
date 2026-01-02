@@ -1,61 +1,67 @@
 using UnityEngine;
-using System.IO;
-using System;
-using System.Text;
+using System.IO; 
 
 public static class SaveManager
 {
-    private static string FileName = "savegame.dat";
-    
-    // Percorso: %AppData%/LocalLow/TuoNomeCompagnia/TuoGioco/savegame.dat
-    private static string Path => System.IO.Path.Combine(Application.persistentDataPath, FileName);
+    // Nome del file di salvataggio
+    private static string fileName = "savegame.json";
 
+    /// <summary>
+    /// Salva i dati passati su disco.
+    /// </summary>
     public static void Save(SaveData data)
     {
         try
         {
-            string json = JsonUtility.ToJson(data, true);
-            
-            // Opzionale: Offuscamento semplice (Base64)
-            string encoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(json));
-            
-            File.WriteAllText(Path, encoded);
-            Debug.Log($"<color=green>GIOCO SALVATO</color> in: {Path}");
+            string json = JsonUtility.ToJson(data, true); 
+            string path = Path.Combine(Application.persistentDataPath, fileName);
+            File.WriteAllText(path, json);
+
+            // Debug.Log($"Salvataggio riuscito in: {path}"); // Decommenta se vuoi vedere il percorso
         }
-        catch (Exception e)
+        catch (System.Exception e)
         {
-            Debug.LogError($"Errore salvataggio: {e.Message}");
+            Debug.LogError($"Errore durante il salvataggio: {e.Message}");
         }
     }
 
+    /// <summary>
+    /// Carica i dati dal disco.
+    /// </summary>
     public static SaveData Load()
     {
-        if (!File.Exists(Path))
-        {
-            Debug.Log("Nessun salvataggio trovato. Creazione nuova partita.");
-            return null;
-        }
+        string path = Path.Combine(Application.persistentDataPath, fileName);
 
-        try
+        if (File.Exists(path))
         {
-            string encoded = File.ReadAllText(Path);
-            
-            // Decodifica Base64
-            byte[] bytes = Convert.FromBase64String(encoded);
-            string json = Encoding.UTF8.GetString(bytes);
-            
-            return JsonUtility.FromJson<SaveData>(json);
+            try
+            {
+                string json = File.ReadAllText(path);
+                SaveData data = JsonUtility.FromJson<SaveData>(json);
+                return data;
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Errore durante la lettura del file: {e.Message}");
+                return null;
+            }
         }
-        catch (Exception e)
+        else
         {
-            Debug.LogError($"Errore caricamento (File corrotto?): {e.Message}");
-            return null; // Ritorna null per forzare una nuova partita
+            return null;
         }
     }
 
-    public static void DeleteSave()
+    /// <summary>
+    /// Cancella il file di salvataggio.
+    /// </summary>
+    public static void DeleteSaveFile()
     {
-        if (File.Exists(Path)) File.Delete(Path);
-        PlayerPrefs.DeleteAll();
+        string path = Path.Combine(Application.persistentDataPath, fileName);
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+            Debug.Log("File di salvataggio eliminato.");
+        }
     }
 }
