@@ -1,14 +1,14 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems; // Fondamentale per il Hold
-using TMPro;       
+using TMPro;        
 using BreakInfinity; 
 
 public class UIManager : MonoBehaviour
 {
     [Header("Top HUD")]
-    public TextMeshProUGUI scoreText;           
-    public TextMeshProUGUI incomeText;          
+    public TextMeshProUGUI scoreText;            
+    public TextMeshProUGUI incomeText;           
     public TextMeshProUGUI logisticsStatusText; 
     public TextMeshProUGUI storageText; // NUOVO: Serve indicatore Storage
 
@@ -16,11 +16,11 @@ public class UIManager : MonoBehaviour
     // Sostituiamo il semplice Button con un EventTrigger o gestore custom
     public GameObject mainEnergyButtonObj; 
     public Button buyEmitterButton; // Ex Habitat
-    public Button buyLogisticsButton;           
+    public Button buyLogisticsButton;            
     
     [Header("Visual Feedback")]
-    public Image logisticsButtonImage;          
-    public Color normalColor = Color.white;     
+    public Image logisticsButtonImage;           
+    public Color normalColor = Color.white;      
     public Color warningColor = new Color(1f, 0.3f, 0.3f); 
     public TextMeshProUGUI emitterCostText;
     public TextMeshProUGUI logisticsCostText;

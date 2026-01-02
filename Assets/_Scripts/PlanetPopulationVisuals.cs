@@ -62,6 +62,7 @@ public class PlanetPopulationVisuals : MonoBehaviour
         if (GameManager.Instance == null) return;
 
         // Quanti ne dobbiamo avere?
+        // NOTA: Qui usiamo direttamente EmitterCount e maxLights (int), senza passare dal Balance
         int target = Mathf.Min(GameManager.Instance.EmitterCount, maxLights);
 
         if (target > _spawnedCount)

@@ -31,23 +31,23 @@ public class ResearchItem
 {
     [Header("Identificativi")]
     public string id;              
-    public string title;           
-    [TextArea] public string description;     
-    public Sprite icon;            
+    public string title;            
+    [TextArea] public string description;       
+    public Sprite icon;             
     
     [Header("Configurazione Effetto")]
-    public ResearchType type;      
-    public ResearchTarget target;  
+    public ResearchType type;       
+    public ResearchTarget target;   
     
-    public double bonusValue;      
+    public double bonusValue;       
 
     [Header("Economia")]
-    public BigDouble baseCost;     
+    public BigDouble baseCost;      
     public double costGrowth = 1.50d;
 
     [Header("Progresso")]
-    public int currentLevel;       
-    public int maxLevel;           
+    public int currentLevel;        
+    public int maxLevel;            
     
     public BigDouble GetCost()
     {
