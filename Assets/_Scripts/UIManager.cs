@@ -7,23 +7,27 @@ using BreakInfinity;
 public class UIManager : MonoBehaviour
 {
     [Header("Top HUD")]
-    public TextMeshProUGUI scoreText;            
-    public TextMeshProUGUI incomeText;           
+    public TextMeshProUGUI scoreText;             
+    public TextMeshProUGUI incomeText;            
     public TextMeshProUGUI logisticsStatusText; 
     public TextMeshProUGUI storageText; 
 
     [Header("Bottom Deck")]
     public GameObject mainEnergyButtonObj; 
     public Button buyEmitterButton; 
-    public Button buyLogisticsButton;            
+    public Button buyLogisticsButton;             
     
-    [Header("RESET QUANTISTICO")] // <--- NUOVA SEZIONE
+    [Header("RESET QUANTISTICO")]
     public Button prestigeButton;
-    public TextMeshProUGUI prestigeInfoText; // Testo dentro o sopra il bottone (es: "Prestige for +5 Nodes")
+    public TextMeshProUGUI prestigeInfoText; 
+
+    [Header("OPTIONS MENU")] // <--- NUOVA SEZIONE AGGIUNTA
+    public Button optionsButton;              // Il bottone ingranaggio nella UI
+    public OptionsMenu optionsMenuController; // Riferimento allo script del Popup Opzioni
 
     [Header("Visual Feedback")]
-    public Image logisticsButtonImage;            
-    public Color normalColor = Color.white;       
+    public Image logisticsButtonImage;             
+    public Color normalColor = Color.white;        
     public Color warningColor = new Color(1f, 0.3f, 0.3f); 
     public TextMeshProUGUI emitterCostText;
     public TextMeshProUGUI logisticsCostText;
@@ -35,6 +39,7 @@ public class UIManager : MonoBehaviour
         gm = GameManager.Instance;
         if (gm != null)
         {
+            // Iscrizione all'evento di aggiornamento economia
             gm.OnEconomyUpdated += RefreshUI;
             
             // Setup Bottoni Acquisto
@@ -43,10 +48,17 @@ public class UIManager : MonoBehaviour
             
             // Setup Bottone PRESTIGIO
             if(prestigeButton) prestigeButton.onClick.AddListener(gm.PerformQuantumReset);
+
+            // Setup Bottone OPZIONI (NUOVO)
+            if (optionsButton != null && optionsMenuController != null)
+            {
+                optionsButton.onClick.AddListener(optionsMenuController.ToggleMenu);
+            }
             
             // Setup Hold Button
             SetupHoldButton();
 
+            // Aggiornamento iniziale
             RefreshUI();
         }
     }
@@ -91,7 +103,7 @@ public class UIManager : MonoBehaviour
         if (emitterCostText) emitterCostText.text = "Emitter: " + FormatNumber(gm.GetEmitterCost());
         if (logisticsCostText) logisticsCostText.text = "Logistics: " + FormatNumber(gm.GetLogisticsCost());
         
-        // 4. RESET QUANTISTICO (NUOVO)
+        // 4. RESET QUANTISTICO
         if (prestigeInfoText)
         {
             BigDouble potentialNodes = gm.CalculatePotentialNodes();
@@ -107,6 +119,7 @@ public class UIManager : MonoBehaviour
 
     void CheckBottleneck()
     {
+        // Se produciamo più di quanto la logistica può trasportare
         bool isBottleneck = gm.RawProductionRate > gm.LogisticsCap;
         Color targetColor = isBottleneck ? warningColor : normalColor;
 

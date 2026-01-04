@@ -9,12 +9,15 @@ public class ResearchSlotUI : MonoBehaviour
     public TextMeshProUGUI titleText;
     public TextMeshProUGUI descText;
     public TextMeshProUGUI costText;
+    
+    [Tooltip("Collega qui il testo verde 'Level'")]
+    public TextMeshProUGUI levelText; 
+    
     public Button buyButton;
     public Slider progressBar;
     public Image iconImage;
 
     private ResearchItem _myData;
-    // Qui definiamo che la Setup vuole una "Action" (un metodo), non il Manager intero
     private System.Action<ResearchItem> _buyAction;
 
     public void Setup(ResearchItem item, System.Action<ResearchItem> onBuyClick)
@@ -32,20 +35,70 @@ public class ResearchSlotUI : MonoBehaviour
         RefreshUI();
     }
 
-    // Questo metodo DEVE essere public
     public void RefreshUI()
     {
         if (_myData == null) return;
+        if (GameManager.Instance == null) return;
 
+        BigDouble cost = _myData.GetCost();
+        bool isMaxed = _myData.IsMaxed();
+        bool canAfford = GameManager.Instance.CurrentEnergy >= cost;
+
+        // 1. GESTIONE TESTO COSTO (La tua modifica)
         if (costText != null) 
         {
-            // Se è maxato, mostra "MAX", altrimenti il prezzo
-            if (_myData.IsMaxed())
+            if (isMaxed)
+            {
                 costText.text = "MAX";
+                costText.color = Color.white;
+            }
             else
-                costText.text = _myData.GetCost().ToString("F0") + " Energy";
+            {
+                costText.text = cost.ToString("F0") + " Energy";
+
+                // --- NUOVA LOGICA COLORI TESTO ---
+                if (canAfford)
+                {
+                    // Se ho i soldi (Sfondo Verde) -> Testo Nero
+                    costText.color = Color.black;
+                }
+                else
+                {
+                    // Se non ho i soldi (Sfondo Scuro) -> Testo Grigio Chiaro
+                    // (0.8f è un grigio molto chiaro, quasi bianco ma spento)
+                    costText.color = new Color(0.4f, 0.4f, 0.4f, 1f);
+                }
+            }
         }
         
+        // 2. GESTIONE SFONDO BOTTONE (Manteniamo la logica precedente)
+        if (buyButton != null)
+        {
+            bool isInteractable = !isMaxed && canAfford;
+            buyButton.interactable = isInteractable;
+
+            Image btnBg = buyButton.GetComponent<Image>();
+            
+            if (btnBg != null && GameManager.Instance.activeTheme != null)
+            {
+                if (isMaxed)
+                {
+                    btnBg.color = Color.gray; 
+                }
+                else if (canAfford)
+                {
+                    // Sfondo Verde del tema
+                    btnBg.color = GameManager.Instance.activeTheme.primaryAction;
+                }
+                else
+                {
+                    // Sfondo Grigio Scuro
+                    btnBg.color = new Color(0.25f, 0.25f, 0.25f, 1f); 
+                }
+            }
+        }
+
+        // 3. Barra Progresso
         if (progressBar != null)
         {
             if (_myData.maxLevel > 0)
@@ -53,5 +106,27 @@ public class ResearchSlotUI : MonoBehaviour
             else
                 progressBar.value = 0; 
         }
+
+        // 4. Testo Livello
+        if (levelText != null)
+        {
+            levelText.text = $"Level <color=white>{_myData.currentLevel}</color>/{_myData.maxLevel}";
+        }
     }
+
+    #if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (levelText != null)
+        {
+            levelText.textWrappingMode = TextWrappingModes.NoWrap;
+            levelText.overflowMode = TextOverflowModes.Ellipsis;
+            if (string.IsNullOrEmpty(levelText.text) || levelText.text == "Level")
+            {
+                levelText.text = "Level 0/0";
+                UnityEditor.EditorUtility.SetDirty(levelText);
+            }
+        }
+    }
+    #endif
 }

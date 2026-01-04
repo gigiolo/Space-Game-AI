@@ -6,7 +6,7 @@ public class ResearchManager : MonoBehaviour
 {
     [Header("UI References")]
     public GameObject menuPanel;        
-    public Transform listContent;       
+    public Transform listContent;        
     public ResearchSlotUI slotPrefab;    
 
     [Header("Database")]
@@ -71,6 +71,10 @@ public class ResearchManager : MonoBehaviour
                 GameManager.Instance.LogisticsResearchBonus += item.bonusValue;
             else if (item.target == ResearchTarget.StorageCapacity)
                 GameManager.Instance.StorageResearchBonus += item.bonusValue;
+            
+            // --- NUOVO: Aggiungi velocità quando compri un livello ---
+            else if (item.target == ResearchTarget.EmitterProductionSpeed)
+                GameManager.Instance.EmitterAutoGrowthSpeed += item.bonusValue;
         }
     }
 
@@ -91,13 +95,15 @@ public class ResearchManager : MonoBehaviour
     }
 
     // --- LOGICA DI RICALCOLO (CHIAMATA DAL LOADGAME) ---
-    // Questa è la parte critica che mancava o era incompleta
     public void RecalculateAllResearches()
     {
         // 1. Resetta TUTTI i bonus nel GameManager a zero/base
         GameManager.Instance.ResearchMultiplier = 1;
         GameManager.Instance.LogisticsResearchBonus = 0;
         GameManager.Instance.StorageResearchBonus = 0;
+        
+        // --- NUOVO: Resetta la velocità prima di ricalcolarla dai livelli salvati ---
+        GameManager.Instance.EmitterAutoGrowthSpeed = 0;
         
         // 2. Ricalcola basandosi sul livello attuale di ogni ricerca
         foreach (var item in allResearches)
@@ -123,7 +129,7 @@ public class ResearchManager : MonoBehaviour
             GameManager.Instance.ResearchMultiplier *= totalMult;
         }
 
-        // B. ADDITIVI (Logistica / Storage)
+        // B. ADDITIVI (Logistica / Storage / Velocità Emettitori)
         else if (item.type == ResearchType.Additive)
         {
             // Formula: Bonus * Livello
@@ -136,6 +142,11 @@ public class ResearchManager : MonoBehaviour
             else if (item.target == ResearchTarget.StorageCapacity)
             {
                 GameManager.Instance.StorageResearchBonus += totalAdditive;
+            }
+            // --- NUOVO: Ricalcolo velocità totale ---
+            else if (item.target == ResearchTarget.EmitterProductionSpeed)
+            {
+                GameManager.Instance.EmitterAutoGrowthSpeed += totalAdditive;
             }
         }
     }

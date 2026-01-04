@@ -28,6 +28,19 @@ public class ResearchLoader : MonoBehaviour
         CreateResearch("t1_cable", "Cavi in Rame", "Aumenta capacità logistica (+5).", 
             10, 50, 1.15f, ResearchTarget.LogisticsCapacity, ResearchType.Additive, 5);
 
+        // ESEMPIO: Nanobot (Livello 1 = +0.1 emettitori al secondo)
+        // Significa che ogni 10 secondi ottieni un Emettitore gratis.
+        CreateResearch("auto_emit_1", 
+            "Nanobot Assemblatori", 
+            "Produzione automatica Emettitori (+0.1/s).", 
+            50,           // Costo Base
+            10,             // Livelli Max
+            1.5f,           // Crescita Costo
+            ResearchTarget.EmitterProductionSpeed, // <--- IL NOSTRO NUOVO TARGET
+            ResearchType.Additive, 
+            0.1             // <--- Valore da aggiungere alla velocità
+        );
+
         CreateResearch("t1_batt", "Condensatori", "Aumenta stoccaggio base (+50).", 
             15, 20, 1.20f, ResearchTarget.StorageCapacity, ResearchType.Additive, 50);
 

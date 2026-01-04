@@ -16,21 +16,26 @@ public class GameManager : MonoBehaviour
     [Header("--- BILANCIAMENTO ---")]
     public BigDouble emitterBaseCost = 10;
     public double emitterGrowth = 1.15d;
+    
     public BigDouble logisticsBaseCost = 15;
-    public double logisticsGrowth = 1.50d;
+    
+    // --- MODIFICA MATEMATICA 1: CRESCITA LOGISTICA RILASSATA ---
+    // Prima era 1.50 (troppo ripido). Ora 1.25 permette di comprare più livelli.
+    public double logisticsGrowth = 1.25d; 
+
     public BigDouble holdButtonMultiplier = 2.0; 
     public double offlineProductionRatio = 0.5d;
 
     [Header("--- SALVATAGGIO ---")]
     public float autoSaveInterval = 30f; 
 
-    // --- VARIABILI DI GIOCO (RESETTABILI) ---
+    // --- VARIABILI DI GIOCO ---
     public BigDouble CurrentEnergy { get; private set; }
     public BigDouble LifetimeEarnings { get; private set; }
     public int EmitterCount { get; private set; }
     public int LogisticsLevel { get; private set; }
     
-    // --- VARIABILI PERMANENTI (PERSISTONO AL RESET) ---
+    // --- VARIABILI PERMANENTI ---
     public BigDouble ScientificNodes { get; private set; } = 0;
     
     // --- CAPACITA' ---
@@ -43,19 +48,20 @@ public class GameManager : MonoBehaviour
     public BigDouble LogisticsResearchBonus { get; set; } = 0;
     public BigDouble StorageResearchBonus { get; set; } = 0;
     
-    // Il bonus ora dipende dai Nodi salvati! (+10% per nodo)
-    public BigDouble EarningsBonus => 1 + (ScientificNodes * 0.10); 
+    public double EmitterAutoGrowthSpeed { get; set; } = 0; 
+    private double _emitterAccumulator = 0; 
 
-    // --- STATO ---
+    // --- MODIFICA MATEMATICA 2: BONUS NODI PIÙ POTENTE ---
+    // Dato che la formula della radice quadrata ci darà meno nodi, 
+    // aumentiamo la potenza del singolo nodo da 10% (0.10) a 50% (0.50).
+    public BigDouble EarningsBonus => 1 + (ScientificNodes * 0.50); 
+
+    // --- STATO & TIMER ---
     private bool _isHoldingButton = false;
     public BigDouble LastOfflineEarnings { get; private set; } = 0;
     public TimeSpan LastOfflineTimeSpan { get; private set; }
-
-    // EVENTI
     public event Action OnEconomyUpdated;
     public event Action OnOfflineProductionCalculated;
-
-    // TIMER UI
     private float _uiRefreshTimer = 0f;
     private float _uiRefreshRate = 0.05f;
 
@@ -65,7 +71,6 @@ public class GameManager : MonoBehaviour
         get 
         {
             BigDouble baseProd = EmitterCount * BaseEmissionPerUnit;
-            // Applichiamo qui il bonus dei Nodi Scientifici
             BigDouble multipliers = ResearchMultiplier * EarningsBonus;
             
             if (_isHoldingButton) multipliers *= holdButtonMultiplier;
@@ -84,7 +89,6 @@ public class GameManager : MonoBehaviour
         QualitySettings.vSyncCount = 0; 
         Application.targetFrameRate = 60; 
         
-        // Inizializza a zero, poi il LoadGame sovrascriverà se c'è un save
         InitializeGameState();
     }
 
@@ -93,12 +97,13 @@ public class GameManager : MonoBehaviour
         if (activeTheme != null) ThemedUIElement.SetGlobalTheme(activeTheme);
         if (targetResearchManager == null) targetResearchManager = FindFirstObjectByType<ResearchManager>();
 
-        LoadGame(); // Carica tutto (Run corrente + Nodi)
+        LoadGame(); 
         StartCoroutine(AutoSaveRoutine());
     }
 
     private void Update()
     {
+        // 1. GESTIONE INCOME
         BigDouble income = EffectiveIncomePerSec;
         
         if (income > 0)
@@ -119,25 +124,59 @@ public class GameManager : MonoBehaviour
                 }
             }
         }
+
+        // 2. GESTIONE AUTO-CRESCITA
+        if (EmitterAutoGrowthSpeed > 0)
+        {
+            _emitterAccumulator += EmitterAutoGrowthSpeed * Time.deltaTime;
+            if (_emitterAccumulator >= 1.0)
+            {
+                int toAdd = (int)_emitterAccumulator; 
+                _emitterAccumulator -= toAdd;         
+                
+                EmitterCount += toAdd;
+                RecalculateCaps();
+                OnEconomyUpdated?.Invoke();
+            }
+        }
     }
 
     // ----------------------------------------------------------------------
-    // --- GESTIONE RESET QUANTISTICO (PRESTIGIO) ---
+    // --- NUOVO SISTEMA MATEMATICO (PRESTIGIO & CAPS) ---
     // ----------------------------------------------------------------------
     
-    // HELPER PER LA UI: Calcola quanti nodi otterresti se resettassi ora
+    // --- MODIFICA MATEMATICA 3: FORMULA RADICE QUADRATA ---
     public BigDouble CalculatePotentialNodes()
     {
-        // Se hai guadagnato meno di 1000 in questa vita, niente nodi
-        if (LifetimeEarnings < 10) return 0;
+        // Soglia minima per resettare aumentata leggermente per evitare reset inutili
+        if (LifetimeEarnings < 1000) return 0;
 
-        // Formula: Radice quadrata dei guadagni diviso 1000 (modificabile)
-        return BigDouble.Floor(LifetimeEarnings / 1);    
+        // FORMULA: Radice Quadrata di (Earnings / 1000)
+        // Esempio: 
+        // 1000 Energy -> Sqrt(1) = 1 Nodo
+        // 1.000.000 Energy -> Sqrt(1000) = 31 Nodi
+        // Questo rallenta l'inflazione dei nodi nel late-game.
+        BigDouble baseVal = LifetimeEarnings / 1000;
+        
+        // BreakInfinity usa BigDouble.Pow(val, 0.5) per la radice quadrata
+        return BigDouble.Floor(BigDouble.Pow(baseVal, 0.5));    
     }
 
+    public void RecalculateCaps()
+    {
+        // --- MODIFICA MATEMATICA 4: CAPACITÀ LOGISTICA AUMENTATA ---
+        // Formula vecchia: 2 + (LogisticsLevel * 1.5) -> Troppo lenta
+        // Formula nuova: 5 + (LogisticsLevel * 5) -> Molto più respiro
+        LogisticsCap = 5 + (LogisticsLevel * 5) + LogisticsResearchBonus; 
+        
+        // Storage: formula leggermente potenziata
+        StorageCap = 500 + (LogisticsLevel * 100) + StorageResearchBonus;
+    }
+
+    // ----------------------------------------------------------------------
+    
     public void PerformQuantumReset()
     {
-        // 1. Usiamo la stessa funzione helper per coerenza
         BigDouble nodesToGain = CalculatePotentialNodes();
 
         if (nodesToGain <= 0) 
@@ -146,14 +185,11 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        // 2. Aggiungi ai nodi permanenti
         ScientificNodes += nodesToGain;
         Debug.Log($"<color=cyan>RESET ESEGUITO! Guadagnati {nodesToGain} nodi. Totale: {ScientificNodes}</color>");
 
-        // 3. Resetta lo stato della partita (Energia, Edifici, Ricerche)
         InitializeGameState(); 
 
-        // 4. Resetta le ricerche nel manager
         if (targetResearchManager != null)
         {
             foreach(var res in targetResearchManager.allResearches)
@@ -163,15 +199,10 @@ public class GameManager : MonoBehaviour
             targetResearchManager.RecalculateAllResearches();
         }
 
-        // 5. SALVA SUBITO
-        // Questo sovrascrive il file: avrai Energia 0 ma Nodi Alti.
         SaveGame(); 
-        
-        // 6. Aggiorna la grafica
         OnEconomyUpdated?.Invoke();
     }
 
-    // Resetta solo le variabili della "Run", non i Nodi
     private void InitializeGameState()
     {
         CurrentEnergy = 0;
@@ -182,29 +213,24 @@ public class GameManager : MonoBehaviour
         ResearchMultiplier = 1;
         LogisticsResearchBonus = 0;
         StorageResearchBonus = 0;
+        
+        EmitterAutoGrowthSpeed = 0;
+        _emitterAccumulator = 0;
 
         RecalculateCaps();
     }
 
-    // ----------------------------------------------------------------------
-    // --- SISTEMA DI SALVATAGGIO UNIFICATO ---
-    // ----------------------------------------------------------------------
-    
+    // --- SALVATAGGIO (Invariato) ---
     public void SaveGame()
     {
         SaveData data = new SaveData();
-
-        // 1. Dati Run Corrente
         data.currentEnergy = CurrentEnergy.ToString();
         data.lifetimeEarnings = LifetimeEarnings.ToString();
         data.emitterCount = EmitterCount;
         data.logisticsLevel = LogisticsLevel;
         data.lastSaveTime = DateTime.Now.ToString(); 
-
-        // 2. Dati Permanenti (IMPORTANTE!)
         data.scientificNodes = ScientificNodes.ToString();
 
-        // 3. Ricerche
         if (targetResearchManager != null)
         {
             foreach (var item in targetResearchManager.allResearches)
@@ -219,7 +245,6 @@ public class GameManager : MonoBehaviour
                 }
             }
         }
-
         SaveManager.Save(data);
     }
 
@@ -229,30 +254,24 @@ public class GameManager : MonoBehaviour
 
         if (data == null) 
         {
-            // Se non c'è salvataggio, inizia da zero
             InitializeGameState();
             ScientificNodes = 0;
             return; 
         }
 
-        // 1. Ripristino Valuta Run
         if (!string.IsNullOrEmpty(data.currentEnergy)) CurrentEnergy = BigDouble.Parse(data.currentEnergy);
         if (!string.IsNullOrEmpty(data.lifetimeEarnings)) LifetimeEarnings = BigDouble.Parse(data.lifetimeEarnings);
 
-        // 2. Ripristino Edifici Run
         EmitterCount = data.emitterCount > 0 ? data.emitterCount : 1;
         LogisticsLevel = data.logisticsLevel > 0 ? data.logisticsLevel : 1;
 
-        // 3. Ripristino Dati Permanenti (NODI)
         if (!string.IsNullOrEmpty(data.scientificNodes))
             ScientificNodes = BigDouble.Parse(data.scientificNodes);
         else
             ScientificNodes = 0;
 
-        // 4. Ripristino Ricerche
         if (targetResearchManager != null)
         {
-            // Reset preventivo livelli
             foreach(var r in targetResearchManager.allResearches) r.currentLevel = 0;
 
             if (data.researches != null)
@@ -268,7 +287,6 @@ public class GameManager : MonoBehaviour
 
         RecalculateCaps();
 
-        // 5. Offline
         if (!string.IsNullOrEmpty(data.lastSaveTime))
         {
             HandleOfflineProgress(data.lastSaveTime);
@@ -298,9 +316,25 @@ public class GameManager : MonoBehaviour
                 CurrentEnergy += actualEarnings;
                 LifetimeEarnings += actualEarnings;
                 LastOfflineEarnings = actualEarnings;
-                LastOfflineTimeSpan = timeAway;
-                OnOfflineProductionCalculated?.Invoke();
             }
+
+            if (EmitterAutoGrowthSpeed > 0)
+            {
+                double rawGrowth = EmitterAutoGrowthSpeed * secondsAway * offlineProductionRatio;
+                int emittersGained = (int)rawGrowth;
+                double decimalRemainder = rawGrowth - emittersGained;
+
+                if (emittersGained > 0)
+                {
+                    EmitterCount += emittersGained;
+                    _emitterAccumulator += decimalRemainder;
+                    RecalculateCaps(); 
+                    Debug.Log($"Offline Growth: gained {emittersGained} emitters");
+                }
+            }
+
+            LastOfflineTimeSpan = timeAway;
+            OnOfflineProductionCalculated?.Invoke();
         }
     }
 
@@ -338,12 +372,6 @@ public class GameManager : MonoBehaviour
     {
         if (CurrentEnergy >= amount) { CurrentEnergy -= amount; return true; }
         return false;
-    }
-
-    public void RecalculateCaps()
-    {
-        LogisticsCap = 2 + (LogisticsLevel * 1.5) + LogisticsResearchBonus; 
-        StorageCap = 500 + (LogisticsLevel * 50) + StorageResearchBonus;
     }
 
     public void UpdateCapsFromResearch() { RecalculateCaps(); OnEconomyUpdated?.Invoke(); }

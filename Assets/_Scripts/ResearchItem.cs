@@ -8,7 +8,6 @@ public enum ResearchType
     Unlock           // Sblocca funzionalità
 }
 
-// Qui ho aggiunto tutte le definizioni che l'Initializer potrebbe cercare
 public enum ResearchTarget
 {
     GlobalProduction,    // Produzione totale
@@ -17,13 +16,16 @@ public enum ResearchTarget
     HabitatProduction,   // Variante per compatibilità
     
     Logistics,           // Nome generico Logistica
-    LogisticsCapacity,   // QUELLO CHE CERCAVA L'ERRORE CS0117
+    LogisticsCapacity,   // Capacità Logistica
     
     Storage,             // Nome generico Storage
-    StorageCapacity,     // Variante per compatibilità
+    StorageCapacity,     // Capacità Storage
     
     ClickPower,          // Potenza Click
-    ClickMultiplier      // Variante Click
+    ClickMultiplier,     // Variante Click
+
+    // --- NUOVO ---
+    EmitterProductionSpeed  // Aumenta la velocità di autogenerazione Emettitori (es. +0.1/sec)
 }
 
 [System.Serializable]
@@ -32,14 +34,14 @@ public class ResearchItem
     [Header("Identificativi")]
     public string id;              
     public string title;            
-    [TextArea] public string description;       
+    [TextArea] public string description;        
     public Sprite icon;             
     
     [Header("Configurazione Effetto")]
-    public ResearchType type;       
-    public ResearchTarget target;   
+    public ResearchType type;        
+    public ResearchTarget target;    
     
-    public double bonusValue;       
+    public double bonusValue;        
 
     [Header("Economia")]
     public BigDouble baseCost;      
