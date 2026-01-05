@@ -10,32 +10,23 @@ public enum ResearchType
 
 public enum ResearchTarget
 {
-    GlobalProduction,    // Produzione totale
-    
-    Emitter,             // Nome generico Generatore
-    HabitatProduction,   // Variante per compatibilità
-    
-    Logistics,           // Nome generico Logistica
-    LogisticsCapacity,   // Capacità Logistica
-    
-    Storage,             // Nome generico Storage
-    StorageCapacity,     // Capacità Storage
-    
-    ClickPower,          // Potenza Click
-    ClickMultiplier,     // Variante Click
-
-    // --- NUOVO ---
-    EmitterProductionSpeed  // Aumenta la velocità di autogenerazione Emettitori (es. +0.1/sec)
+    GlobalProduction,
+    Emitter,                // (Non usato in questa lista, ma tienilo)
+    LogisticsCapacity,      // Usato
+    StorageCapacity,        // Usato
+    ClickPower,             // NUOVO
+    EmitterProductionSpeed, // NUOVO
+    EmitterMaxCap           // AGGIUNTO: Fondamentale per far compilare il codice
 }
 
 [System.Serializable]
 public class ResearchItem
 {
     [Header("Identificativi")]
-    public string id;              
+    public string id;               
     public string title;            
     [TextArea] public string description;        
-    public Sprite icon;             
+    public Sprite icon;              
     
     [Header("Configurazione Effetto")]
     public ResearchType type;        
@@ -44,7 +35,7 @@ public class ResearchItem
     public double bonusValue;        
 
     [Header("Economia")]
-    public BigDouble baseCost;      
+    public BigDouble baseCost;       
     public double costGrowth = 1.50d;
 
     [Header("Progresso")]

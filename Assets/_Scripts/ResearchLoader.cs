@@ -6,11 +6,9 @@ public class ResearchLoader : MonoBehaviour
 {
     public ResearchManager researchManager; 
 
-    // Esegui questo metodo facendo clic destro sul componente nell'Inspector!
     [ContextMenu("Populate Full Research List")]
     public void PopulateResearches()
     {
-        // Se non è collegato, cerchiamolo usando il NUOVO comando (fix warning CS0618)
         if (researchManager == null) 
             researchManager = GetComponent<ResearchManager>() ?? FindFirstObjectByType<ResearchManager>();
             
@@ -20,26 +18,36 @@ public class ResearchLoader : MonoBehaviour
             return;
         }
         
-        // Pulisci la lista esistente per evitare duplicati
         researchManager.allResearches = new List<ResearchItem>();
 
         // --- TIER 1: BASE (Tecnologia Terrestre) ---
         
-        CreateResearch("t1_cable", "Cavi in Rame", "Aumenta capacità logistica (+5).", 
-            10, 50, 1.15f, ResearchTarget.LogisticsCapacity, ResearchType.Additive, 5);
+        // 1. ESPANSIONE HABITAT (Fondamentale ora che il Cap iniziale è 1)
+        CreateResearch("habitat_1", 
+            "Espansione Habitat", 
+            "Aumenta il numero massimo di emettitori (+1).", 
+            25, 
+            10, 
+            1.5f, 
+            ResearchTarget.EmitterMaxCap, 
+            ResearchType.Additive, 
+            1 // +1 Slot per livello
+        );
 
-        // ESEMPIO: Nanobot (Livello 1 = +0.1 emettitori al secondo)
-        // Significa che ogni 10 secondi ottieni un Emettitore gratis.
+        // 2. NANOBOT (Velocità Produzione)
         CreateResearch("auto_emit_1", 
             "Nanobot Assemblatori", 
             "Produzione automatica Emettitori (+0.1/s).", 
-            50,           // Costo Base
-            10,             // Livelli Max
-            1.5f,           // Crescita Costo
-            ResearchTarget.EmitterProductionSpeed, // <--- IL NOSTRO NUOVO TARGET
+            50, 
+            10, 
+            1.5f, 
+            ResearchTarget.EmitterProductionSpeed, 
             ResearchType.Additive, 
-            0.1             // <--- Valore da aggiungere alla velocità
+            0.1 
         );
+        
+        CreateResearch("t1_cable", "Cavi in Rame", "Aumenta capacità logistica (+5).", 
+            10, 50, 1.15f, ResearchTarget.LogisticsCapacity, ResearchType.Additive, 5);
 
         CreateResearch("t1_batt", "Condensatori", "Aumenta stoccaggio base (+50).", 
             15, 20, 1.20f, ResearchTarget.StorageCapacity, ResearchType.Additive, 50);
@@ -77,8 +85,6 @@ public class ResearchLoader : MonoBehaviour
 
         CreateResearch("t2_smart", "Griglia Smart", "Moltiplicatore Efficienza (+5%).", 
             t2 * 10, 10, 2.0f, ResearchTarget.GlobalProduction, ResearchType.Multiplier, 0.05);
-
-        // ... puoi aggiungere il resto se ti serve, ma questo è sufficiente per partire ...
         
         Debug.Log("<color=green>DATABASE RICERCHE GENERATO:</color> Importati " + researchManager.allResearches.Count + " elementi.");
     }

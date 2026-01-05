@@ -44,7 +44,7 @@ public class ResearchSlotUI : MonoBehaviour
         bool isMaxed = _myData.IsMaxed();
         bool canAfford = GameManager.Instance.CurrentEnergy >= cost;
 
-        // 1. GESTIONE TESTO COSTO (La tua modifica)
+        // 1. GESTIONE TESTO COSTO
         if (costText != null) 
         {
             if (isMaxed)
@@ -56,22 +56,18 @@ public class ResearchSlotUI : MonoBehaviour
             {
                 costText.text = cost.ToString("F0") + " Energy";
 
-                // --- NUOVA LOGICA COLORI TESTO ---
                 if (canAfford)
                 {
-                    // Se ho i soldi (Sfondo Verde) -> Testo Nero
                     costText.color = Color.black;
                 }
                 else
                 {
-                    // Se non ho i soldi (Sfondo Scuro) -> Testo Grigio Chiaro
-                    // (0.8f è un grigio molto chiaro, quasi bianco ma spento)
                     costText.color = new Color(0.4f, 0.4f, 0.4f, 1f);
                 }
             }
         }
         
-        // 2. GESTIONE SFONDO BOTTONE (Manteniamo la logica precedente)
+        // 2. GESTIONE SFONDO BOTTONE
         if (buyButton != null)
         {
             bool isInteractable = !isMaxed && canAfford;
@@ -87,12 +83,10 @@ public class ResearchSlotUI : MonoBehaviour
                 }
                 else if (canAfford)
                 {
-                    // Sfondo Verde del tema
                     btnBg.color = GameManager.Instance.activeTheme.primaryAction;
                 }
                 else
                 {
-                    // Sfondo Grigio Scuro
                     btnBg.color = new Color(0.25f, 0.25f, 0.25f, 1f); 
                 }
             }
@@ -113,20 +107,4 @@ public class ResearchSlotUI : MonoBehaviour
             levelText.text = $"Level <color=white>{_myData.currentLevel}</color>/{_myData.maxLevel}";
         }
     }
-
-    #if UNITY_EDITOR
-    private void OnValidate()
-    {
-        if (levelText != null)
-        {
-            levelText.textWrappingMode = TextWrappingModes.NoWrap;
-            levelText.overflowMode = TextOverflowModes.Ellipsis;
-            if (string.IsNullOrEmpty(levelText.text) || levelText.text == "Level")
-            {
-                levelText.text = "Level 0/0";
-                UnityEditor.EditorUtility.SetDirty(levelText);
-            }
-        }
-    }
-    #endif
 }

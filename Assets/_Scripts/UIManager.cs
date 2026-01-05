@@ -7,30 +7,25 @@ using BreakInfinity;
 public class UIManager : MonoBehaviour
 {
     [Header("Top HUD")]
-    public TextMeshProUGUI scoreText;             
-    public TextMeshProUGUI incomeText;            
+    public TextMeshProUGUI scoreText;              
+    public TextMeshProUGUI incomeText;             
     public TextMeshProUGUI logisticsStatusText; 
     public TextMeshProUGUI storageText; 
 
     [Header("Bottom Deck")]
     public GameObject mainEnergyButtonObj; 
-    public Button buyEmitterButton; 
-    public Button buyLogisticsButton;             
     
     [Header("RESET QUANTISTICO")]
     public Button prestigeButton;
     public TextMeshProUGUI prestigeInfoText; 
 
-    [Header("OPTIONS MENU")] // <--- NUOVA SEZIONE AGGIUNTA
-    public Button optionsButton;              // Il bottone ingranaggio nella UI
-    public OptionsMenu optionsMenuController; // Riferimento allo script del Popup Opzioni
+    [Header("OPTIONS MENU")]
+    public Button optionsButton;               
+    public OptionsMenu optionsMenuController;
 
     [Header("Visual Feedback")]
-    public Image logisticsButtonImage;             
     public Color normalColor = Color.white;        
     public Color warningColor = new Color(1f, 0.3f, 0.3f); 
-    public TextMeshProUGUI emitterCostText;
-    public TextMeshProUGUI logisticsCostText;
 
     private GameManager gm;
 
@@ -39,17 +34,12 @@ public class UIManager : MonoBehaviour
         gm = GameManager.Instance;
         if (gm != null)
         {
-            // Iscrizione all'evento di aggiornamento economia
             gm.OnEconomyUpdated += RefreshUI;
-            
-            // Setup Bottoni Acquisto
-            if(buyEmitterButton) buyEmitterButton.onClick.AddListener(gm.BuyEmitter);
-            if(buyLogisticsButton) buyLogisticsButton.onClick.AddListener(gm.BuyLogistics);
             
             // Setup Bottone PRESTIGIO
             if(prestigeButton) prestigeButton.onClick.AddListener(gm.PerformQuantumReset);
 
-            // Setup Bottone OPZIONI (NUOVO)
+            // Setup Bottone OPZIONI
             if (optionsButton != null && optionsMenuController != null)
             {
                 optionsButton.onClick.AddListener(optionsMenuController.ToggleMenu);
@@ -95,22 +85,27 @@ public class UIManager : MonoBehaviour
         if (storageText) storageText.text = $"Max Cap: {FormatNumber(gm.StorageCap)}";
         if (incomeText) incomeText.text = $"+{FormatNumber(gm.EffectiveIncomePerSec)}/s";
 
-        // 2. LOGISTICA
+        // 2. LOGISTICA E EMETTITORI (Nuovo Display)
         if (logisticsStatusText)
-            logisticsStatusText.text = $"Prod: {FormatNumber(gm.RawProductionRate)} | Log: {FormatNumber(gm.LogisticsCap)}";
+        {
+            // Mostra: Units: 1 / 1 (MAX)
+            string emitterString = $"Units: {gm.EmitterCount} / {gm.EmitterCap}";
+            
+            // Se siamo pieni, colora di rosso
+            if (gm.EmitterCount >= gm.EmitterCap)
+            {
+                emitterString = $"<color=red>{emitterString} (MAX)</color>";
+            }
 
-        // 3. COSTI BOTTONI
-        if (emitterCostText) emitterCostText.text = "Emitter: " + FormatNumber(gm.GetEmitterCost());
-        if (logisticsCostText) logisticsCostText.text = "Logistics: " + FormatNumber(gm.GetLogisticsCost());
-        
-        // 4. RESET QUANTISTICO
+            logisticsStatusText.text = $"{emitterString}\nProd: {FormatNumber(gm.RawProductionRate)} | Log Cap: {FormatNumber(gm.LogisticsCap)}";
+        }
+
+        // 3. RESET QUANTISTICO
         if (prestigeInfoText)
         {
             BigDouble potentialNodes = gm.CalculatePotentialNodes();
-            // Mostra anche quanti ne hai già accumulati
             prestigeInfoText.text = $"RESET (Current: {gm.ScientificNodes})\nGain: <color=#00FFFF>+{FormatNumber(potentialNodes)} Nodes</color>";
             
-            // Opzionale: Disabilita il tasto se guadagni 0
             if (prestigeButton) prestigeButton.interactable = potentialNodes > 0;
         }
 
@@ -124,8 +119,6 @@ public class UIManager : MonoBehaviour
         Color targetColor = isBottleneck ? warningColor : normalColor;
 
         if(incomeText) incomeText.color = targetColor;
-        if(logisticsStatusText) logisticsStatusText.color = targetColor;
-        if(logisticsButtonImage) logisticsButtonImage.color = targetColor;
     }
 
     private string FormatNumber(BigDouble number)

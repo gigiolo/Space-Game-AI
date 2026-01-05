@@ -1,28 +1,28 @@
 using System;
-using System.Collections.Generic; // Fondamentale per le Liste
+using System.Collections.Generic; 
 
 [Serializable]
 public class SaveData
 {
-    // --- INFO GENERALI ---
     public string lastSaveTime;
 
-    // --- ECONOMIA DELLA RUN CORRENTE ---
+    // ECONOMIA
     public string currentEnergy;
     public string lifetimeEarnings;
     public int emitterCount;
     public int logisticsLevel;
     
-    // --- RICERCHE ---
-    // Questa lista usa la classe definita qui sotto (ResearchSaveData)
+    // RICERCHE
     public List<ResearchSaveData> researches = new List<ResearchSaveData>();
     
-    // --- DATI PERMANENTI (RESET QUANTISTICO) ---
+    // PERMANENTI
     public string scientificNodes; 
     public string totalLifetimeEarnings;
+
+    // VISUALS
+    public List<string> cityLightPositions = new List<string>();
 }
 
-// QUESTA È LA CLASSE CHE TI MANCAVA:
 [Serializable]
 public class ResearchSaveData
 {

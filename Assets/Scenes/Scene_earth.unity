@@ -157,17 +157,12 @@ MonoBehaviour:
   logisticsStatusText: {fileID: 0}
   storageText: {fileID: 0}
   mainEnergyButtonObj: {fileID: 0}
-  buyEmitterButton: {fileID: 0}
-  buyLogisticsButton: {fileID: 0}
   prestigeButton: {fileID: 0}
   prestigeInfoText: {fileID: 0}
   optionsButton: {fileID: 0}
   optionsMenuController: {fileID: 0}
-  logisticsButtonImage: {fileID: 0}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   warningColor: {r: 1, g: 0.3, b: 0.3, a: 1}
-  emitterCostText: {fileID: 0}
-  logisticsCostText: {fileID: 0}
 --- !u!114 &301704
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1626,17 +1621,12 @@ MonoBehaviour:
   logisticsStatusText: {fileID: 0}
   storageText: {fileID: 0}
   mainEnergyButtonObj: {fileID: 0}
-  buyEmitterButton: {fileID: 0}
-  buyLogisticsButton: {fileID: 0}
   prestigeButton: {fileID: 0}
   prestigeInfoText: {fileID: 0}
   optionsButton: {fileID: 0}
   optionsMenuController: {fileID: 0}
-  logisticsButtonImage: {fileID: 0}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   warningColor: {r: 1, g: 0.3, b: 0.3, a: 1}
-  emitterCostText: {fileID: 0}
-  logisticsCostText: {fileID: 0}
 --- !u!222 &726410777
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2383,6 +2373,8 @@ MonoBehaviour:
   surfaceRadius: 0.501
   baseLightSize: 0.0125
   maxLights: 2000
+  clusterSpread: 0.1
+  newHubChance: 0.05
   sunLight: {fileID: 126104936}
 --- !u!199 &1058039599
 ParticleSystemRenderer:
@@ -7414,14 +7406,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   targetResearchManager: {fileID: 1818984353}
   activeTheme: {fileID: 11400000, guid: 7832233842c08554aae84a0638c359d0, type: 2}
-  emitterBaseCost:
-    mantissa: 1
-    exponent: 1
-  emitterGrowth: 1.15
-  logisticsBaseCost:
-    mantissa: 1.5
-    exponent: 16
-  logisticsGrowth: 1.25
+  planetVisuals: {fileID: 1058039598}
   holdButtonMultiplier:
     mantissa: 2
     exponent: 0
@@ -7459,17 +7444,12 @@ MonoBehaviour:
   logisticsStatusText: {fileID: 726410775}
   storageText: {fileID: 1681258678}
   mainEnergyButtonObj: {fileID: 1834870916}
-  buyEmitterButton: {fileID: 0}
-  buyLogisticsButton: {fileID: 424529443}
   prestigeButton: {fileID: 191445055}
   prestigeInfoText: {fileID: 853513984}
   optionsButton: {fileID: 549588329}
   optionsMenuController: {fileID: 37713273}
-  logisticsButtonImage: {fileID: 0}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   warningColor: {r: 1, g: 0.3, b: 0.3, a: 1}
-  emitterCostText: {fileID: 0}
-  logisticsCostText: {fileID: 0}
 --- !u!224 &1539593078 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 1213254854913591476, guid: 71b65e0788a2e8243a79cc35f60c80e7, type: 3}
@@ -8225,17 +8205,12 @@ MonoBehaviour:
   logisticsStatusText: {fileID: 0}
   storageText: {fileID: 0}
   mainEnergyButtonObj: {fileID: 0}
-  buyEmitterButton: {fileID: 0}
-  buyLogisticsButton: {fileID: 0}
   prestigeButton: {fileID: 0}
   prestigeInfoText: {fileID: 0}
   optionsButton: {fileID: 0}
   optionsMenuController: {fileID: 0}
-  logisticsButtonImage: {fileID: 0}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   warningColor: {r: 1, g: 0.3, b: 0.3, a: 1}
-  emitterCostText: {fileID: 0}
-  logisticsCostText: {fileID: 0}
 --- !u!222 &1990969313
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -8432,17 +8407,12 @@ MonoBehaviour:
   logisticsStatusText: {fileID: 0}
   storageText: {fileID: 0}
   mainEnergyButtonObj: {fileID: 0}
-  buyEmitterButton: {fileID: 0}
-  buyLogisticsButton: {fileID: 0}
   prestigeButton: {fileID: 0}
   prestigeInfoText: {fileID: 0}
   optionsButton: {fileID: 0}
   optionsMenuController: {fileID: 0}
-  logisticsButtonImage: {fileID: 0}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   warningColor: {r: 1, g: 0.3, b: 0.3, a: 1}
-  emitterCostText: {fileID: 0}
-  logisticsCostText: {fileID: 0}
 --- !u!114 &2022683264
 MonoBehaviour:
   m_ObjectHideFlags: 0

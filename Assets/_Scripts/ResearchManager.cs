@@ -50,31 +50,10 @@ public class ResearchManager : MonoBehaviour
         if (GameManager.Instance.TrySpend(cost))
         {
             item.currentLevel++;
-            // Applichiamo l'effetto incrementale (solo per questo livello)
-            ApplySingleLevelEffect(item); 
-            
-            GameManager.Instance.UpdateCapsFromResearch();
-            UpdateAllSlots(); 
-        }
-    }
 
-    // Usato quando compri UN livello (aggiunge solo il bonus di quel livello)
-    void ApplySingleLevelEffect(ResearchItem item)
-    {
-        if (item.target == ResearchTarget.GlobalProduction && item.type == ResearchType.Multiplier)
-        {
-            GameManager.Instance.ResearchMultiplier *= (1 + item.bonusValue);
-        }
-        else if (item.type == ResearchType.Additive)
-        {
-            if (item.target == ResearchTarget.LogisticsCapacity)
-                GameManager.Instance.LogisticsResearchBonus += item.bonusValue;
-            else if (item.target == ResearchTarget.StorageCapacity)
-                GameManager.Instance.StorageResearchBonus += item.bonusValue;
-            
-            // --- NUOVO: Aggiungi velocità quando compri un livello ---
-            else if (item.target == ResearchTarget.EmitterProductionSpeed)
-                GameManager.Instance.EmitterAutoGrowthSpeed += item.bonusValue;
+            // FIX DRY: Invece di applicare un effetto singolo, ricalcoliamo tutto.
+            // Questo assicura che matematica e UI siano sempre sincronizzati.
+            RecalculateAllResearches(); 
         }
     }
 
@@ -94,16 +73,17 @@ public class ResearchManager : MonoBehaviour
         if(menuPanel.activeSelf) UpdateAllSlots();
     }
 
-    // --- LOGICA DI RICALCOLO (CHIAMATA DAL LOADGAME) ---
+    // --- LOGICA DI RICALCOLO TOTALE ---
     public void RecalculateAllResearches()
     {
+        if (GameManager.Instance == null) return;
+
         // 1. Resetta TUTTI i bonus nel GameManager a zero/base
         GameManager.Instance.ResearchMultiplier = 1;
         GameManager.Instance.LogisticsResearchBonus = 0;
         GameManager.Instance.StorageResearchBonus = 0;
-        
-        // --- NUOVO: Resetta la velocità prima di ricalcolarla dai livelli salvati ---
         GameManager.Instance.EmitterAutoGrowthSpeed = 0;
+        GameManager.Instance.EmitterCapResearchBonus = 0; 
         
         // 2. Ricalcola basandosi sul livello attuale di ogni ricerca
         foreach (var item in allResearches)
@@ -114,8 +94,8 @@ public class ResearchManager : MonoBehaviour
             }
         }
         
-        // 3. Aggiorna UI e Caps
-        GameManager.Instance.ForceUIUpdate();
+        // 3. FONDAMENTALE: Aggiorna Caps e UI nel GameManager
+        GameManager.Instance.UpdateCapsFromResearch();
         UpdateAllSlots();
     }
 
@@ -129,25 +109,23 @@ public class ResearchManager : MonoBehaviour
             GameManager.Instance.ResearchMultiplier *= totalMult;
         }
 
-        // B. ADDITIVI (Logistica / Storage / Velocità Emettitori)
+        // B. ADDITIVI
         else if (item.type == ResearchType.Additive)
         {
             // Formula: Bonus * Livello
             double totalAdditive = item.bonusValue * item.currentLevel;
 
             if (item.target == ResearchTarget.LogisticsCapacity)
-            {
                 GameManager.Instance.LogisticsResearchBonus += totalAdditive;
-            }
+            
             else if (item.target == ResearchTarget.StorageCapacity)
-            {
                 GameManager.Instance.StorageResearchBonus += totalAdditive;
-            }
-            // --- NUOVO: Ricalcolo velocità totale ---
+            
             else if (item.target == ResearchTarget.EmitterProductionSpeed)
-            {
                 GameManager.Instance.EmitterAutoGrowthSpeed += totalAdditive;
-            }
+                
+            else if (item.target == ResearchTarget.EmitterMaxCap)
+                GameManager.Instance.EmitterCapResearchBonus += (int)totalAdditive;
         }
     }
 }

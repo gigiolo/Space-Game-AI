@@ -3,12 +3,8 @@ using System.IO;
 
 public static class SaveManager
 {
-    // Nome del file di salvataggio
     private static string fileName = "savegame.json";
 
-    /// <summary>
-    /// Salva i dati passati su disco.
-    /// </summary>
     public static void Save(SaveData data)
     {
         try
@@ -16,8 +12,6 @@ public static class SaveManager
             string json = JsonUtility.ToJson(data, true); 
             string path = Path.Combine(Application.persistentDataPath, fileName);
             File.WriteAllText(path, json);
-
-            // Debug.Log($"Salvataggio riuscito in: {path}"); // Decommenta se vuoi vedere il percorso
         }
         catch (System.Exception e)
         {
@@ -25,9 +19,6 @@ public static class SaveManager
         }
     }
 
-    /// <summary>
-    /// Carica i dati dal disco.
-    /// </summary>
     public static SaveData Load()
     {
         string path = Path.Combine(Application.persistentDataPath, fileName);
@@ -52,9 +43,6 @@ public static class SaveManager
         }
     }
 
-    /// <summary>
-    /// Cancella il file di salvataggio.
-    /// </summary>
     public static void DeleteSaveFile()
     {
         string path = Path.Combine(Application.persistentDataPath, fileName);
