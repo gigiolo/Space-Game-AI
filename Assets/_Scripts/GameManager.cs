@@ -192,11 +192,12 @@ public class GameManager : MonoBehaviour
         // Reset Ricerche
         if (targetResearchManager != null)
         {
+            // Reset livelli a 0
             foreach(var res in targetResearchManager.allResearches)
             {
                 res.currentLevel = 0;
             }
-            // Qui il recalculate resetterà tutti i bonus a 0
+            // Ricalcola per azzerare i bonus
             targetResearchManager.RecalculateAllResearches();
         }
 
@@ -231,7 +232,6 @@ public class GameManager : MonoBehaviour
         data.emitterCount = EmitterCount;
         data.logisticsLevel = LogisticsLevel;
         
-        // FIX: Uso ToBinary per evitare problemi di formattazione data tra nazioni diverse
         data.lastSaveTime = DateTime.UtcNow.ToBinary().ToString(); 
         
         data.scientificNodes = ScientificNodes.ToString();
@@ -261,8 +261,10 @@ public class GameManager : MonoBehaviour
 
     public void LoadGame()
     {
+        // 1. Carichiamo i dati dal disco
         SaveData data = SaveManager.Load();
 
+        // 2. Se non esistono dati, resettiamo tutto e usciamo
         if (data == null) 
         {
             InitializeGameState();
@@ -270,6 +272,7 @@ public class GameManager : MonoBehaviour
             return; 
         }
 
+        // 3. Applichiamo i dati salvati
         if (!string.IsNullOrEmpty(data.currentEnergy)) CurrentEnergy = BigDouble.Parse(data.currentEnergy);
         if (!string.IsNullOrEmpty(data.lifetimeEarnings)) LifetimeEarnings = BigDouble.Parse(data.lifetimeEarnings);
 
@@ -281,23 +284,14 @@ public class GameManager : MonoBehaviour
         else
             ScientificNodes = 0;
 
+        // --- CARICAMENTO NUOVO SISTEMA RICERCHE ---
+        // Qui usiamo la variabile 'data' che abbiamo definito all'inizio
         if (targetResearchManager != null)
         {
-            foreach(var r in targetResearchManager.allResearches) r.currentLevel = 0;
-
-            if (data.researches != null)
-            {
-                foreach (var savedRes in data.researches)
-                {
-                    var item = targetResearchManager.allResearches.Find(r => r.id == savedRes.id);
-                    if (item != null) item.currentLevel = savedRes.level;
-                }
-            }
-            // Questo applica i bonus corretti basati sui livelli caricati
-            targetResearchManager.RecalculateAllResearches();
+            targetResearchManager.LoadResearchLevels(data.researches);
         }
 
-        // Caricamento Posizioni Luci (planetVisuals gestirà la pulizia)
+        // Caricamento Posizioni Luci
         if (planetVisuals != null && data.cityLightPositions != null)
         {
             planetVisuals.LoadEncodedPositions(data.cityLightPositions);
@@ -305,6 +299,7 @@ public class GameManager : MonoBehaviour
 
         RecalculateCaps();
 
+        // Gestione tempo offline
         if (!string.IsNullOrEmpty(data.lastSaveTime))
         {
             HandleOfflineProgress(data.lastSaveTime);
@@ -319,7 +314,6 @@ public class GameManager : MonoBehaviour
 
         DateTime lastSaveTime;
         
-        // FIX: Provo a parsare come Binary (nuovo metodo), se fallisce provo il vecchio metodo (retrocompatibilità)
         try 
         {
             long binaryDate = long.Parse(lastSaveTimeStr);
@@ -327,16 +321,11 @@ public class GameManager : MonoBehaviour
         }
         catch 
         {
-            // Fallback per vecchi salvataggi
             if (!DateTime.TryParse(lastSaveTimeStr, out lastSaveTime)) return;
         }
 
-        // Nota: Se usiamo UtcNow nel Save, usiamo UtcNow anche qui
         TimeSpan timeAway = DateTime.UtcNow - lastSaveTime;
-        
-        // Se la data caricata era locale (vecchio save), il calcolo potrebbe essere sballato di qualche ora, 
-        // ma si risolverà al prossimo salvataggio.
-        if (timeAway.TotalSeconds < 0) timeAway = DateTime.Now - lastSaveTime; // Fallback locale
+        if (timeAway.TotalSeconds < 0) timeAway = DateTime.Now - lastSaveTime; 
 
         double secondsAway = timeAway.TotalSeconds;
 

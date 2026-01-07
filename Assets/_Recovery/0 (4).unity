@@ -1449,7 +1449,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1109117509}
+      - m_Target: {fileID: 1818984353}
         m_TargetAssemblyTypeName: ResearchManager, Assembly-CSharp
         m_MethodName: ToggleMenu
         m_Mode: 1
@@ -7286,6 +7286,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1109117510}
   - component: {fileID: 1109117509}
+  - component: {fileID: 1109117508}
   m_Layer: 0
   m_Name: ResearchSystem
   m_TagString: Untagged
@@ -7293,6 +7294,19 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &1109117508
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1109117507}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b12c02d59ed84b4ab7eef3f83b5bb0c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ResearchUIGenerator
+  researchManager: {fileID: 1818984353}
 --- !u!114 &1109117509
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7308,8 +7322,6 @@ MonoBehaviour:
   menuPanel: {fileID: 7416067575548010061}
   listContent: {fileID: 1539593078}
   slotPrefab: {fileID: 5758632673340810765, guid: b4c5929c2a1bb934aba5b0d9967230c4, type: 3}
-  researchDatabase:
-  - {fileID: 11400000, guid: 1bae1678004f92142bcd44c79b15ccd3, type: 2}
   allResearches: []
 --- !u!4 &1109117510
 Transform:
@@ -7577,7 +7589,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 17c09069550dad846ba312412538ad20, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  targetResearchManager: {fileID: 1109117509}
+  targetResearchManager: {fileID: 1818984353}
   activeTheme: {fileID: 11400000, guid: 7832233842c08554aae84a0638c359d0, type: 2}
   planetVisuals: {fileID: 1058039598}
   holdButtonMultiplier:
@@ -7903,6 +7915,250 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!1 &1818984352
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1818984354}
+  - component: {fileID: 1818984353}
+  - component: {fileID: 1818984355}
+  m_Layer: 0
+  m_Name: ResearchManager.cs
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1818984353
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1818984352}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 213f22a053a7c6b429f907077babddc9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ResearchManager
+  menuPanel: {fileID: 7416067575548010061}
+  listContent: {fileID: 1539593078}
+  slotPrefab: {fileID: 5758632673340810765, guid: b4c5929c2a1bb934aba5b0d9967230c4, type: 3}
+  allResearches:
+  - id: habitat_1
+    title: Espansione Habitat
+    description: Aumenta il numero massimo di emettitori (+1).
+    icon: {fileID: 0}
+    type: 1
+    target: 6
+    bonusValue: 1
+    baseCost:
+      mantissa: 2.5
+      exponent: 1
+    costGrowth: 1.5
+    currentLevel: 0
+    maxLevel: 10
+  - id: auto_emit_1
+    title: Nanobot Assemblatori
+    description: Produzione automatica Emettitori (+0.1/s).
+    icon: {fileID: 0}
+    type: 1
+    target: 5
+    bonusValue: 0.1
+    baseCost:
+      mantissa: 5
+      exponent: 1
+    costGrowth: 1.5
+    currentLevel: 0
+    maxLevel: 10
+  - id: t1_cable
+    title: Cavi in Rame
+    description: "Aumenta capacit\xE0 logistica (+5)."
+    icon: {fileID: 0}
+    type: 1
+    target: 2
+    bonusValue: 5
+    baseCost:
+      mantissa: 1
+      exponent: 1
+    costGrowth: 1.149999976158142
+    currentLevel: 0
+    maxLevel: 50
+  - id: t1_batt
+    title: Condensatori
+    description: Aumenta stoccaggio base (+50).
+    icon: {fileID: 0}
+    type: 1
+    target: 3
+    bonusValue: 50
+    baseCost:
+      mantissa: 1.5
+      exponent: 1
+    costGrowth: 1.2000000476837158
+    currentLevel: 0
+    maxLevel: 20
+  - id: t1_turb
+    title: Turbine Gas
+    description: Aumenta produzione base (+10%).
+    icon: {fileID: 0}
+    type: 0
+    target: 0
+    bonusValue: 0.1
+    baseCost:
+      mantissa: 2.5
+      exponent: 1
+    costGrowth: 1.1799999475479126
+    currentLevel: 0
+    maxLevel: 30
+  - id: t1_maint
+    title: Manutenzione
+    description: Ottimizza efficienza globale (+2%).
+    icon: {fileID: 0}
+    type: 0
+    target: 0
+    bonusValue: 0.02
+    baseCost:
+      mantissa: 5
+      exponent: 2
+    costGrowth: 1.5
+    currentLevel: 0
+    maxLevel: 10
+  - id: t1_iso
+    title: Isolamento Cavi
+    description: Riduce dispersione (+5 Cap).
+    icon: {fileID: 0}
+    type: 1
+    target: 2
+    bonusValue: 5
+    baseCost:
+      mantissa: 1.2
+      exponent: 2
+    costGrowth: 1.1399999856948853
+    currentLevel: 0
+    maxLevel: 50
+  - id: t1_litio
+    title: Batterie Litio
+    description: Accumulatori chimici (+200 Cap).
+    icon: {fileID: 0}
+    type: 1
+    target: 3
+    bonusValue: 200
+    baseCost:
+      mantissa: 2.5
+      exponent: 2
+    costGrowth: 1.159999966621399
+    currentLevel: 0
+    maxLevel: 30
+  - id: t1_soft
+    title: Software Rete
+    description: Gestione flussi migliorata (+8 Cap).
+    icon: {fileID: 0}
+    type: 1
+    target: 2
+    bonusValue: 8
+    baseCost:
+      mantissa: 3.5
+      exponent: 2
+    costGrowth: 1.25
+    currentLevel: 0
+    maxLevel: 20
+  - id: t1_solar
+    title: Pannelli Flex
+    description: Cattura luce residua (+15%).
+    icon: {fileID: 0}
+    type: 0
+    target: 0
+    bonusValue: 0.15
+    baseCost:
+      mantissa: 6
+      exponent: 2
+    costGrowth: 1.149999976158142
+    currentLevel: 0
+    maxLevel: 50
+  - id: t2_super
+    title: Superconduttori
+    description: Logistica a bassa resistenza (+10).
+    icon: {fileID: 0}
+    type: 1
+    target: 2
+    bonusValue: 10
+    baseCost:
+      mantissa: 5
+      exponent: 3
+    costGrowth: 1.149999976158142
+    currentLevel: 0
+    maxLevel: 50
+  - id: t2_solid
+    title: Stato Solido
+    description: Batterie dense (+1500).
+    icon: {fileID: 0}
+    type: 1
+    target: 3
+    bonusValue: 1500
+    baseCost:
+      mantissa: 7.5
+      exponent: 3
+    costGrowth: 1.1799999475479126
+    currentLevel: 0
+    maxLevel: 40
+  - id: t2_fiss
+    title: Reattori Modulari
+    description: Produzione nucleare (+25%).
+    icon: {fileID: 0}
+    type: 0
+    target: 0
+    bonusValue: 0.25
+    baseCost:
+      mantissa: 1.25
+      exponent: 4
+    costGrowth: 1.159999966621399
+    currentLevel: 0
+    maxLevel: 50
+  - id: t2_smart
+    title: Griglia Smart
+    description: Moltiplicatore Efficienza (+5%).
+    icon: {fileID: 0}
+    type: 0
+    target: 0
+    bonusValue: 0.05
+    baseCost:
+      mantissa: 5
+      exponent: 4
+    costGrowth: 2
+    currentLevel: 0
+    maxLevel: 10
+--- !u!4 &1818984354
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1818984352}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1818984355
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1818984352}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b12c02d59ed84b4ab7eef3f83b5bb0c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ResearchLoader
+  researchManager: {fileID: 1818984353}
 --- !u!1 &1834870916 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 991484556495085090, guid: d3cfd732c73ba3640b02cb996f9548ce, type: 3}
@@ -13915,7 +14171,7 @@ PrefabInstance:
     - target: {fileID: 1147762815394758455, guid: 71b65e0788a2e8243a79cc35f60c80e7, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 1109117509}
+      objectReference: {fileID: 1818984353}
     - target: {fileID: 1147762815394758455, guid: 71b65e0788a2e8243a79cc35f60c80e7, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
       value: ToggleMenu
@@ -14290,4 +14546,5 @@ SceneRoots:
   - {fileID: 1438791438}
   - {fileID: 583126336}
   - {fileID: 2136256925}
+  - {fileID: 1818984354}
   - {fileID: 1109117510}

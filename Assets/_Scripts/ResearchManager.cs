@@ -9,13 +9,21 @@ public class ResearchManager : MonoBehaviour
     public Transform listContent;        
     public ResearchSlotUI slotPrefab;    
 
-    [Header("Database")]
-    public List<ResearchItem> allResearches; 
+    [Header("Database (Trascina qui i file ricerca)")]
+    public List<ResearchDefinition> researchDatabase; 
+
+    [Header("Stato Runtime (Si riempie da solo)")]
+    public List<ResearchItem> allResearches;
 
     private void Start()
     {
         if(menuPanel) menuPanel.SetActive(false); 
-        InitializeResearches();
+        
+        // Inizializza se non è stato già fatto dal LoadGame
+        if (allResearches == null || allResearches.Count == 0)
+            InitializeDatabase();
+
+        InitializeUI();
         
         if(GameManager.Instance)
             GameManager.Instance.OnEconomyUpdated += UpdateAllSlots;
@@ -27,16 +35,49 @@ public class ResearchManager : MonoBehaviour
             GameManager.Instance.OnEconomyUpdated -= UpdateAllSlots;
     }
 
-    void InitializeResearches()
+    // Trasforma i file SO in oggetti di gioco
+    public void InitializeDatabase()
+    {
+        if (allResearches == null) allResearches = new List<ResearchItem>();
+
+        foreach (var def in researchDatabase)
+        {
+            // Evita duplicati se chiamiamo questa funzione più volte
+            if (!allResearches.Exists(r => r.id == def.id))
+            {
+                allResearches.Add(new ResearchItem(def));
+            }
+        }
+    }
+
+    // Chiamata dal GameManager quando carica il salvataggio
+    public void LoadResearchLevels(List<ResearchSaveData> savedData)
+    {
+        InitializeDatabase(); // Assicura che la lista esista
+        
+        // Reset a 0
+        foreach(var res in allResearches) res.currentLevel = 0;
+
+        // Applica salvataggi
+        if (savedData != null)
+        {
+            foreach (var saved in savedData)
+            {
+                var item = allResearches.Find(r => r.id == saved.id);
+                if (item != null) item.currentLevel = saved.level;
+            }
+        }
+        RecalculateAllResearches();
+    }
+
+    void InitializeUI()
     {
         foreach (Transform child in listContent) Destroy(child.gameObject);
 
         foreach (var research in allResearches)
         {
             GameObject newSlot = Instantiate(slotPrefab.gameObject, listContent);
-            
             newSlot.transform.localScale = Vector3.one; 
-            
             newSlot.GetComponent<ResearchSlotUI>().Setup(research, OnBuyResearch);
         }
     }
@@ -50,9 +91,6 @@ public class ResearchManager : MonoBehaviour
         if (GameManager.Instance.TrySpend(cost))
         {
             item.currentLevel++;
-
-            // FIX DRY: Invece di applicare un effetto singolo, ricalcoliamo tutto.
-            // Questo assicura che matematica e UI siano sempre sincronizzati.
             RecalculateAllResearches(); 
         }
     }
@@ -60,11 +98,8 @@ public class ResearchManager : MonoBehaviour
     void UpdateAllSlots()
     {
         if(!menuPanel.activeSelf) return;
-
         foreach(Transform child in listContent)
-        {
             child.GetComponent<ResearchSlotUI>().RefreshUI();
-        }
     }
 
     public void ToggleMenu()
@@ -73,46 +108,38 @@ public class ResearchManager : MonoBehaviour
         if(menuPanel.activeSelf) UpdateAllSlots();
     }
 
-    // --- LOGICA DI RICALCOLO TOTALE ---
     public void RecalculateAllResearches()
     {
         if (GameManager.Instance == null) return;
 
-        // 1. Resetta TUTTI i bonus nel GameManager a zero/base
+        // 1. Reset Bonus
         GameManager.Instance.ResearchMultiplier = 1;
         GameManager.Instance.LogisticsResearchBonus = 0;
         GameManager.Instance.StorageResearchBonus = 0;
         GameManager.Instance.EmitterAutoGrowthSpeed = 0;
         GameManager.Instance.EmitterCapResearchBonus = 0; 
         
-        // 2. Ricalcola basandosi sul livello attuale di ogni ricerca
+        // 2. Ricalcola
         foreach (var item in allResearches)
         {
-            if (item.currentLevel > 0)
-            {
-                ApplyEffectBasedOnTotalLevel(item);
-            }
+            if (item.currentLevel > 0) ApplyEffectBasedOnTotalLevel(item);
         }
         
-        // 3. FONDAMENTALE: Aggiorna Caps e UI nel GameManager
+        // 3. Aggiorna Caps
         GameManager.Instance.UpdateCapsFromResearch();
         UpdateAllSlots();
     }
 
     void ApplyEffectBasedOnTotalLevel(ResearchItem item)
     {
-        // A. MOLTIPLICATORI (Produzione)
+        // NOTA: item.target e item.type ora vengono letti dal SO tramite ResearchItem
         if (item.target == ResearchTarget.GlobalProduction && item.type == ResearchType.Multiplier)
         {
-            // Formula: (1 + bonus)^livello
             BigDouble totalMult = BigDouble.Pow(1 + item.bonusValue, item.currentLevel);
             GameManager.Instance.ResearchMultiplier *= totalMult;
         }
-
-        // B. ADDITIVI
         else if (item.type == ResearchType.Additive)
         {
-            // Formula: Bonus * Livello
             double totalAdditive = item.bonusValue * item.currentLevel;
 
             if (item.target == ResearchTarget.LogisticsCapacity)
