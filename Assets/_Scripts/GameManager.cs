@@ -34,7 +34,7 @@ public class GameManager : MonoBehaviour
     public BigDouble ScientificNodes { get; private set; } = 0;
     
     // --- CAPACITA' ---
-    public BigDouble BaseEmissionPerUnit { get; private set; } = 1;
+    public BigDouble BaseEmissionPerUnit { get; private set; } = 0.01;
     public BigDouble StorageCap { get; private set; } = 50;
     public BigDouble LogisticsCap { get; private set; } = 3;
 
@@ -49,7 +49,13 @@ public class GameManager : MonoBehaviour
     // Bonus accumulato dalle ricerche per il Cap Emettitori
     public int EmitterCapResearchBonus { get; set; } = 0; 
     
-    public double EmitterAutoGrowthSpeed { get; set; } = 0; 
+    // --- GESTIONE VELOCITA' NANOBOT ---
+    // La velocità di base (senza ricerche). Modifica qui il valore (es. 0.3)
+    public double BaseAutoGrowthSpeed = 0.3; 
+
+    // La velocità effettiva attuale (Base + Bonus Ricerche)
+    public double EmitterAutoGrowthSpeed { get; set; } 
+    
     private double _emitterAccumulator = 0; 
 
     public BigDouble EarningsBonus => 1 + (ScientificNodes * 0.50); 
@@ -124,6 +130,7 @@ public class GameManager : MonoBehaviour
         }
 
         // 2. GESTIONE AUTO-CRESCITA (Nanobot)
+        // Funziona solo se la velocità è > 0 e c'è spazio
         if (EmitterAutoGrowthSpeed > 0 && EmitterCount < EmitterCap)
         {
             _emitterAccumulator += EmitterAutoGrowthSpeed * Time.deltaTime;
@@ -158,11 +165,13 @@ public class GameManager : MonoBehaviour
 
     public void RecalculateCaps()
     {
-        LogisticsCap = 5 + (LogisticsLevel * 5) + LogisticsResearchBonus; 
-        StorageCap = 500 + (LogisticsLevel * 100) + StorageResearchBonus;
+        LogisticsCap = 5000 + (LogisticsLevel * 1) + LogisticsResearchBonus; 
+        StorageCap = 249 + (LogisticsLevel * 1) + StorageResearchBonus;
 
         // --- CALCOLO CAP EMETTITORI ---
-        EmitterCap = 1 + EmitterCapResearchBonus;
+        // Qui hai impostato 5 come base nel codice che mi hai inviato.
+        // Se vuoi tornare a 250, cambia il 5 in 250.
+        EmitterCap = 5 + EmitterCapResearchBonus;
     }
 
     // --- NUOVO METODO FONDAMENTALE PER LE RICERCHE ---
@@ -217,7 +226,11 @@ public class GameManager : MonoBehaviour
         StorageResearchBonus = 0;
         
         EmitterCapResearchBonus = 0;
-        EmitterAutoGrowthSpeed = 0;
+        
+        // --- MODIFICA FONDAMENTALE ---
+        // Inizializziamo usando la variabile Base, così non è hardcodata
+        EmitterAutoGrowthSpeed = BaseAutoGrowthSpeed;
+        
         _emitterAccumulator = 0;
 
         RecalculateCaps();
@@ -285,7 +298,6 @@ public class GameManager : MonoBehaviour
             ScientificNodes = 0;
 
         // --- CARICAMENTO NUOVO SISTEMA RICERCHE ---
-        // Qui usiamo la variabile 'data' che abbiamo definito all'inizio
         if (targetResearchManager != null)
         {
             targetResearchManager.LoadResearchLevels(data.researches);

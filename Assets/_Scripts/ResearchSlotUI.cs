@@ -54,7 +54,8 @@ public class ResearchSlotUI : MonoBehaviour
             }
             else
             {
-                costText.text = cost.ToString("F0") + " Energy";
+                // --- MODIFICA QUI: Usiamo il metodo FormatNumber invece di ToString("F0") ---
+                costText.text = FormatNumber(cost) + " Energy";
 
                 if (canAfford)
                 {
@@ -106,5 +107,28 @@ public class ResearchSlotUI : MonoBehaviour
         {
             levelText.text = $"Level <color=white>{_myData.currentLevel}</color>/{_myData.maxLevel}";
         }
+    }
+
+    // --- NUOVO METODO PER FORMATTAZIONE INTELLIGENTE ---
+    private string FormatNumber(BigDouble number)
+    {
+        // Se il numero è molto piccolo (es. 0.49, 3.25, 9.99)
+        // Mostriamo 2 cifre decimali
+        if (number < 10) 
+            return number.ToString("F2");
+
+        // Se il numero è medio (es. 10, 500, 999)
+        // Mostriamo solo l'intero (niente decimali inutili)
+        if (number < 1000) 
+            return number.ToString("F0");
+
+        // Se il numero è grande (es. 1200 -> 1.20k)
+        long exponent = (long)BigDouble.Log10(number);
+        if (exponent < 6) return (number / 1000).ToString("F2") + "k";
+        if (exponent < 9) return (number / 1e6).ToString("F2") + "M";
+        if (exponent < 12) return (number / 1e9).ToString("F2") + "B";
+        if (exponent < 15) return (number / 1e12).ToString("F2") + "T";
+        
+        return number.ToString("e2");
     }
 }

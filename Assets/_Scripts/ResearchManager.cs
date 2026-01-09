@@ -116,7 +116,12 @@ public class ResearchManager : MonoBehaviour
         GameManager.Instance.ResearchMultiplier = 1;
         GameManager.Instance.LogisticsResearchBonus = 0;
         GameManager.Instance.StorageResearchBonus = 0;
-        GameManager.Instance.EmitterAutoGrowthSpeed = 0;
+        
+        // --- MODIFICA FONDAMENTALE ---
+        // Resettiamo al valore BASE, non a zero.
+        // Così il tuo 0.3 iniziale non viene perso.
+        GameManager.Instance.EmitterAutoGrowthSpeed = GameManager.Instance.BaseAutoGrowthSpeed;
+        
         GameManager.Instance.EmitterCapResearchBonus = 0; 
         
         // 2. Ricalcola
