@@ -3,13 +3,16 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems; 
 using TMPro;        
 using BreakInfinity; 
+using System; 
 
 public class UIManager : MonoBehaviour
 {
     [Header("Top HUD")]
-    public TextMeshProUGUI scoreText;              
-    public TextMeshProUGUI incomeText;             
+    public TextMeshProUGUI scoreText;               
+    public TextMeshProUGUI incomeText;              
     public TextMeshProUGUI logisticsStatusText; 
+    
+    [Tooltip("Collega qui il testo che prima mostrava la Capacità Massima")]
     public TextMeshProUGUI storageText; 
 
     [Header("Bottom Deck")]
@@ -20,7 +23,7 @@ public class UIManager : MonoBehaviour
     public TextMeshProUGUI prestigeInfoText; 
 
     [Header("OPTIONS MENU")]
-    public Button optionsButton;               
+    public Button optionsButton;                
     public OptionsMenu optionsMenuController;
 
     [Header("Visual Feedback")]
@@ -36,19 +39,14 @@ public class UIManager : MonoBehaviour
         {
             gm.OnEconomyUpdated += RefreshUI;
             
-            // Setup Bottone PRESTIGIO
             if(prestigeButton) prestigeButton.onClick.AddListener(gm.PerformQuantumReset);
 
-            // Setup Bottone OPZIONI
             if (optionsButton != null && optionsMenuController != null)
             {
                 optionsButton.onClick.AddListener(optionsMenuController.ToggleMenu);
             }
             
-            // Setup Hold Button
             SetupHoldButton();
-
-            // Aggiornamento iniziale
             RefreshUI();
         }
     }
@@ -80,18 +78,25 @@ public class UIManager : MonoBehaviour
     {
         if (gm == null) return;
 
-        // 1. ENERGIA E INCOME
+        // 1. ENERGIA (Infinita)
         if (scoreText) scoreText.text = $"{FormatNumber(gm.CurrentEnergy)} Energy";
-        if (storageText) storageText.text = $"Max Cap: {FormatNumber(gm.StorageCap)}";
+        
+        // 2. TEMPO OFFLINE (Sostituisce Max Cap)
+        if (storageText) 
+        {
+            TimeSpan ts = TimeSpan.FromSeconds(gm.MaxOfflineSeconds);
+            string formattedTime = string.Format("{0}h {1:D2}m", (int)ts.TotalHours, ts.Minutes);
+            storageText.text = $"Offline: {formattedTime}";
+        }
+
+        // 3. INCOME
         if (incomeText) incomeText.text = $"+{FormatNumber(gm.EffectiveIncomePerSec)}/s";
 
-        // 2. LOGISTICA E EMETTITORI (Nuovo Display)
+        // 4. LOGISTICA E EMETTITORI
         if (logisticsStatusText)
         {
-            // Mostra: Units: 1 / 1 (MAX)
             string emitterString = $"Units: {gm.EmitterCount} / {gm.EmitterCap}";
             
-            // Se siamo pieni, colora di rosso
             if (gm.EmitterCount >= gm.EmitterCap)
             {
                 emitterString = $"<color=red>{emitterString} (MAX)</color>";
@@ -100,7 +105,7 @@ public class UIManager : MonoBehaviour
             logisticsStatusText.text = $"{emitterString}\nProd: {FormatNumber(gm.RawProductionRate)} | Log Cap: {FormatNumber(gm.LogisticsCap)}";
         }
 
-        // 3. RESET QUANTISTICO
+        // 5. RESET QUANTISTICO
         if (prestigeInfoText)
         {
             BigDouble potentialNodes = gm.CalculatePotentialNodes();
@@ -114,7 +119,6 @@ public class UIManager : MonoBehaviour
 
     void CheckBottleneck()
     {
-        // Se produciamo più di quanto la logistica può trasportare
         bool isBottleneck = gm.RawProductionRate > gm.LogisticsCap;
         Color targetColor = isBottleneck ? warningColor : normalColor;
 

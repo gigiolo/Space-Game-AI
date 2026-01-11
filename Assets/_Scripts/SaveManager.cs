@@ -48,8 +48,19 @@ public static class SaveManager
         string path = Path.Combine(Application.persistentDataPath, fileName);
         if (File.Exists(path))
         {
-            File.Delete(path);
-            Debug.Log("File di salvataggio eliminato.");
+            try
+            {
+                File.Delete(path);
+                Debug.Log("File di salvataggio eliminato con successo.");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"Impossibile eliminare il salvataggio: {e.Message}");
+            }
+        }
+        else
+        {
+            Debug.Log("Nessun file di salvataggio trovato da eliminare.");
         }
     }
 }

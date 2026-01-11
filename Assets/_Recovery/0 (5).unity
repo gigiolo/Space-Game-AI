@@ -1646,7 +1646,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Logistic Cap
+  m_text: 'Logistics: 0 / 10'
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 54b1d5fb33cf8cd46be58c19d3af12ab, type: 2}
   m_sharedMaterial: {fileID: 2403652158332447865, guid: 54b1d5fb33cf8cd46be58c19d3af12ab, type: 2}
@@ -7928,7 +7928,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Offline Time
+  m_text: Cap 500
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 54b1d5fb33cf8cd46be58c19d3af12ab, type: 2}
   m_sharedMaterial: {fileID: 2403652158332447865, guid: 54b1d5fb33cf8cd46be58c19d3af12ab, type: 2}

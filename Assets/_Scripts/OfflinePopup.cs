@@ -6,35 +6,17 @@ using System;
 public class OfflinePopup : MonoBehaviour
 {
     [Header("UI References")]
-    public GameObject popupPanel;       // Il pannello intero (Background + Finestra)
-    public TextMeshProUGUI titleText;   // "Welcome Back!"
-    public TextMeshProUGUI timeText;    // "You were away for: 2h 15m"
-    public TextMeshProUGUI earningsText;// "You earned: 1.50k Energy"
-    public TextMeshProUGUI capWarningText; // "Storage Full!" (opzionale)
+    public GameObject popupPanel;
+    public TextMeshProUGUI titleText;
+    public TextMeshProUGUI timeText;
+    public TextMeshProUGUI earningsText;
+    public TextMeshProUGUI capWarningText; 
 
     private void Start()
     {
-        // Iscrizione all'evento (codice che avevi già)
         if (GameManager.Instance != null)
         {
             GameManager.Instance.OnOfflineProductionCalculated += ShowPopup;
-        }
-
-        // --- NUOVO CODICE: Il controllo manuale di sicurezza ---
-        // Controlliamo se il Manager ha già calcolato tutto PRIMA che noi ci svegliassimo
-        CheckPendingOfflineEarnings();
-    }
-
-    private void CheckPendingOfflineEarnings()
-    {
-        // Se il GameManager esiste E ha dei guadagni offline salvati in memoria...
-        if (GameManager.Instance != null && GameManager.Instance.LastOfflineEarnings > 0)
-        {
-            // ...ma il pannello è ancora spento (quindi ci siamo persi l'evento)
-            if (popupPanel != null && !popupPanel.activeSelf)
-            {
-                ShowPopup();
-            }
         }
     }
 
@@ -50,45 +32,39 @@ public class OfflinePopup : MonoBehaviour
     {
         BigDouble earnings = GameManager.Instance.LastOfflineEarnings;
         TimeSpan timeAway = GameManager.Instance.LastOfflineTimeSpan;
+        
+        // CORREZIONE: Usiamo MaxOfflineSeconds invece di StorageCap
+        double maxTimeSeconds = GameManager.Instance.MaxOfflineSeconds;
 
         // Formattazione Tempo
         string timeStr = "";
         if (timeAway.Days > 0) timeStr += $"{timeAway.Days}d ";
         if (timeAway.Hours > 0) timeStr += $"{timeAway.Hours}h ";
-        timeStr += $"{timeAway.Minutes}m {timeAway.Seconds}s";
+        timeStr += $"{timeAway.Minutes}m";
 
         string earnStr = FormatNumber(earnings);
 
-        // Aggiorna Testi UI
         if(timeText) timeText.text = $"Time Away: <color=yellow>{timeStr}</color>";
+        if(earningsText) earningsText.text = $"Offline Production (50%):\n<size=150%><color=#00FFFF>+{earnStr}</color></size>";
         
-        // >>> LOGICA PER LO STORAGE PIENO <<<
-        if (earnings <= 0)
-        {
-            // Caso: Batteria Piena -> Guadagno Zero
-            if(earningsText) earningsText.text = "<color=red>BATTERIES FULL!</color>\n<size=80%>Upgrade Storage to earn offline.</size>";
-        }
-        else
-        {
-            // Caso Normale
-            if(earningsText) earningsText.text = $"Offline Production (50%):\n<size=150%><color=#00FFFF>+{earnStr}</color></size>";
-        }
-        
-        // Gestione Avviso Extra (Opzionale)
+        // NUOVO CONTROLLO: BATTERIE ESAURITE
         if (capWarningText)
         {
-            // Mostra l'avviso se siamo pieni O se abbiamo guadagnato 0
-            bool isFull = GameManager.Instance.CurrentEnergy >= GameManager.Instance.StorageCap;
-            capWarningText.gameObject.SetActive(isFull || earnings <= 0);
+            // Se siamo stati via (timeAway) più di quanto le batterie reggessero (maxTimeSeconds)
+            bool batteriesDied = timeAway.TotalSeconds > maxTimeSeconds;
             
-            if (isFull || earnings <= 0) 
-                capWarningText.text = "<color=red>Storage Capacity Reached!</color>";
+            capWarningText.gameObject.SetActive(batteriesDied);
+            
+            if (batteriesDied) 
+            {
+                TimeSpan maxTs = TimeSpan.FromSeconds(maxTimeSeconds);
+                string maxStr = $"{maxTs.Hours}h {maxTs.Minutes}m";
+                capWarningText.text = $"<color=red>Batteries died after {maxStr}!</color>\nUpgrade storage to last longer.";
+            }
         }
 
-        // Mostra Pannello
-        popupPanel.SetActive(true); // Ricordati che ora questo accende "Visuals"
-        
-        // ... (Blocco camera rimasto uguale) ...
+        popupPanel.SetActive(true);
+        PlanetOrbitCamera.IsInputBlocked = true;
     }
 
     public void ClosePopup()
@@ -97,7 +73,6 @@ public class OfflinePopup : MonoBehaviour
         PlanetOrbitCamera.IsInputBlocked = false;
     }
 
-    // Helper per formattazione (copiato da UIManager per consistenza)
     private string FormatNumber(BigDouble number)
     {
         if (number < 1000) return number.ToString("F0");

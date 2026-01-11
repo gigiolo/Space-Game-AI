@@ -1,10 +1,19 @@
 # ninja log v5
+4091	4330	7889240362458212	C:/Users/giova/Space_game/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/451s1g3m/obj/arm64-v8a/libgame.so	8f2a3cd694adca47
 78	3401	7889240352539850	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	b6515facd7777742
 65	3414	7889240352631148	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	6b4bd13409af544b
-29	3425	7889240353119382	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	ed78183911d34657
-124	3458	7889240353648468	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	ad68e2bb323056ad
-1	3593	7889240355003103	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	68b03beb4609c851
 108	3928	7889240358344016	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	cc41adc62a787486
+29	3425	7889240353119382	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	ed78183911d34657
+1	3593	7889240355003103	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	68b03beb4609c851
+124	3458	7889240353648468	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	ad68e2bb323056ad
 93	3935	7889240358407946	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	3ea2343f2520cf24
 11	4091	7889240359976091	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	4b459c65865b859a
-4091	4330	7889240362458212	C:/Users/giova/Space_game/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/451s1g3m/obj/arm64-v8a/libgame.so	8f2a3cd694adca47
+35	3124	7896779730568192	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	6b4bd13409af544b
+60	3146	7896779730761105	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	b6515facd7777742
+26	3174	7896779731098520	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	ed78183911d34657
+87	3217	7896779731559026	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	ad68e2bb323056ad
+45	3289	7896779732165104	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	68b03beb4609c851
+74	3544	7896779734846459	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	3ea2343f2520cf24
+16	3683	7896779736204267	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	4b459c65865b859a
+102	3751	7896779736930954	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	cc41adc62a787486
+3751	3974	7896779739201910	C:/Users/giova/Space_game/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/451s1g3m/obj/arm64-v8a/libgame.so	8f2a3cd694adca47
