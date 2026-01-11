@@ -18,8 +18,20 @@ public class GameManager : MonoBehaviour
     public PlanetPopulationVisuals planetVisuals; 
 
     [Header("--- BILANCIAMENTO ---")]
-    public BigDouble holdButtonMultiplier = 2.0; 
     public double offlineProductionRatio = 0.5d;
+
+    [Header("--- ENERGY BUTTON (RAMP-UP) ---")]
+    [Tooltip("Tempo in secondi per raggiungere il moltiplicatore massimo.")]
+    [SerializeField] private float energyButton_RampUpDuration = 7.0f;
+    [Tooltip("Il moltiplicatore massimo applicato alla produzione.")]
+    [SerializeField] private float energyButton_MaxMultiplier = 3.0f;
+    [Tooltip("Durata massima in secondi in cui il moltiplicatore resta al suo picco.")]
+    [SerializeField] private float energyButton_MaxHoldDuration = 12.0f;
+    [Tooltip("Tempo in secondi per far tornare il moltiplicatore a 1x.")]
+    [SerializeField] private float energyButton_RampDownDuration = 7.0f;
+    [Tooltip("Modifica il costo del cooldown. Es: 1.0 = cooldown uguale al tempo di utilizzo.")]
+    [SerializeField] private float energyButton_CooldownMultiplier = 1.0f;
+
 
     [Header("--- SALVATAGGIO ---")]
     public float autoSaveInterval = 30f; 
@@ -67,13 +79,25 @@ public class GameManager : MonoBehaviour
     public BigDouble EarningsBonus => 1 + (ScientificNodes * 0.50); 
 
     // --- STATO & TIMER ---
-    private bool _isHoldingButton = false;
     public BigDouble LastOfflineEarnings { get; private set; } = 0;
     public TimeSpan LastOfflineTimeSpan { get; private set; }
     public event Action OnEconomyUpdated;
     public event Action OnOfflineProductionCalculated;
     private float _uiRefreshTimer = 0f;
     private float _uiRefreshRate = 0.05f;
+
+    // --- ENERGY BUTTON STATE ---
+    private enum EnergyButtonState { Idle, RampingUp, HoldingMax, RampingDown, Cooldown }
+    private EnergyButtonState _energyButtonState = EnergyButtonState.Idle;
+
+    // Il valore attuale del moltiplicatore, pubblico per la UI
+    public float CurrentEnergyMultiplier { get; private set; } = 1.0f;
+
+    // Timers interni per la logica
+    private float _energyButtonTimer = 0.0f;
+    private float _timeSpentAtMax = 0.0f;
+    private float _cooldownTimer = 0.0f;
+
 
     // FORMULE DI PRODUZIONE
     public BigDouble RawProductionRate 
@@ -83,9 +107,63 @@ public class GameManager : MonoBehaviour
             BigDouble baseProd = EmitterCount * BaseEmissionPerUnit;
             BigDouble multipliers = ResearchMultiplier * EarningsBonus;
             
-            if (_isHoldingButton) multipliers *= holdButtonMultiplier;
+            // Applica il nuovo moltiplicatore dinamico
+            multipliers *= CurrentEnergyMultiplier;
 
             return baseProd * multipliers;
+        }
+    }
+
+    private void UpdateEnergyButtonState()
+    {
+        float deltaTime = Time.deltaTime;
+
+        switch (_energyButtonState)
+        {
+            case EnergyButtonState.RampingUp:
+                _energyButtonTimer += deltaTime;
+                CurrentEnergyMultiplier = Mathf.Lerp(1.0f, energyButton_MaxMultiplier, _energyButtonTimer / energyButton_RampUpDuration);
+
+                if (_energyButtonTimer >= energyButton_RampUpDuration)
+                {
+                    CurrentEnergyMultiplier = energyButton_MaxMultiplier;
+                    _energyButtonState = EnergyButtonState.HoldingMax;
+                    _energyButtonTimer = 0.0f; // Reset timer for hold phase
+                }
+                break;
+
+            case EnergyButtonState.HoldingMax:
+                _energyButtonTimer += deltaTime;
+                _timeSpentAtMax += deltaTime;
+
+                if (_energyButtonTimer >= energyButton_MaxHoldDuration)
+                {
+                    _energyButtonState = EnergyButtonState.RampingDown;
+                    _energyButtonTimer = 0.0f; // Reset timer for ramp down
+                }
+                break;
+
+            case EnergyButtonState.RampingDown:
+                _energyButtonTimer += deltaTime;
+                CurrentEnergyMultiplier = Mathf.Lerp(energyButton_MaxMultiplier, 1.0f, _energyButtonTimer / energyButton_RampDownDuration);
+
+                if (_energyButtonTimer >= energyButton_RampDownDuration)
+                {
+                    CurrentEnergyMultiplier = 1.0f;
+                    _energyButtonState = EnergyButtonState.Cooldown;
+                    _cooldownTimer = _timeSpentAtMax * energyButton_CooldownMultiplier;
+                    _timeSpentAtMax = 0; // Reset for next cycle
+                    _energyButtonTimer = 0;
+                }
+                break;
+
+            case EnergyButtonState.Cooldown:
+                _cooldownTimer -= deltaTime;
+                if (_cooldownTimer <= 0)
+                {
+                    _energyButtonState = EnergyButtonState.Idle;
+                }
+                break;
         }
     }
 
@@ -120,7 +198,10 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        // 1. GESTIONE INCOME (INFINITO)
+        // 1. GESTIONE LOGICA ENERGY BUTTON
+        UpdateEnergyButtonState();
+
+        // 2. GESTIONE INCOME (INFINITO)
         BigDouble income = EffectiveIncomePerSec;
         
         if (income > 0)
@@ -393,8 +474,27 @@ public class GameManager : MonoBehaviour
     private void OnApplicationQuit() => SaveGame();
     private void OnApplicationPause(bool pauseStatus) { if (pauseStatus) SaveGame(); }
 
-    public void SetHoldState(bool isHolding) { _isHoldingButton = isHolding; }
+    // --- AZIONI GIOCATORE (Energy Button)---
+    public void OnEnergyButtonPress()
+    {
+        if (_energyButtonState == EnergyButtonState.Idle)
+        {
+            _energyButtonState = EnergyButtonState.RampingUp;
+            _energyButtonTimer = 0.0f;
+        }
+    }
 
+    public void OnEnergyButtonRelease()
+    {
+        if (_energyButtonState == EnergyButtonState.RampingUp || _energyButtonState == EnergyButtonState.HoldingMax)
+        {
+            _energyButtonState = EnergyButtonState.RampingDown;
+            _energyButtonTimer = 0.0f;
+        }
+    }
+
+
+    // --- AZIONI GIOCATORE ---
     public bool TrySpend(BigDouble amount)
     {
         if (CurrentEnergy >= amount) { CurrentEnergy -= amount; return true; }
