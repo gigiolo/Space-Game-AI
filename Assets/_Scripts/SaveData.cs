@@ -21,10 +21,9 @@ public class SaveData
 
     // VISUALS
     public List<string> cityLightPositions = new List<string>();
-
+    
     // REWARD NOTIFICATIONS
     public float rewardNotificationTimer;
-    public int rewardNotificationCount;
 }
 
 [Serializable]

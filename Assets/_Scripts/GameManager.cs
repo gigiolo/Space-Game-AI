@@ -368,7 +368,6 @@ public class GameManager : MonoBehaviour
         if (rewardNotificationManager != null)
         {
             data.rewardNotificationTimer = rewardNotificationManager.Timer;
-            data.rewardNotificationCount = rewardNotificationManager.CurrentNotificationCount;
         }
 
         if (targetResearchManager != null)
@@ -422,7 +421,7 @@ public class GameManager : MonoBehaviour
 
         if (rewardNotificationManager != null)
         {
-            rewardNotificationManager.LoadState(data.rewardNotificationTimer, data.rewardNotificationCount);
+            rewardNotificationManager.LoadState(data.rewardNotificationTimer);
         }
 
         RecalculateCaps();

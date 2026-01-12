@@ -40,10 +40,9 @@ public class RewardNotificationManager : MonoBehaviour
         }
     }
 
-    public void LoadState(float timer, int count)
+    public void LoadState(float timer)
     {
         Timer = timer;
-        CurrentNotificationCount = count;
     }
 
     private void GenerateRewardNotification()
@@ -63,7 +62,7 @@ public class RewardNotificationManager : MonoBehaviour
             Debug.Log("Produzione di energia a zero. Nessuna ricompensa generata.");
             return;
         }
-
+        
         // Creazione dei dati per la notifica
         NotificationData data = new NotificationData(
             "Bonus Energia!",
