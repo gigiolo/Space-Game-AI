@@ -25,6 +25,10 @@ public class SaveData
     // REWARD NOTIFICATIONS
     public float rewardNotificationTimer;
     public int rewardNotificationCount;
+
+    // DAILY GIFT
+    public string dailyGiftLastClaimedTimestamp;
+    public int dailyGiftCurrentDayIndex;
 }
 
 [Serializable]
