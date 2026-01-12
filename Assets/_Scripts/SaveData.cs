@@ -21,9 +21,14 @@ public class SaveData
 
     // VISUALS
     public List<string> cityLightPositions = new List<string>();
-    
+
     // REWARD NOTIFICATIONS
     public float rewardNotificationTimer;
+    public int rewardNotificationCount;
+    
+    // DAILY GIFT
+    public string dailyGiftLastClaimedTimestamp;
+    public int dailyGiftCurrentDayIndex;
 }
 
 [Serializable]

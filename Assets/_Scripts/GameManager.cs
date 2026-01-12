@@ -13,6 +13,7 @@ public class GameManager : MonoBehaviour
     [Header("--- COLLEGAMENTI ---")]
     public ResearchManager targetResearchManager;
     public RewardNotificationManager rewardNotificationManager;
+    public DailyGiftManager dailyGiftManager;
     public UITheme activeTheme; 
     
     // Riferimento allo script che gestisce le luci sul pianeta
@@ -200,6 +201,12 @@ public class GameManager : MonoBehaviour
         {
             rewardNotificationManager = gameObject.AddComponent<RewardNotificationManager>();
         }
+
+        dailyGiftManager = GetComponent<DailyGiftManager>();
+        if (dailyGiftManager == null)
+        {
+            dailyGiftManager = gameObject.AddComponent<DailyGiftManager>();
+        }
         
         InitializeGameState();
     }
@@ -368,6 +375,12 @@ public class GameManager : MonoBehaviour
         if (rewardNotificationManager != null)
         {
             data.rewardNotificationTimer = rewardNotificationManager.Timer;
+            data.rewardNotificationCount = rewardNotificationManager.CurrentNotificationCount;
+        }
+
+        if (dailyGiftManager != null)
+        {
+            dailyGiftManager.Save(data);
         }
 
         if (targetResearchManager != null)
@@ -421,7 +434,12 @@ public class GameManager : MonoBehaviour
 
         if (rewardNotificationManager != null)
         {
-            rewardNotificationManager.LoadState(data.rewardNotificationTimer);
+            rewardNotificationManager.LoadState(data.rewardNotificationTimer, data.rewardNotificationCount);
+        }
+
+        if (dailyGiftManager != null)
+        {
+            dailyGiftManager.Initialize(data);
         }
 
         RecalculateCaps();
