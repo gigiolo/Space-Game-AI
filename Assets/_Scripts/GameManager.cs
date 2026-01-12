@@ -98,6 +98,10 @@ public class GameManager : MonoBehaviour
     private float _timeSpentAtMax = 0.0f;
     private float _cooldownTimer = 0.0f;
 
+    // Nuove variabili per gestire la discesa proporzionale
+    private float _rampDownStartMultiplier = 1.0f;
+    private float _currentRampDownDuration = 0.0f;
+
 
     // FORMULE DI PRODUZIONE
     public BigDouble RawProductionRate 
@@ -145,9 +149,20 @@ public class GameManager : MonoBehaviour
 
             case EnergyButtonState.RampingDown:
                 _energyButtonTimer += deltaTime;
-                CurrentEnergyMultiplier = Mathf.Lerp(energyButton_MaxMultiplier, 1.0f, _energyButtonTimer / energyButton_RampDownDuration);
 
-                if (_energyButtonTimer >= energyButton_RampDownDuration)
+                if (_currentRampDownDuration > 0)
+                {
+                    // Usa le nuove variabili per un Lerp proporzionale e corretto
+                    float normalizedTime = _energyButtonTimer / _currentRampDownDuration;
+                    CurrentEnergyMultiplier = Mathf.Lerp(_rampDownStartMultiplier, 1.0f, normalizedTime);
+                }
+                else
+                {
+                    // Se la durata è 0, imposta direttamente il moltiplicatore a 1 per evitare errori
+                    CurrentEnergyMultiplier = 1.0f;
+                }
+
+                if (_energyButtonTimer >= _currentRampDownDuration)
                 {
                     CurrentEnergyMultiplier = 1.0f;
                     _energyButtonState = EnergyButtonState.Cooldown;
@@ -486,8 +501,26 @@ public class GameManager : MonoBehaviour
 
     public void OnEnergyButtonRelease()
     {
-        if (_energyButtonState == EnergyButtonState.RampingUp || _energyButtonState == EnergyButtonState.HoldingMax)
+        if (_energyButtonState == EnergyButtonState.RampingUp)
         {
+            // Salva il moltiplicatore corrente
+            _rampDownStartMultiplier = CurrentEnergyMultiplier;
+
+            // Calcola la proporzione del moltiplicatore raggiunto rispetto al massimo
+            float multiplierRatio = (_rampDownStartMultiplier - 1.0f) / (energyButton_MaxMultiplier - 1.0f);
+
+            // Calcola la durata della discesa in modo proporzionale
+            _currentRampDownDuration = energyButton_RampDownDuration * multiplierRatio;
+
+            _energyButtonState = EnergyButtonState.RampingDown;
+            _energyButtonTimer = 0.0f;
+        }
+        else if (_energyButtonState == EnergyButtonState.HoldingMax)
+        {
+            // Se siamo al massimo, usa i valori standard
+            _rampDownStartMultiplier = energyButton_MaxMultiplier;
+            _currentRampDownDuration = energyButton_RampDownDuration;
+
             _energyButtonState = EnergyButtonState.RampingDown;
             _energyButtonTimer = 0.0f;
         }
