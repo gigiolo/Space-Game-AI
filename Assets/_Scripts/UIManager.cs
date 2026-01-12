@@ -8,10 +8,13 @@ using System;
 public class UIManager : MonoBehaviour
 {
     [Header("Top HUD")]
-    public TextMeshProUGUI scoreText;               
-    public TextMeshProUGUI incomeText;              
+    public TextMeshProUGUI scoreText;                
+    public TextMeshProUGUI incomeText;               
     public TextMeshProUGUI logisticsStatusText; 
     
+    [Tooltip("Collega qui il testo che mostra il moltiplicatore attivo (es. x3.0)")]
+    public TextMeshProUGUI energyMultiplierText; // <--- NUOVO CAMPO
+
     [Tooltip("Collega qui il testo che prima mostrava la Capacità Massima")]
     public TextMeshProUGUI storageText; 
 
@@ -23,7 +26,7 @@ public class UIManager : MonoBehaviour
     public TextMeshProUGUI prestigeInfoText; 
 
     [Header("OPTIONS MENU")]
-    public Button optionsButton;                
+    public Button optionsButton;                 
     public OptionsMenu optionsMenuController;
 
     [Header("Visual Feedback")]
@@ -57,15 +60,17 @@ public class UIManager : MonoBehaviour
 
         EventTrigger trigger = mainEnergyButtonObj.GetComponent<EventTrigger>();
         if (trigger == null) trigger = mainEnergyButtonObj.AddComponent<EventTrigger>();
-
+        
+        // Quando premi (PointerDown), chiami OnEnergyButtonPress
         EventTrigger.Entry entryDown = new EventTrigger.Entry();
         entryDown.eventID = EventTriggerType.PointerDown;
-        entryDown.callback.AddListener((data) => { gm.SetHoldState(true); });
+        entryDown.callback.AddListener((data) => { gm.OnEnergyButtonPress(); }); 
         trigger.triggers.Add(entryDown);
 
+        // Quando rilasci (PointerUp), chiami OnEnergyButtonRelease
         EventTrigger.Entry entryUp = new EventTrigger.Entry();
         entryUp.eventID = EventTriggerType.PointerUp;
-        entryUp.callback.AddListener((data) => { gm.SetHoldState(false); });
+        entryUp.callback.AddListener((data) => { gm.OnEnergyButtonRelease(); });
         trigger.triggers.Add(entryUp);
     }
 
@@ -105,7 +110,29 @@ public class UIManager : MonoBehaviour
             logisticsStatusText.text = $"{emitterString}\nProd: {FormatNumber(gm.RawProductionRate)} | Log Cap: {FormatNumber(gm.LogisticsCap)}";
         }
 
-        // 5. RESET QUANTISTICO
+        // 5. MOLTIPLICATORE ENERGY BUTTON (NUOVO)
+        if (energyMultiplierText != null)
+        {
+            float currentMult = gm.CurrentEnergyMultiplier;
+
+            // Se il moltiplicatore è significativamente maggiore di 1 (es. stiamo premendo il tasto)
+            if (currentMult > 1.01f) 
+            {
+                if (!energyMultiplierText.gameObject.activeSelf) 
+                    energyMultiplierText.gameObject.SetActive(true);
+
+                // Mostra es: "x 2.45"
+                energyMultiplierText.text = $"x {currentMult:F2}";
+            }
+            else
+            {
+                // Se è 1.0 (o quasi), nascondi il testo
+                if (energyMultiplierText.gameObject.activeSelf) 
+                    energyMultiplierText.gameObject.SetActive(false);
+            }
+        }
+
+        // 6. RESET QUANTISTICO
         if (prestigeInfoText)
         {
             BigDouble potentialNodes = gm.CalculatePotentialNodes();
