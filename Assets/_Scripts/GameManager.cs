@@ -11,7 +11,8 @@ public class GameManager : MonoBehaviour
     public static GameManager Instance { get; private set; }
 
     [Header("--- COLLEGAMENTI ---")]
-    public ResearchManager targetResearchManager; 
+    public ResearchManager targetResearchManager;
+    public RewardNotificationManager rewardNotificationManager;
     public UITheme activeTheme; 
     
     // Riferimento allo script che gestisce le luci sul pianeta
@@ -190,7 +191,15 @@ public class GameManager : MonoBehaviour
         else { Destroy(gameObject); }
         
         QualitySettings.vSyncCount = 0; 
-        Application.targetFrameRate = 60; 
+        Application.targetFrameRate = 60;
+
+        // --- GESTIONE COMPONENTI DIPENDENTI ---
+        // Assicura che esista un RewardNotificationManager.
+        rewardNotificationManager = GetComponent<RewardNotificationManager>();
+        if (rewardNotificationManager == null)
+        {
+            rewardNotificationManager = gameObject.AddComponent<RewardNotificationManager>();
+        }
         
         InitializeGameState();
     }
@@ -356,6 +365,12 @@ public class GameManager : MonoBehaviour
             data.cityLightPositions = planetVisuals.GetEncodedPositions();
         }
 
+        if (rewardNotificationManager != null)
+        {
+            data.rewardNotificationTimer = rewardNotificationManager.Timer;
+            data.rewardNotificationCount = rewardNotificationManager.CurrentNotificationCount;
+        }
+
         if (targetResearchManager != null)
         {
             foreach (var item in targetResearchManager.allResearches)
@@ -403,6 +418,11 @@ public class GameManager : MonoBehaviour
         if (planetVisuals != null && data.cityLightPositions != null)
         {
             planetVisuals.LoadEncodedPositions(data.cityLightPositions);
+        }
+
+        if (rewardNotificationManager != null)
+        {
+            rewardNotificationManager.LoadState(data.rewardNotificationTimer, data.rewardNotificationCount);
         }
 
         RecalculateCaps();
