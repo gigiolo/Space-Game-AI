@@ -40,10 +40,11 @@ public class RewardNotificationManager : MonoBehaviour
         }
     }
 
-    public void LoadState(float timer, int count)
+    public void LoadState(SaveData data)
     {
-        Timer = timer;
-        CurrentNotificationCount = count;
+        if (data == null) return;
+        Timer = data.rewardNotificationTimer;
+        CurrentNotificationCount = data.rewardNotificationCount;
     }
 
     private void GenerateRewardNotification()

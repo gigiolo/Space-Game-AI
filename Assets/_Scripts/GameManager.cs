@@ -434,7 +434,7 @@ public class GameManager : MonoBehaviour
 
         if (rewardNotificationManager != null)
         {
-            rewardNotificationManager.LoadState(data.rewardNotificationTimer, data.rewardNotificationCount);
+            rewardNotificationManager.LoadState(data);
         }
 
         if (dailyGiftManager != null)
