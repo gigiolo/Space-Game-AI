@@ -17,7 +17,6 @@ public class DailyGiftManager : MonoBehaviour
     private DateTime lastClaimedTimestamp;
     private int currentDayIndex;
     private bool isRewardAvailable = false;
-    private bool isNotificationShowing = false;
     private BigDouble _cachedRewardAmount;
 
     // Real-time Check
@@ -56,8 +55,9 @@ public class DailyGiftManager : MonoBehaviour
                 CheckForDailyGift();
             }
 
-            // If a reward is available but the notification hasn't been shown, show it.
-            if (isRewardAvailable && !isNotificationShowing)
+            // If a reward is available, try to create a notification.
+            // The NotificationManager will handle preventing duplicates.
+            if (isRewardAvailable)
             {
                 CreateNotification();
             }
@@ -137,6 +137,7 @@ public class DailyGiftManager : MonoBehaviour
         }
 
         var notificationData = new NotificationData(
+            "daily_gift", // ID Univoco per questa notifica
             "Daily Gift Available!",
             currentReward.description,
             currentReward.icon,
@@ -145,7 +146,6 @@ public class DailyGiftManager : MonoBehaviour
         );
 
         notificationManager.SpawnNotification(notificationData);
-        isNotificationShowing = true; // Mark that the notification is now visible
     }
 
     public void ShowRewardPopup()
@@ -162,6 +162,7 @@ public class DailyGiftManager : MonoBehaviour
         string description = $"{currentReward.description}\n<size=120%><b>{_cachedRewardAmount.ToString("F2")}</b></size>";
 
         var popupData = new NotificationData(
+            "daily_gift_popup", // ID unico per il popup, non strettamente necessario ma buona pratica
             $"Daily Gift - Day {currentDayIndex + 1}",
             description,
             currentReward.icon,
@@ -198,7 +199,6 @@ public class DailyGiftManager : MonoBehaviour
         lastClaimedTimestamp = DateTime.Now;
         currentDayIndex = (currentDayIndex + 1) % dailyRewards.Count;
         isRewardAvailable = false;
-        isNotificationShowing = false; // Reset notification flag for the next day
 
         // Save progress immediately
         GameManager.Instance.SaveGame();

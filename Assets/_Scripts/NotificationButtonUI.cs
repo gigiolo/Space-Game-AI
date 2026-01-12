@@ -27,10 +27,9 @@ public class NotificationButtonUI : MonoBehaviour
 
     void OnClick()
     {
-        // 1. Diamo i dati al Manager per aprire il popup
+        // Ora il pulsante si limita a chiedere al Manager di aprire il popup.
+        // Non si distrugge più da solo. Sarà il popup a gestire la sua rimozione
+        // dopo che il premio è stato effettivamente riscosso.
         NotificationManager.Instance.OpenPopup(_data);
-
-        // 2. Distruggiamo questo bottone (la notifica è stata letta)
-        Destroy(gameObject);
     }
 }

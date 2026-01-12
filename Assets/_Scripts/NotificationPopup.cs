@@ -12,10 +12,12 @@ public class NotificationPopup : MonoBehaviour
     public Button claimButton;
 
     private NotificationData _currentData;
+    private string _currentNotificationId;
 
     public void Show(NotificationData data)
     {
         _currentData = data;
+        _currentNotificationId = data.id;
 
         // Imposta testi e grafica
         if (titleText) titleText.text = data.title;
@@ -33,6 +35,12 @@ public class NotificationPopup : MonoBehaviour
     {
         // Esegue il codice specifico (es. dare soldi, boost, etc.)
         _currentData.onClaimAction?.Invoke();
+
+        // Ora, dopo aver riscosso, diciamo al manager di eliminare la notifica.
+        if (!string.IsNullOrEmpty(_currentNotificationId))
+        {
+            NotificationManager.Instance.DismissNotification(_currentNotificationId);
+        }
 
         Close();
     }
