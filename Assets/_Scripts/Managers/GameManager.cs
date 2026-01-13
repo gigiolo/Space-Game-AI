@@ -17,6 +17,8 @@ public class GameManager : MonoBehaviour
     // Riferimento allo script che gestisce le luci sul pianeta
     public PlanetPopulationVisuals planetVisuals; 
 
+    public GameObject[] emitters;
+
     [Header("--- BILANCIAMENTO ---")]
     public double offlineProductionRatio = 0.5d;
 
@@ -109,7 +111,11 @@ public class GameManager : MonoBehaviour
         get 
         {
             BigDouble baseProd = EmitterCount * BaseEmissionPerUnit;
-            BigDouble multipliers = ResearchMultiplier * EarningsBonus;
+
+            // Get planet multiplier, default to 1 if not available
+            BigDouble planetMultiplier = PlanetManager.Instance?.GetCurrentPlanetData()?.productionMultiplier ?? 1;
+
+            BigDouble multipliers = ResearchMultiplier * EarningsBonus * planetMultiplier;
             
             // Applica il nuovo moltiplicatore dinamico
             multipliers *= CurrentEnergyMultiplier;
@@ -182,7 +188,7 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    public BigDouble EffectiveIncomePerSec => BigDouble.Min(RawProductionRate, LogisticsCap);
+    public BigDouble TotalEnergyPerSecond => BigDouble.Min(RawProductionRate, LogisticsCap);
 
     private void Awake()
     {
@@ -217,7 +223,7 @@ public class GameManager : MonoBehaviour
         UpdateEnergyButtonState();
 
         // 2. GESTIONE INCOME (INFINITO)
-        BigDouble income = EffectiveIncomePerSec;
+        BigDouble income = TotalEnergyPerSecond;
         
         if (income > 0)
         {
@@ -320,6 +326,26 @@ public class GameManager : MonoBehaviour
         OnEconomyUpdated?.Invoke();
     }
 
+    public void PerformPlanetChangeReset()
+    {
+        // This reset is for changing planets. It preserves Scientific Nodes.
+        InitializeGameState();
+
+        // Reset researches
+        if (targetResearchManager != null)
+        {
+            foreach(var res in targetResearchManager.allResearches)
+            {
+                res.currentLevel = 0;
+            }
+            targetResearchManager.RecalculateAllResearches();
+        }
+
+        // We don't save here immediately, the PlanetManager will handle saving
+        // after the new planet scene is loaded.
+        OnEconomyUpdated?.Invoke();
+    }
+
     private void InitializeGameState()
     {
         CurrentEnergy = 0;
@@ -350,6 +376,16 @@ public class GameManager : MonoBehaviour
         data.lastSaveTime = DateTime.UtcNow.ToBinary().ToString(); 
         
         data.scientificNodes = ScientificNodes.ToString();
+
+        // Save planet progression
+        if (PlanetManager.Instance != null)
+        {
+            data.currentPlanetIndex = PlanetManager.Instance.currentPlanetIndex;
+            data.isPreparingForLaunch = PlanetManager.Instance.isPreparingForLaunch;
+            data.launchPreparationProgress = PlanetManager.Instance.launchPreparationProgress.ToString();
+            data.isTraveling = PlanetManager.Instance.isTraveling;
+            data.travelStartTimeBinary = PlanetManager.Instance.travelStartTime.ToBinary().ToString();
+        }
 
         if (planetVisuals != null)
         {
@@ -395,6 +431,23 @@ public class GameManager : MonoBehaviour
         else
             ScientificNodes = 0;
 
+        // Load planet progression
+        if (PlanetManager.Instance != null)
+        {
+            PlanetManager.Instance.currentPlanetIndex = data.currentPlanetIndex;
+            PlanetManager.Instance.isPreparingForLaunch = data.isPreparingForLaunch;
+            if (!string.IsNullOrEmpty(data.launchPreparationProgress))
+            {
+                PlanetManager.Instance.launchPreparationProgress = BigDouble.Parse(data.launchPreparationProgress);
+            }
+            PlanetManager.Instance.isTraveling = data.isTraveling;
+            if (!string.IsNullOrEmpty(data.travelStartTimeBinary))
+            {
+                long binaryTime = long.Parse(data.travelStartTimeBinary);
+                PlanetManager.Instance.travelStartTime = DateTime.FromBinary(binaryTime);
+            }
+        }
+
         if (targetResearchManager != null)
         {
             targetResearchManager.LoadResearchLevels(data.researches);
@@ -417,6 +470,17 @@ public class GameManager : MonoBehaviour
     
     private void HandleOfflineProgress(string lastSaveTimeStr)
     {
+        // Correct Offline Travel Handling
+        if (PlanetManager.Instance != null && PlanetManager.Instance.isTraveling)
+        {
+            TimeSpan timeSinceTravelStart = DateTime.UtcNow - PlanetManager.Instance.travelStartTime;
+            if (timeSinceTravelStart.TotalSeconds >= PlanetManager.TRAVEL_DURATION_SECONDS)
+            {
+                PlanetManager.Instance.CompleteTravel();
+                return; // Stop further offline processing as the planet has changed
+            }
+        }
+
         if (string.IsNullOrEmpty(lastSaveTimeStr)) return;
 
         DateTime lastSaveTime;
@@ -440,7 +504,7 @@ public class GameManager : MonoBehaviour
             // LIMITA IL TEMPO, NON L'ENERGIA
             double actualSeconds = Math.Min(secondsAway, MaxOfflineSeconds);
             
-            BigDouble actualEarnings = EffectiveIncomePerSec * actualSeconds * offlineProductionRatio;
+            BigDouble actualEarnings = TotalEnergyPerSecond * actualSeconds * offlineProductionRatio;
 
             if (actualEarnings > 0) 
             {

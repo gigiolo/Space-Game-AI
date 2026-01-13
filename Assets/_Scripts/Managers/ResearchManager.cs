@@ -4,6 +4,8 @@ using BreakInfinity;
 
 public class ResearchManager : MonoBehaviour
 {
+    public static ResearchManager Instance { get; private set; }
+
     [Header("UI References")]
     public GameObject menuPanel;        
     public Transform listContent;        
@@ -14,6 +16,19 @@ public class ResearchManager : MonoBehaviour
 
     [Header("Stato Runtime (Si riempie da solo)")]
     public List<ResearchItem> allResearches;
+
+    private void Awake()
+    {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+        }
+        else
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+    }
 
     private void Start()
     {

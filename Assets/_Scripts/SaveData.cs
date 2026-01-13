@@ -21,6 +21,13 @@ public class SaveData
 
     // VISUALS
     public List<string> cityLightPositions = new List<string>();
+
+    // PROGRESSION
+    public int currentPlanetIndex;
+    public bool isPreparingForLaunch;
+    public string launchPreparationProgress;
+    public bool isTraveling;
+    public string travelStartTimeBinary;
 }
 
 [Serializable]
