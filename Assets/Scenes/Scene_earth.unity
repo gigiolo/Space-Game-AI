@@ -131,7 +131,6 @@ GameObject:
   - component: {fileID: 301706}
   - component: {fileID: 301705}
   - component: {fileID: 301704}
-  - component: {fileID: 301703}
   - component: {fileID: 301708}
   m_Layer: 5
   m_Name: Canvas
@@ -140,30 +139,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &301703
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 301702}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 897b11214c3a8104490aa9ff97adab7a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::UIManager
-  scoreText: {fileID: 0}
-  incomeText: {fileID: 1990969311}
-  logisticsStatusText: {fileID: 0}
-  energyMultiplierText: {fileID: 0}
-  storageText: {fileID: 0}
-  mainEnergyButtonObj: {fileID: 0}
-  prestigeButton: {fileID: 0}
-  prestigeInfoText: {fileID: 0}
-  optionsButton: {fileID: 0}
-  optionsMenuController: {fileID: 0}
-  normalColor: {r: 1, g: 1, b: 1, a: 1}
-  warningColor: {r: 1, g: 0.3, b: 0.3, a: 1}
 --- !u!114 &301704
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1544,7 +1519,7 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 1109117509}
+      - m_Target: {fileID: 1109117511}
         m_TargetAssemblyTypeName: ResearchManager, Assembly-CSharp
         m_MethodName: ToggleMenu
         m_Mode: 1
@@ -1731,18 +1706,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 897b11214c3a8104490aa9ff97adab7a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIManager
-  scoreText: {fileID: 0}
-  incomeText: {fileID: 1990969311}
-  logisticsStatusText: {fileID: 0}
-  energyMultiplierText: {fileID: 0}
-  storageText: {fileID: 0}
-  mainEnergyButtonObj: {fileID: 0}
-  prestigeButton: {fileID: 0}
-  prestigeInfoText: {fileID: 0}
-  optionsButton: {fileID: 0}
-  optionsMenuController: {fileID: 0}
-  normalColor: {r: 1, g: 1, b: 1, a: 1}
-  warningColor: {r: 1, g: 0.3, b: 0.3, a: 1}
 --- !u!222 &726410777
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7431,7 +7394,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1109117510}
-  - component: {fileID: 1109117509}
+  - component: {fileID: 1109117511}
   m_Layer: 0
   m_Name: ResearchSystem
   m_TagString: Untagged
@@ -7439,26 +7402,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1109117509
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1109117507}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 213f22a053a7c6b429f907077babddc9, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ResearchManager
-  menuPanel: {fileID: 7416067575548010061}
-  listContent: {fileID: 1539593078}
-  slotPrefab: {fileID: 5758632673340810765, guid: b4c5929c2a1bb934aba5b0d9967230c4, type: 3}
-  researchDatabase:
-  - {fileID: 11400000, guid: a6c9d048706f835448fc3aaaf7689b54, type: 2}
-  - {fileID: 11400000, guid: 1bae1678004f92142bcd44c79b15ccd3, type: 2}
-  - {fileID: 11400000, guid: 5c2653b5424a1bb4b9166eb480b46bb2, type: 2}
-  allResearches: []
 --- !u!4 &1109117510
 Transform:
   m_ObjectHideFlags: 0
@@ -7474,6 +7417,26 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1109117511
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1109117507}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 774123527000bab4baf250a3f24a175a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ResearchManager
+  menuPanel: {fileID: 7416067575548010061}
+  listContent: {fileID: 1539593078}
+  slotPrefab: {fileID: 5758632673340810765, guid: b4c5929c2a1bb934aba5b0d9967230c4, type: 3}
+  researchDatabase:
+  - {fileID: 11400000, guid: a6c9d048706f835448fc3aaaf7689b54, type: 2}
+  - {fileID: 11400000, guid: 1bae1678004f92142bcd44c79b15ccd3, type: 2}
+  - {fileID: 11400000, guid: 5c2653b5424a1bb4b9166eb480b46bb2, type: 2}
+  allResearches: []
 --- !u!1 &1143258651 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 2698631003088277915, guid: 71b65e0788a2e8243a79cc35f60c80e7, type: 3}
@@ -7706,6 +7669,7 @@ GameObject:
   - component: {fileID: 1528240056}
   - component: {fileID: 1528240055}
   - component: {fileID: 1528240057}
+  - component: {fileID: 1528240058}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -7722,13 +7686,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 1528240054}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 17c09069550dad846ba312412538ad20, type: 3}
+  m_Script: {fileID: 11500000, guid: e504ea9f2ecb25e4697019a7d9b57913, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
-  targetResearchManager: {fileID: 1109117509}
-  rewardNotificationManager: {fileID: 0}
-  activeTheme: {fileID: 11400000, guid: 7832233842c08554aae84a0638c359d0, type: 2}
+  targetResearchManager: {fileID: 0}
+  activeTheme: {fileID: 0}
   planetVisuals: {fileID: 1058039598}
+  emitters: []
   offlineProductionRatio: 0.5
   energyButton_RampUpDuration: 7
   energyButton_MaxMultiplier: 3
@@ -7761,7 +7725,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1528240054}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 897b11214c3a8104490aa9ff97adab7a, type: 3}
+  m_Script: {fileID: 11500000, guid: d03cfc85c9832d54c8eb376042b62996, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIManager
   scoreText: {fileID: 2022683260}
@@ -7772,10 +7736,37 @@ MonoBehaviour:
   mainEnergyButtonObj: {fileID: 1834870916}
   prestigeButton: {fileID: 191445055}
   prestigeInfoText: {fileID: 853513984}
+  planetTravelPanel: {fileID: 0}
+  startPreparationButton: {fileID: 0}
+  startTravelButton: {fileID: 0}
+  planetValueText: {fileID: 0}
+  launchProgressBar: {fileID: 0}
+  travelStatusText: {fileID: 0}
   optionsButton: {fileID: 549588329}
   optionsMenuController: {fileID: 37713273}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   warningColor: {r: 1, g: 0.3, b: 0.3, a: 1}
+--- !u!114 &1528240058
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1528240054}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 725942942722e93409bc7ae73c0d7a6d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlanetManager
+  planets:
+  - {fileID: 0}
+  - {fileID: 0}
+  currentPlanetIndex: 0
+  isPreparingForLaunch: 0
+  launchPreparationProgress:
+    mantissa: 0
+    exponent: 0
+  isTraveling: 0
 --- !u!224 &1539593078 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 1213254854913591476, guid: 71b65e0788a2e8243a79cc35f60c80e7, type: 3}
@@ -8688,18 +8679,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 897b11214c3a8104490aa9ff97adab7a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIManager
-  scoreText: {fileID: 0}
-  incomeText: {fileID: 1990969311}
-  logisticsStatusText: {fileID: 0}
-  energyMultiplierText: {fileID: 0}
-  storageText: {fileID: 0}
-  mainEnergyButtonObj: {fileID: 0}
-  prestigeButton: {fileID: 0}
-  prestigeInfoText: {fileID: 0}
-  optionsButton: {fileID: 0}
-  optionsMenuController: {fileID: 0}
-  normalColor: {r: 1, g: 1, b: 1, a: 1}
-  warningColor: {r: 1, g: 0.3, b: 0.3, a: 1}
 --- !u!222 &1990969313
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -8891,18 +8870,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 897b11214c3a8104490aa9ff97adab7a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::UIManager
-  scoreText: {fileID: 0}
-  incomeText: {fileID: 1990969311}
-  logisticsStatusText: {fileID: 0}
-  energyMultiplierText: {fileID: 0}
-  storageText: {fileID: 0}
-  mainEnergyButtonObj: {fileID: 0}
-  prestigeButton: {fileID: 0}
-  prestigeInfoText: {fileID: 0}
-  optionsButton: {fileID: 0}
-  optionsMenuController: {fileID: 0}
-  normalColor: {r: 1, g: 1, b: 1, a: 1}
-  warningColor: {r: 1, g: 0.3, b: 0.3, a: 1}
 --- !u!114 &2022683264
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -14190,7 +14157,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1299526429269536}
-  m_Mesh: {fileID: 4300000, guid: 1d1efd74961b744cca932e0880b5eb4d, type: 3}
+  m_Mesh: {fileID: 4300000, guid: 277a4092b6ae84cc6970d7a21ac55f7f, type: 3}
 --- !u!33 &33680731950641380
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -14320,7 +14287,7 @@ PrefabInstance:
     - target: {fileID: 1147762815394758455, guid: 71b65e0788a2e8243a79cc35f60c80e7, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
-      objectReference: {fileID: 1109117509}
+      objectReference: {fileID: 1109117511}
     - target: {fileID: 1147762815394758455, guid: 71b65e0788a2e8243a79cc35f60c80e7, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
       value: ToggleMenu

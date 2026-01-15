@@ -1,6 +1,7 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
+using BreakInfinity; // <--- Aggiunto per far funzionare BigDouble
 
 public class DailyGiftManager : MonoBehaviour
 {
@@ -223,13 +224,13 @@ public class DailyGiftManager : MonoBehaviour
                 
                 // --- PLACEHOLDERS FOR FUTURE DYNAMIC REWARDS ---
                 case DailyRewardSO.RewardType.PremiumCurrency:
-                     Debug.LogWarning("Dynamic Premium Currency calculation not yet implemented. Returning placeholder value.");
+                      Debug.LogWarning("Dynamic Premium Currency calculation not yet implemented. Returning placeholder value.");
                     return 10; // Placeholder
                 case DailyRewardSO.RewardType.ScienceNodes:
                     Debug.LogWarning("Dynamic Science Nodes calculation not yet implemented. Returning placeholder value.");
                     return 5; // Placeholder
                 case DailyRewardSO.RewardType.QuantumMultiplier:
-                     Debug.LogWarning("Dynamic Quantum Multiplier not yet implemented. Returning placeholder value.");
+                      Debug.LogWarning("Dynamic Quantum Multiplier not yet implemented. Returning placeholder value.");
                     return 1; // Placeholder
             }
         }

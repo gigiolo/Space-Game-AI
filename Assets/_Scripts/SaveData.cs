@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic; 
+using System.Collections.Generic;
 
 [Serializable]
 public class SaveData
@@ -29,6 +29,13 @@ public class SaveData
     // DAILY GIFT
     public string dailyGiftLastClaimedTimestamp;
     public int dailyGiftCurrentDayIndex;
+
+    // --- PLANET TRAVEL (Nuovi campi aggiunti) ---
+    public int currentPlanetIndex;
+    public bool isPreparingForLaunch;
+    public string launchPreparationProgress; // Salviamo come stringa perché è un BigDouble
+    public bool isTraveling;
+    public string travelStartTimeBinary;     // Salviamo il tempo come stringa binaria
 }
 
 [Serializable]
