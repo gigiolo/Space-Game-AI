@@ -24,7 +24,7 @@ public class PlanetManager : MonoBehaviour
     [HideInInspector] public bool isTraveling = false;
     [HideInInspector] public DateTime travelStartTime;
 
-    public const float TRAVEL_DURATION_SECONDS = 3600; // 1 hour
+    public const float TRAVEL_DURATION_SECONDS = 3; // 1 hour
 
     private void Awake()
     {

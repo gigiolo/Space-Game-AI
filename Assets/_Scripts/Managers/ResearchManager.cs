@@ -19,22 +19,16 @@ public class ResearchManager : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-        }
-        else
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
+        // --- MODIFICA: Niente più DontDestroyOnLoad ---
+        // Ogni scena ha il suo ResearchManager che gestisce la propria UI.
+        Instance = this;
     }
 
     private void Start()
     {
         if(menuPanel) menuPanel.SetActive(false); 
         
-        // Inizializza se non è stato già fatto dal LoadGame
+        // Inizializza se non è stato già fatto
         if (allResearches == null || allResearches.Count == 0)
             InitializeDatabase();
 
@@ -57,7 +51,6 @@ public class ResearchManager : MonoBehaviour
 
         foreach (var def in researchDatabase)
         {
-            // Evita duplicati se chiamiamo questa funzione più volte
             if (!allResearches.Exists(r => r.id == def.id))
             {
                 allResearches.Add(new ResearchItem(def));
@@ -112,13 +105,21 @@ public class ResearchManager : MonoBehaviour
 
     void UpdateAllSlots()
     {
+        // Protezione extra: se la UI è stata distrutta, non fare nulla
+        if (menuPanel == null) return;
+
         if(!menuPanel.activeSelf) return;
+        
         foreach(Transform child in listContent)
-            child.GetComponent<ResearchSlotUI>().RefreshUI();
+        {
+            if (child != null)
+                child.GetComponent<ResearchSlotUI>().RefreshUI();
+        }
     }
 
     public void ToggleMenu()
     {
+        if (menuPanel == null) return;
         menuPanel.SetActive(!menuPanel.activeSelf);
         if(menuPanel.activeSelf) UpdateAllSlots();
     }
@@ -132,9 +133,6 @@ public class ResearchManager : MonoBehaviour
         GameManager.Instance.LogisticsResearchBonus = 0;
         GameManager.Instance.StorageResearchBonus = 0;
         
-        // --- MODIFICA FONDAMENTALE ---
-        // Resettiamo al valore BASE, non a zero.
-        // Così il tuo 0.3 iniziale non viene perso.
         GameManager.Instance.EmitterAutoGrowthSpeed = GameManager.Instance.BaseAutoGrowthSpeed;
         
         GameManager.Instance.EmitterCapResearchBonus = 0; 
@@ -152,7 +150,6 @@ public class ResearchManager : MonoBehaviour
 
     void ApplyEffectBasedOnTotalLevel(ResearchItem item)
     {
-        // NOTA: item.target e item.type ora vengono letti dal SO tramite ResearchItem
         if (item.target == ResearchTarget.GlobalProduction && item.type == ResearchType.Multiplier)
         {
             BigDouble totalMult = BigDouble.Pow(1 + item.bonusValue, item.currentLevel);

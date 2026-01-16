@@ -15,8 +15,8 @@ MonoBehaviour:
   planetName: Planet_2
   sceneName: Scene_planet2
   requiredPlanetValue:
-    mantissa: 3.45
-    exponent: 4
+    mantissa: 1.099
+    exponent: 3
   productionMultiplier:
     mantissa: 5
     exponent: 0

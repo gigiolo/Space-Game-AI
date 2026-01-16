@@ -14,26 +14,18 @@ public class GameManager : MonoBehaviour
     public ResearchManager targetResearchManager; 
     public UITheme activeTheme; 
     
-    // Riferimento allo script che gestisce le luci sul pianeta
     public PlanetPopulationVisuals planetVisuals; 
-    
     public GameObject[] emitters;
 
     [Header("--- BILANCIAMENTO ---")]
     public double offlineProductionRatio = 0.5d;
 
-    [Header("--- ENERGY BUTTON (RAMP-UP) ---")]
-    [Tooltip("Tempo in secondi per raggiungere il moltiplicatore massimo.")]
+    [Header("--- ENERGY BUTTON ---")]
     [SerializeField] private float energyButton_RampUpDuration = 7.0f;
-    [Tooltip("Il moltiplicatore massimo applicato alla produzione.")]
     [SerializeField] private float energyButton_MaxMultiplier = 3.0f;
-    [Tooltip("Durata massima in secondi in cui il moltiplicatore resta al suo picco.")]
     [SerializeField] private float energyButton_MaxHoldDuration = 12.0f;
-    [Tooltip("Tempo in secondi per far tornare il moltiplicatore a 1x.")]
     [SerializeField] private float energyButton_RampDownDuration = 7.0f;
-    [Tooltip("Modifica il costo del cooldown. Es: 1.0 = cooldown uguale al tempo di utilizzo.")]
     [SerializeField] private float energyButton_CooldownMultiplier = 1.0f;
-
 
     [Header("--- SALVATAGGIO ---")]
     public float autoSaveInterval = 30f; 
@@ -41,41 +33,24 @@ public class GameManager : MonoBehaviour
     // --- VARIABILI DI GIOCO ---
     public BigDouble CurrentEnergy { get; private set; }
     public BigDouble LifetimeEarnings { get; private set; }
-    
     public int EmitterCount { get; private set; } 
     public int LogisticsLevel { get; private set; }
-    
-    // --- VARIABILI PERMANENTI ---
     public BigDouble ScientificNodes { get; private set; } = 0;
     
     // --- CAPACITA' & LIMITI ---
     public BigDouble BaseEmissionPerUnit { get; private set; } = 0.01; 
-    
-    // TEMPO OFFLINE (Sostituisce lo Storage Cap)
-    // Base: 7200 secondi (2 Ore)
     public double MaxOfflineSeconds { get; private set; } = 7200; 
-
     public BigDouble LogisticsCap { get; private set; } = 3;
-
-    // --- LIMITE EMETTITORI ---
     public int EmitterCap { get; private set; } = 1; 
 
     // --- MOLTIPLICATORI & BONUS ---
     public BigDouble ResearchMultiplier { get; set; } = 1;
     public BigDouble LogisticsResearchBonus { get; set; } = 0;
-    
-    // Questo bonus ora rappresenta LIVELLI di batteria
     public BigDouble StorageResearchBonus { get; set; } = 0; 
-    
-    // Bonus accumulato dalle ricerche per il Cap Emettitori
     public int EmitterCapResearchBonus { get; set; } = 0; 
     
-    // --- GESTIONE VELOCITA' NANOBOT ---
     public double BaseAutoGrowthSpeed = 0.3; 
-    
-    // IMPORTANTE: Questo deve essere 'double' per funzionare con Time.deltaTime
     public double EmitterAutoGrowthSpeed { get; set; } 
-    
     private double _emitterAccumulator = 0; 
 
     public BigDouble EarningsBonus => 1 + (ScientificNodes * 0.50); 
@@ -91,125 +66,39 @@ public class GameManager : MonoBehaviour
     // --- ENERGY BUTTON STATE ---
     private enum EnergyButtonState { Idle, RampingUp, HoldingMax, RampingDown, Cooldown }
     private EnergyButtonState _energyButtonState = EnergyButtonState.Idle;
-
-    // Il valore attuale del moltiplicatore, pubblico per la UI
     public float CurrentEnergyMultiplier { get; private set; } = 1.0f;
-
-    // Timers interni per la logica
     private float _energyButtonTimer = 0.0f;
     private float _timeSpentAtMax = 0.0f;
     private float _cooldownTimer = 0.0f;
-
-    // Nuove variabili per gestire la discesa proporzionale
     private float _rampDownStartMultiplier = 1.0f;
     private float _currentRampDownDuration = 0.0f;
 
-
-    // --- FORMULE DI PRODUZIONE ---
-
-    // 1. Produzione Attuale (Include il moltiplicatore del bottone che tieni premuto)
+    // FORMULE
     public BigDouble RawProductionRate 
     {
         get 
         {
             BigDouble baseProd = EmitterCount * BaseEmissionPerUnit;
-            
-            // Get planet multiplier, default to 1 if not available
             BigDouble planetMultiplier = PlanetManager.Instance?.GetCurrentPlanetData()?.productionMultiplier ?? 1;
-
             BigDouble multipliers = ResearchMultiplier * EarningsBonus * planetMultiplier;
-            
-            // Applica il moltiplicatore dinamico del bottone
             multipliers *= CurrentEnergyMultiplier;
-
             return baseProd * multipliers;
         }
     }
 
-    // 2. Produzione STABILE (Ignora il bottone, serve per il Planet Value)
     public BigDouble RawStableProductionRate 
     {
         get 
         {
             BigDouble baseProd = EmitterCount * BaseEmissionPerUnit;
-            
             BigDouble planetMultiplier = PlanetManager.Instance?.GetCurrentPlanetData()?.productionMultiplier ?? 1;
-
-            // NOTA: Qui NON moltiplichiamo per 'CurrentEnergyMultiplier'
             BigDouble multipliers = ResearchMultiplier * EarningsBonus * planetMultiplier;
-
             return baseProd * multipliers;
         }
     }
 
-    // Income Reale (quello che guadagni ogni secondo)
     public BigDouble EffectiveIncomePerSec => BigDouble.Min(RawProductionRate, LogisticsCap);
-
-    // Income Stabile (quello usato per sbloccare i pianeti)
     public BigDouble EffectiveStableIncomePerSec => BigDouble.Min(RawStableProductionRate, LogisticsCap);
-
-
-    private void UpdateEnergyButtonState()
-    {
-        float deltaTime = Time.deltaTime;
-
-        switch (_energyButtonState)
-        {
-            case EnergyButtonState.RampingUp:
-                _energyButtonTimer += deltaTime;
-                CurrentEnergyMultiplier = Mathf.Lerp(1.0f, energyButton_MaxMultiplier, _energyButtonTimer / energyButton_RampUpDuration);
-
-                if (_energyButtonTimer >= energyButton_RampUpDuration)
-                {
-                    CurrentEnergyMultiplier = energyButton_MaxMultiplier;
-                    _energyButtonState = EnergyButtonState.HoldingMax;
-                    _energyButtonTimer = 0.0f; // Reset timer for hold phase
-                }
-                break;
-
-            case EnergyButtonState.HoldingMax:
-                _energyButtonTimer += deltaTime;
-                _timeSpentAtMax += deltaTime;
-
-                if (_energyButtonTimer >= energyButton_MaxHoldDuration)
-                {
-                    _energyButtonState = EnergyButtonState.RampingDown;
-                    _energyButtonTimer = 0.0f; // Reset timer for ramp down
-                }
-                break;
-
-            case EnergyButtonState.RampingDown:
-                _energyButtonTimer += deltaTime;
-
-                if (_currentRampDownDuration > 0)
-                {
-                    float normalizedTime = _energyButtonTimer / _currentRampDownDuration;
-                    CurrentEnergyMultiplier = Mathf.Lerp(_rampDownStartMultiplier, 1.0f, normalizedTime);
-                }
-                else
-                {
-                    CurrentEnergyMultiplier = 1.0f;
-                }
-
-                if (_energyButtonTimer >= _currentRampDownDuration)
-                {
-                    CurrentEnergyMultiplier = 1.0f;
-                    _energyButtonState = EnergyButtonState.Cooldown;
-                    _cooldownTimer = _timeSpentAtMax * energyButton_CooldownMultiplier;
-                    _timeSpentAtMax = 0; // Reset for next cycle
-                    _energyButtonTimer = 0;
-                }
-                break;
-
-            case EnergyButtonState.Cooldown:
-                _cooldownTimer -= deltaTime;
-                if (_cooldownTimer <= 0)
-                {
-                    _energyButtonState = EnergyButtonState.Idle;
-                }
-                break;
-        }
-    }
 
     private void Awake()
     {
@@ -222,9 +111,36 @@ public class GameManager : MonoBehaviour
         InitializeGameState();
     }
 
+    // --- MODIFICA: Registrazione evento SceneLoaded ---
+    private void OnEnable()
+    {
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    // Questa funzione viene chiamata automaticamente ogni volta che cambia la scena
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // Cerca il nuovo ResearchManager nella nuova scena
+        targetResearchManager = FindFirstObjectByType<ResearchManager>();
+        
+        // Cerca i nuovi visuals del pianeta
+        planetVisuals = FindFirstObjectByType<PlanetPopulationVisuals>();
+        
+        // Forza un refresh della UI
+        OnEconomyUpdated?.Invoke();
+    }
+    // ------------------------------------------------
+
     private void Start()
     {
         if (activeTheme != null) ThemedUIElement.SetGlobalTheme(activeTheme);
+        
+        // Questo trova il manager della PRIMA scena
         if (targetResearchManager == null) targetResearchManager = FindFirstObjectByType<ResearchManager>();
 
         LoadGame(); 
@@ -233,24 +149,19 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        // SHORTCUT HARD RESET
+        // HARD RESET
         if (Input.GetKeyDown(KeyCode.K) || Input.touchCount >= 4)
         {
             PerformFullHardReset();
             return;
         }
 
-        // 1. GESTIONE LOGICA ENERGY BUTTON
         UpdateEnergyButtonState();
 
-        // 2. GESTIONE INCOME (INFINITO)
         BigDouble income = EffectiveIncomePerSec;
-        
         if (income > 0)
         {
             BigDouble amount = income * Time.deltaTime;
-
-            // Energia Infinita: sale sempre
             CurrentEnergy += amount;
             LifetimeEarnings += amount;
 
@@ -262,20 +173,16 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // 2. GESTIONE AUTO-CRESCITA (Nanobot)
+        // NANOBOT
         if (EmitterAutoGrowthSpeed > 0 && EmitterCount < EmitterCap)
         {
             _emitterAccumulator += EmitterAutoGrowthSpeed * Time.deltaTime;
-            
             if (_emitterAccumulator >= 1.0)
             {
                 int toAdd = (int)_emitterAccumulator; 
-                
                 int spaceLeft = EmitterCap - EmitterCount;
                 int actualAdd = Mathf.Min(toAdd, spaceLeft);
-
                 _emitterAccumulator -= actualAdd;               
-                
                 if (actualAdd < toAdd) _emitterAccumulator = 0;
 
                 if (actualAdd > 0)
@@ -287,18 +194,54 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // DEBUG
-        if (Input.GetKeyDown(KeyCode.N))
+        if (Input.GetKeyDown(KeyCode.N)) AddInstantEmitters(5);
+    }
+
+    private void UpdateEnergyButtonState()
+    {
+        float deltaTime = Time.deltaTime;
+        switch (_energyButtonState)
         {
-            AddInstantEmitters(5);
+            case EnergyButtonState.RampingUp:
+                _energyButtonTimer += deltaTime;
+                CurrentEnergyMultiplier = Mathf.Lerp(1.0f, energyButton_MaxMultiplier, _energyButtonTimer / energyButton_RampUpDuration);
+                if (_energyButtonTimer >= energyButton_RampUpDuration) {
+                    CurrentEnergyMultiplier = energyButton_MaxMultiplier;
+                    _energyButtonState = EnergyButtonState.HoldingMax;
+                    _energyButtonTimer = 0.0f; 
+                }
+                break;
+            case EnergyButtonState.HoldingMax:
+                _energyButtonTimer += deltaTime;
+                _timeSpentAtMax += deltaTime;
+                if (_energyButtonTimer >= energyButton_MaxHoldDuration) {
+                    _energyButtonState = EnergyButtonState.RampingDown;
+                    _energyButtonTimer = 0.0f; 
+                }
+                break;
+            case EnergyButtonState.RampingDown:
+                _energyButtonTimer += deltaTime;
+                if (_currentRampDownDuration > 0) {
+                    float normalizedTime = _energyButtonTimer / _currentRampDownDuration;
+                    CurrentEnergyMultiplier = Mathf.Lerp(_rampDownStartMultiplier, 1.0f, normalizedTime);
+                } else { CurrentEnergyMultiplier = 1.0f; }
+                if (_energyButtonTimer >= _currentRampDownDuration) {
+                    CurrentEnergyMultiplier = 1.0f;
+                    _energyButtonState = EnergyButtonState.Cooldown;
+                    _cooldownTimer = _timeSpentAtMax * energyButton_CooldownMultiplier;
+                    _timeSpentAtMax = 0; _energyButtonTimer = 0;
+                }
+                break;
+            case EnergyButtonState.Cooldown:
+                _cooldownTimer -= deltaTime;
+                if (_cooldownTimer <= 0) _energyButtonState = EnergyButtonState.Idle;
+                break;
         }
     }
 
     public BigDouble CalculatePotentialNodes()
     {
         if (LifetimeEarnings < 1000) return 0;
-        
-        // Rendimenti decrescenti (Radice Quadrata)
         BigDouble baseVal = LifetimeEarnings / 1000;
         return BigDouble.Floor(BigDouble.Pow(baseVal, 0.5));    
     }
@@ -306,12 +249,8 @@ public class GameManager : MonoBehaviour
     public void RecalculateCaps()
     {
         LogisticsCap = 5000 + (LogisticsLevel * 50) + LogisticsResearchBonus; 
-        
-        // --- CALCOLO TEMPO OFFLINE ---
         double bonusSeconds = StorageResearchBonus.ToDouble() * 1800;
-        
         MaxOfflineSeconds = 7200 + bonusSeconds;
-
         EmitterCap = 5 + EmitterCapResearchBonus;
     }
 
@@ -324,21 +263,19 @@ public class GameManager : MonoBehaviour
     public void PerformQuantumReset()
     {
         BigDouble nodesToGain = CalculatePotentialNodes();
-
         if (nodesToGain <= 0) return;
 
         ScientificNodes += nodesToGain;
-        
         InitializeGameState(); 
 
         if (planetVisuals != null) planetVisuals.ResetVisuals();
 
+        // NOTA: Qui usiamo targetResearchManager. 
+        // Grazie al fix OnSceneLoaded, questo riferimento è sempre valido per la scena corrente.
         if (targetResearchManager != null)
         {
             foreach(var res in targetResearchManager.allResearches)
-            {
                 res.currentLevel = 0;
-            }
             targetResearchManager.RecalculateAllResearches();
         }
 
@@ -348,16 +285,16 @@ public class GameManager : MonoBehaviour
     
     public void PerformPlanetChangeReset()
     {
-        // This reset is for changing planets. It preserves Scientific Nodes.
         InitializeGameState();
 
-        // Reset researches
+        // Aggiorna il riferimento per sicurezza (se la scena è appena caricata)
+        if (targetResearchManager == null) 
+            targetResearchManager = FindFirstObjectByType<ResearchManager>();
+
         if (targetResearchManager != null)
         {
             foreach(var res in targetResearchManager.allResearches)
-            {
                 res.currentLevel = 0;
-            }
             targetResearchManager.RecalculateAllResearches();
         }
 
@@ -370,16 +307,12 @@ public class GameManager : MonoBehaviour
         LifetimeEarnings = 0;
         EmitterCount = 1;
         LogisticsLevel = 1; 
-        
         ResearchMultiplier = 1;
         LogisticsResearchBonus = 0;
         StorageResearchBonus = 0;
-        
         EmitterCapResearchBonus = 0;
         EmitterAutoGrowthSpeed = BaseAutoGrowthSpeed;
-        
         _emitterAccumulator = 0;
-
         RecalculateCaps();
     }
 
@@ -390,43 +323,28 @@ public class GameManager : MonoBehaviour
         data.lifetimeEarnings = LifetimeEarnings.ToString();
         data.emitterCount = EmitterCount;
         data.logisticsLevel = LogisticsLevel;
-        
         data.lastSaveTime = DateTime.UtcNow.ToBinary().ToString(); 
-        
         data.scientificNodes = ScientificNodes.ToString();
         
-        // Save planet progression
         if (PlanetManager.Instance != null)
         {
             data.currentPlanetIndex = PlanetManager.Instance.currentPlanetIndex;
             data.isPreparingForLaunch = PlanetManager.Instance.isPreparingForLaunch;
             data.launchPreparationProgress = PlanetManager.Instance.launchPreparationProgress.ToString();
-            
-            // *** SALVATAGGIO COSTO BLOCCATO ***
             data.lockedLaunchRequirement = PlanetManager.Instance.lockedLaunchRequirement.ToString();
-            // *********************************
-
             data.isTraveling = PlanetManager.Instance.isTraveling;
             data.travelStartTimeBinary = PlanetManager.Instance.travelStartTime.ToBinary().ToString();
         }
 
         if (planetVisuals != null)
-        {
             data.cityLightPositions = planetVisuals.GetEncodedPositions();
-        }
 
         if (targetResearchManager != null)
         {
             foreach (var item in targetResearchManager.allResearches)
             {
                 if (item.currentLevel > 0) 
-                {
-                    data.researches.Add(new ResearchSaveData 
-                    { 
-                        id = item.id, 
-                        level = item.currentLevel 
-                    });
-                }
+                    data.researches.Add(new ResearchSaveData { id = item.id, level = item.currentLevel });
             }
         }
         SaveManager.Save(data);
@@ -435,7 +353,6 @@ public class GameManager : MonoBehaviour
     public void LoadGame()
     {
         SaveData data = SaveManager.Load();
-
         if (data == null) 
         {
             InitializeGameState();
@@ -454,22 +371,15 @@ public class GameManager : MonoBehaviour
         else
             ScientificNodes = 0;
             
-        // Load planet progression
         if (PlanetManager.Instance != null)
         {
             PlanetManager.Instance.currentPlanetIndex = data.currentPlanetIndex;
             PlanetManager.Instance.isPreparingForLaunch = data.isPreparingForLaunch;
             if (!string.IsNullOrEmpty(data.launchPreparationProgress))
-            {
                 PlanetManager.Instance.launchPreparationProgress = BigDouble.Parse(data.launchPreparationProgress);
-            }
-
-            // *** CARICAMENTO COSTO BLOCCATO ***
+            
             if (!string.IsNullOrEmpty(data.lockedLaunchRequirement))
-            {
                 PlanetManager.Instance.lockedLaunchRequirement = BigDouble.Parse(data.lockedLaunchRequirement);
-            }
-            // **********************************
 
             PlanetManager.Instance.isTraveling = data.isTraveling;
             if (!string.IsNullOrEmpty(data.travelStartTimeBinary))
@@ -480,28 +390,21 @@ public class GameManager : MonoBehaviour
         }
 
         if (targetResearchManager != null)
-        {
             targetResearchManager.LoadResearchLevels(data.researches);
-        }
 
         if (planetVisuals != null && data.cityLightPositions != null)
-        {
             planetVisuals.LoadEncodedPositions(data.cityLightPositions);
-        }
 
         RecalculateCaps();
 
         if (!string.IsNullOrEmpty(data.lastSaveTime))
-        {
             HandleOfflineProgress(data.lastSaveTime);
-        }
 
         OnEconomyUpdated?.Invoke();
     }
     
     private void HandleOfflineProgress(string lastSaveTimeStr)
     {
-        // Correct Offline Travel Handling
         if (PlanetManager.Instance != null && PlanetManager.Instance.isTraveling)
         {
             TimeSpan timeSinceTravelStart = DateTime.UtcNow - PlanetManager.Instance.travelStartTime;
@@ -532,9 +435,7 @@ public class GameManager : MonoBehaviour
 
         if (secondsAway > 1) 
         {
-            // LIMITA IL TEMPO, NON L'ENERGIA
             double actualSeconds = Math.Min(secondsAway, MaxOfflineSeconds);
-            
             BigDouble actualEarnings = EffectiveIncomePerSec * actualSeconds * offlineProductionRatio;
 
             if (actualEarnings > 0) 
@@ -544,16 +445,10 @@ public class GameManager : MonoBehaviour
                 LastOfflineEarnings = actualEarnings;
             }
 
-            // CRESCITA EMETTITORI OFFLINE
             if (EmitterAutoGrowthSpeed > 0 && EmitterCount < EmitterCap)
             {
-                // 1. Calcoliamo la crescita decimale totale basata sul 50% (offlineProductionRatio)
                 double rawGrowth = EmitterAutoGrowthSpeed * actualSeconds * offlineProductionRatio;
-
-                // 2. Aggiungiamo il progresso all'accumulatore esistente
                 _emitterAccumulator += rawGrowth;
-
-                // 3. Vediamo se abbiamo raggiunto numeri interi
                 int potentialGained = (int)_emitterAccumulator;
 
                 if (potentialGained > 0)
@@ -566,20 +461,10 @@ public class GameManager : MonoBehaviour
                         EmitterCount += actualGained;
                         RecalculateCaps(); 
                     }
-
-                    // 4. Gestione dell'accumulatore
-                    if (EmitterCount >= EmitterCap)
-                    {
-                        _emitterAccumulator = 0;
-                    }
-                    else
-                    {
-                        // Sottraiamo solo gli emitter effettivamente aggiunti per mantenere il resto
-                        _emitterAccumulator -= actualGained;
-                    }
+                    if (EmitterCount >= EmitterCap) _emitterAccumulator = 0;
+                    else _emitterAccumulator -= actualGained;
                 }
             }
-
             LastOfflineTimeSpan = timeAway;
             OnOfflineProductionCalculated?.Invoke();
         }
@@ -587,21 +472,15 @@ public class GameManager : MonoBehaviour
 
     IEnumerator AutoSaveRoutine()
     {
-        while (true)
-        {
-            yield return new WaitForSeconds(autoSaveInterval);
-            SaveGame();
-        }
+        while (true) { yield return new WaitForSeconds(autoSaveInterval); SaveGame(); }
     }
     
     private void OnApplicationQuit() => SaveGame();
     private void OnApplicationPause(bool pauseStatus) { if (pauseStatus) SaveGame(); }
 
-    // --- AZIONI GIOCATORE (Energy Button)---
     public void OnEnergyButtonPress()
     {
-        if (_energyButtonState == EnergyButtonState.Idle)
-        {
+        if (_energyButtonState == EnergyButtonState.Idle) {
             _energyButtonState = EnergyButtonState.RampingUp;
             _energyButtonTimer = 0.0f;
         }
@@ -609,27 +488,21 @@ public class GameManager : MonoBehaviour
 
     public void OnEnergyButtonRelease()
     {
-        if (_energyButtonState == EnergyButtonState.RampingUp)
-        {
+        if (_energyButtonState == EnergyButtonState.RampingUp) {
             _rampDownStartMultiplier = CurrentEnergyMultiplier;
             float multiplierRatio = (_rampDownStartMultiplier - 1.0f) / (energyButton_MaxMultiplier - 1.0f);
             _currentRampDownDuration = energyButton_RampDownDuration * multiplierRatio;
-
             _energyButtonState = EnergyButtonState.RampingDown;
             _energyButtonTimer = 0.0f;
         }
-        else if (_energyButtonState == EnergyButtonState.HoldingMax)
-        {
+        else if (_energyButtonState == EnergyButtonState.HoldingMax) {
             _rampDownStartMultiplier = energyButton_MaxMultiplier;
             _currentRampDownDuration = energyButton_RampDownDuration;
-
             _energyButtonState = EnergyButtonState.RampingDown;
             _energyButtonTimer = 0.0f;
         }
     }
 
-
-    // --- AZIONI GIOCATORE ---
     public bool TrySpend(BigDouble amount)
     {
         if (CurrentEnergy >= amount) { CurrentEnergy -= amount; return true; }
@@ -657,28 +530,15 @@ public class GameManager : MonoBehaviour
     public void PerformFullHardReset()
     {
         Debug.LogWarning("HARD RESET INIZIATO.");
-
         SaveManager.DeleteSaveFile();
-
-        ScientificNodes = 0;
-        LifetimeEarnings = 0;
-        CurrentEnergy = 0;
-        EmitterCount = 1;
-        LogisticsLevel = 1; 
-        
-        if (targetResearchManager != null)
-        {
-            foreach (var item in targetResearchManager.allResearches)
-            {
-                item.currentLevel = 0;
-            }
+        ScientificNodes = 0; LifetimeEarnings = 0; CurrentEnergy = 0;
+        EmitterCount = 1; LogisticsLevel = 1; 
+        if (targetResearchManager != null) {
+            foreach (var item in targetResearchManager.allResearches) item.currentLevel = 0;
             targetResearchManager.RecalculateAllResearches();
         }
-
         if (planetVisuals != null) planetVisuals.ResetVisuals();
-
         InitializeGameState();
-
         SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }
