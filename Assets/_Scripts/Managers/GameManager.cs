@@ -514,26 +514,39 @@ public class GameManager : MonoBehaviour
                 LastOfflineEarnings = actualEarnings;
             }
 
-            // CRESCITA EMETTITORI OFFLINE
+            // CRESCITA EMETTITORI OFFLINE (MODIFICATO)
             if (EmitterAutoGrowthSpeed > 0 && EmitterCount < EmitterCap)
             {
-                // FIX: Assicurati che tutte le variabili qui siano 'double'
+                // 1. Calcoliamo la crescita decimale totale basata sul 50% (offlineProductionRatio)
                 double rawGrowth = EmitterAutoGrowthSpeed * actualSeconds * offlineProductionRatio;
-                
-                int potentialGained = (int)rawGrowth;
-                double decimalRemainder = rawGrowth - potentialGained;
 
-                int spaceLeft = EmitterCap - EmitterCount;
-                int actualGained = Mathf.Min(potentialGained, spaceLeft);
+                // 2. Aggiungiamo il progresso all'accumulatore esistente
+                _emitterAccumulator += rawGrowth;
 
-                if (actualGained > 0)
+                // 3. Vediamo se abbiamo raggiunto numeri interi
+                int potentialGained = (int)_emitterAccumulator;
+
+                if (potentialGained > 0)
                 {
-                    EmitterCount += actualGained;
-                    if (EmitterCount < EmitterCap)
+                    int spaceLeft = EmitterCap - EmitterCount;
+                    int actualGained = Mathf.Min(potentialGained, spaceLeft);
+
+                    if (actualGained > 0)
                     {
-                        _emitterAccumulator += decimalRemainder;
+                        EmitterCount += actualGained;
+                        RecalculateCaps(); 
                     }
-                    RecalculateCaps(); 
+
+                    // 4. Gestione dell'accumulatore
+                    if (EmitterCount >= EmitterCap)
+                    {
+                        _emitterAccumulator = 0;
+                    }
+                    else
+                    {
+                        // Sottraiamo solo gli emitter effettivamente aggiunti per mantenere il resto
+                        _emitterAccumulator -= actualGained;
+                    }
                 }
             }
 
