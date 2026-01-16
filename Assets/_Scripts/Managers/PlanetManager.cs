@@ -14,6 +14,18 @@ public class PlanetManager : MonoBehaviour
     [HideInInspector]
     public int currentPlanetIndex = 0;
 
+    // --- TRAVEL STATE ---
+    [HideInInspector] public bool isPreparingForLaunch = false;
+    [HideInInspector] public BigDouble launchPreparationProgress = 0;
+    
+    // NUOVO: Memorizza il costo fisso all'inizio del lancio
+    [HideInInspector] public BigDouble lockedLaunchRequirement = 0; 
+
+    [HideInInspector] public bool isTraveling = false;
+    [HideInInspector] public DateTime travelStartTime;
+
+    public const float TRAVEL_DURATION_SECONDS = 3600; // 1 hour
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -23,14 +35,14 @@ public class PlanetManager : MonoBehaviour
         else
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject); // Important for scene changes
+            DontDestroyOnLoad(gameObject);
         }
     }
 
-    private void Start()
+    private void Update()
     {
-        // Logic to load the current planet will be added here later
-        // For now, we assume we always start on the first planet (index 0)
+        if (isPreparingForLaunch) UpdateLaunchPreparation();
+        if (isTraveling) UpdateTravel();
     }
 
     public PlanetData GetCurrentPlanetData()
@@ -39,7 +51,6 @@ public class PlanetManager : MonoBehaviour
         {
             return planets[currentPlanetIndex];
         }
-        Debug.LogError("Planet data for the current index is not available.");
         return null;
     }
 
@@ -47,64 +58,55 @@ public class PlanetManager : MonoBehaviour
     {
         if (GameManager.Instance == null) return 0;
 
-        // CORREZIONE: Usiamo EffectiveIncomePerSec invece di TotalEnergyPerSecond
-        BigDouble currentEnergyProduction = GameManager.Instance.EffectiveIncomePerSec;
-        
-        // Assumiamo che emitters sia un array nel GameManager, altrimenti usiamo EmitterCount
-        BigDouble maxEmitters = 0;
-        if (GameManager.Instance.emitters != null)
-             maxEmitters = GameManager.Instance.emitters.Length;
-        else
-             maxEmitters = GameManager.Instance.EmitterCap; // Fallback se l'array non è assegnato
+        // Usa la produzione stabile per evitare oscillazioni
+        BigDouble currentEnergyProduction = GameManager.Instance.EffectiveStableIncomePerSec;
+        BigDouble maxEmitters = GameManager.Instance.EmitterCap;
+
+        if (maxEmitters <= 0) maxEmitters = 1;
 
         BigDouble balanceFactor = GetCurrentPlanetData()?.balanceFactor ?? 1;
-
-        if (maxEmitters == 0) return 0;
+        if (balanceFactor <= 0) balanceFactor = 1;
 
         return currentEnergyProduction * maxEmitters * balanceFactor;
-    }
-
-    // --- TRAVEL STATE ---
-    [HideInInspector] public bool isPreparingForLaunch = false;
-    [HideInInspector] public BigDouble launchPreparationProgress = 0;
-    [HideInInspector] public bool isTraveling = false;
-    [HideInInspector] public DateTime travelStartTime;
-
-    // --- BALANCE ---
-    public const float TRAVEL_DURATION_SECONDS = 3600; // 1 hour
-
-    private void Update()
-    {
-        if (isPreparingForLaunch)
-        {
-            UpdateLaunchPreparation();
-        }
-
-        if (isTraveling)
-        {
-            UpdateTravel();
-        }
     }
 
     public BigDouble GetLaunchEnergyRequirement()
     {
         if (GameManager.Instance == null) return 0;
-        // Requires 60 seconds of max production
-        // CORREZIONE: Usiamo EffectiveIncomePerSec
-        return GameManager.Instance.EffectiveIncomePerSec * 60;
+
+        // --- FIX CRITICO: SE STIAMO GIA' PREPARANDO, USA IL VALORE BLOCCATO ---
+        // Questo evita che il traguardo si sposti mentre giochi.
+        if (isPreparingForLaunch && lockedLaunchRequirement > 0)
+        {
+            return lockedLaunchRequirement;
+        }
+
+        // Altrimenti calcola quello attuale (Produzione Stabile * 60 secondi)
+        return GameManager.Instance.EffectiveStableIncomePerSec * 60;
     }
 
     private void UpdateLaunchPreparation()
     {
+        // Ora recupera sempre il valore fisso (grazie alla modifica sopra)
         BigDouble energyRequirement = GetLaunchEnergyRequirement();
-        if (energyRequirement <= 0) return;
+        
+        if (energyRequirement <= 0) 
+        {
+            // Protezione: se per assurdo è 0, finiamo subito
+            isPreparingForLaunch = false;
+            return;
+        }
 
-        // Consume energy up to the max needed for preparation
-        // CORREZIONE: Usiamo EffectiveIncomePerSec
+        // Calcola quanto aggiungere questo frame
         BigDouble energyToConsume = GameManager.Instance.EffectiveIncomePerSec * Time.deltaTime;
+        
+        // Calcola quanto manca
         BigDouble remainingEnergy = energyRequirement - launchPreparationProgress;
         
-        energyToConsume = BigDouble.Min(energyToConsume, remainingEnergy);
+        // Non consumare più del necessario
+        if (energyToConsume > remainingEnergy) energyToConsume = remainingEnergy;
+        
+        // Non consumare più di quello che hai
         energyToConsume = BigDouble.Min(energyToConsume, GameManager.Instance.CurrentEnergy);
 
         if (GameManager.Instance.TrySpend(energyToConsume))
@@ -112,10 +114,13 @@ public class PlanetManager : MonoBehaviour
             launchPreparationProgress += energyToConsume;
         }
 
-        if (launchPreparationProgress >= energyRequirement)
+        // Controllo di fine: tolleranza minima per errori di virgola mobile
+        if (launchPreparationProgress >= energyRequirement * 0.9999f) 
         {
+            // Arrotonda per pulizia e chiudi
+            launchPreparationProgress = energyRequirement;
             isPreparingForLaunch = false;
-            // Preparation is complete, player can now start the travel.
+            lockedLaunchRequirement = 0; // Reset per il prossimo pianeta
         }
     }
 
@@ -135,12 +140,20 @@ public class PlanetManager : MonoBehaviour
         PlanetData currentPlanet = GetCurrentPlanetData();
         if (currentPlanet == null || CalculatePlanetValue() < currentPlanet.requiredPlanetValue)
         {
-            Debug.LogWarning("Cannot start launch preparation: Planet Value not met.");
             return;
         }
 
         isPreparingForLaunch = true;
         launchPreparationProgress = 0;
+        
+        // --- FIX CRITICO: BLOCCHIAMO IL PREZZO ORA ---
+        lockedLaunchRequirement = GetLaunchEnergyRequirement();
+        
+        // Sicurezza: se per caso è 0, mettiamo un valore minimo
+        if (lockedLaunchRequirement <= 0) lockedLaunchRequirement = 100;
+        
+        // Salviamo subito per evitare problemi se il gioco crasha
+        GameManager.Instance.SaveGame();
     }
 
     public void StartInterplanetaryTravel()
@@ -149,7 +162,7 @@ public class PlanetManager : MonoBehaviour
 
         isTraveling = true;
         travelStartTime = DateTime.UtcNow;
-        GameManager.Instance.SaveGame(); // Save progress immediately
+        GameManager.Instance.SaveGame();
     }
 
     public void CompleteTravel()
@@ -157,20 +170,14 @@ public class PlanetManager : MonoBehaviour
         isTraveling = false;
         currentPlanetIndex++;
 
-        if (currentPlanetIndex >= planets.Count)
+        if (planets == null || currentPlanetIndex >= planets.Count)
         {
-            Debug.LogError("Travel completed, but no more planets are available!");
-            currentPlanetIndex = planets.Count - 1;
+            currentPlanetIndex = (planets != null) ? planets.Count - 1 : 0;
             return;
         }
 
-        // Load the new planet's scene
         UnityEngine.SceneManagement.SceneManager.LoadScene(GetCurrentPlanetData().sceneName);
-
-        // Perform the reset
         GameManager.Instance.PerformPlanetChangeReset();
-
-        // Save the new state
         GameManager.Instance.SaveGame();
     }
 }

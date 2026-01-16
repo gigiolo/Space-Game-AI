@@ -30,12 +30,17 @@ public class SaveData
     public string dailyGiftLastClaimedTimestamp;
     public int dailyGiftCurrentDayIndex;
 
-    // --- PLANET TRAVEL (Nuovi campi aggiunti) ---
+    // --- PLANET TRAVEL ---
     public int currentPlanetIndex;
     public bool isPreparingForLaunch;
-    public string launchPreparationProgress; // Salviamo come stringa perché è un BigDouble
+    public string launchPreparationProgress;
+    
+    // *** NUOVO CAMPO SALVATO ***
+    public string lockedLaunchRequirement; 
+    // ***************************
+
     public bool isTraveling;
-    public string travelStartTimeBinary;     // Salviamo il tempo come stringa binaria
+    public string travelStartTimeBinary;
 }
 
 [Serializable]

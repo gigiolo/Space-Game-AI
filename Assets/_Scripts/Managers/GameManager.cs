@@ -105,7 +105,9 @@ public class GameManager : MonoBehaviour
     private float _currentRampDownDuration = 0.0f;
 
 
-    // FORMULE DI PRODUZIONE
+    // --- FORMULE DI PRODUZIONE ---
+
+    // 1. Produzione Attuale (Include il moltiplicatore del bottone che tieni premuto)
     public BigDouble RawProductionRate 
     {
         get 
@@ -117,12 +119,35 @@ public class GameManager : MonoBehaviour
 
             BigDouble multipliers = ResearchMultiplier * EarningsBonus * planetMultiplier;
             
-            // Applica il nuovo moltiplicatore dinamico
+            // Applica il moltiplicatore dinamico del bottone
             multipliers *= CurrentEnergyMultiplier;
 
             return baseProd * multipliers;
         }
     }
+
+    // 2. Produzione STABILE (Ignora il bottone, serve per il Planet Value)
+    public BigDouble RawStableProductionRate 
+    {
+        get 
+        {
+            BigDouble baseProd = EmitterCount * BaseEmissionPerUnit;
+            
+            BigDouble planetMultiplier = PlanetManager.Instance?.GetCurrentPlanetData()?.productionMultiplier ?? 1;
+
+            // NOTA: Qui NON moltiplichiamo per 'CurrentEnergyMultiplier'
+            BigDouble multipliers = ResearchMultiplier * EarningsBonus * planetMultiplier;
+
+            return baseProd * multipliers;
+        }
+    }
+
+    // Income Reale (quello che guadagni ogni secondo)
+    public BigDouble EffectiveIncomePerSec => BigDouble.Min(RawProductionRate, LogisticsCap);
+
+    // Income Stabile (quello usato per sbloccare i pianeti)
+    public BigDouble EffectiveStableIncomePerSec => BigDouble.Min(RawStableProductionRate, LogisticsCap);
+
 
     private void UpdateEnergyButtonState()
     {
@@ -158,13 +183,11 @@ public class GameManager : MonoBehaviour
 
                 if (_currentRampDownDuration > 0)
                 {
-                    // Usa le nuove variabili per un Lerp proporzionale e corretto
                     float normalizedTime = _energyButtonTimer / _currentRampDownDuration;
                     CurrentEnergyMultiplier = Mathf.Lerp(_rampDownStartMultiplier, 1.0f, normalizedTime);
                 }
                 else
                 {
-                    // Se la durata è 0, imposta direttamente il moltiplicatore a 1 per evitare errori
                     CurrentEnergyMultiplier = 1.0f;
                 }
 
@@ -187,9 +210,6 @@ public class GameManager : MonoBehaviour
                 break;
         }
     }
-
-    // RENAMED BACK TO EffectiveIncomePerSec to fix errors in other scripts
-    public BigDouble EffectiveIncomePerSec => BigDouble.Min(RawProductionRate, LogisticsCap);
 
     private void Awake()
     {
@@ -254,7 +274,7 @@ public class GameManager : MonoBehaviour
                 int spaceLeft = EmitterCap - EmitterCount;
                 int actualAdd = Mathf.Min(toAdd, spaceLeft);
 
-                _emitterAccumulator -= actualAdd;              
+                _emitterAccumulator -= actualAdd;               
                 
                 if (actualAdd < toAdd) _emitterAccumulator = 0;
 
@@ -288,7 +308,6 @@ public class GameManager : MonoBehaviour
         LogisticsCap = 5000 + (LogisticsLevel * 50) + LogisticsResearchBonus; 
         
         // --- CALCOLO TEMPO OFFLINE ---
-        // FIX: Usiamo .ToDouble() per convertire in sicurezza BigDouble -> double
         double bonusSeconds = StorageResearchBonus.ToDouble() * 1800;
         
         MaxOfflineSeconds = 7200 + bonusSeconds;
@@ -342,8 +361,6 @@ public class GameManager : MonoBehaviour
             targetResearchManager.RecalculateAllResearches();
         }
 
-        // We don't save here immediately, the PlanetManager will handle saving
-        // after the new planet scene is loaded.
         OnEconomyUpdated?.Invoke();
     }
 
@@ -384,6 +401,11 @@ public class GameManager : MonoBehaviour
             data.currentPlanetIndex = PlanetManager.Instance.currentPlanetIndex;
             data.isPreparingForLaunch = PlanetManager.Instance.isPreparingForLaunch;
             data.launchPreparationProgress = PlanetManager.Instance.launchPreparationProgress.ToString();
+            
+            // *** SALVATAGGIO COSTO BLOCCATO ***
+            data.lockedLaunchRequirement = PlanetManager.Instance.lockedLaunchRequirement.ToString();
+            // *********************************
+
             data.isTraveling = PlanetManager.Instance.isTraveling;
             data.travelStartTimeBinary = PlanetManager.Instance.travelStartTime.ToBinary().ToString();
         }
@@ -441,6 +463,14 @@ public class GameManager : MonoBehaviour
             {
                 PlanetManager.Instance.launchPreparationProgress = BigDouble.Parse(data.launchPreparationProgress);
             }
+
+            // *** CARICAMENTO COSTO BLOCCATO ***
+            if (!string.IsNullOrEmpty(data.lockedLaunchRequirement))
+            {
+                PlanetManager.Instance.lockedLaunchRequirement = BigDouble.Parse(data.lockedLaunchRequirement);
+            }
+            // **********************************
+
             PlanetManager.Instance.isTraveling = data.isTraveling;
             if (!string.IsNullOrEmpty(data.travelStartTimeBinary))
             {
@@ -478,7 +508,7 @@ public class GameManager : MonoBehaviour
             if (timeSinceTravelStart.TotalSeconds >= PlanetManager.TRAVEL_DURATION_SECONDS)
             {
                 PlanetManager.Instance.CompleteTravel();
-                return; // Stop further offline processing as the planet has changed
+                return; 
             }
         }
 
@@ -514,7 +544,7 @@ public class GameManager : MonoBehaviour
                 LastOfflineEarnings = actualEarnings;
             }
 
-            // CRESCITA EMETTITORI OFFLINE (MODIFICATO)
+            // CRESCITA EMETTITORI OFFLINE
             if (EmitterAutoGrowthSpeed > 0 && EmitterCount < EmitterCap)
             {
                 // 1. Calcoliamo la crescita decimale totale basata sul 50% (offlineProductionRatio)
@@ -581,13 +611,8 @@ public class GameManager : MonoBehaviour
     {
         if (_energyButtonState == EnergyButtonState.RampingUp)
         {
-            // Salva il moltiplicatore corrente
             _rampDownStartMultiplier = CurrentEnergyMultiplier;
-
-            // Calcola la proporzione del moltiplicatore raggiunto rispetto al massimo
             float multiplierRatio = (_rampDownStartMultiplier - 1.0f) / (energyButton_MaxMultiplier - 1.0f);
-
-            // Calcola la durata della discesa in modo proporzionale
             _currentRampDownDuration = energyButton_RampDownDuration * multiplierRatio;
 
             _energyButtonState = EnergyButtonState.RampingDown;
@@ -595,7 +620,6 @@ public class GameManager : MonoBehaviour
         }
         else if (_energyButtonState == EnergyButtonState.HoldingMax)
         {
-            // Se siamo al massimo, usa i valori standard
             _rampDownStartMultiplier = energyButton_MaxMultiplier;
             _currentRampDownDuration = energyButton_RampDownDuration;
 

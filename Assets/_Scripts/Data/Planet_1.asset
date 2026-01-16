@@ -15,11 +15,11 @@ MonoBehaviour:
   planetName: Planet_1
   sceneName: Scene_planet1
   requiredPlanetValue:
-    mantissa: 0
-    exponent: 0
+    mantissa: 9
+    exponent: 2
   productionMultiplier:
     mantissa: 1
-    exponent: 0
+    exponent: 1
   balanceFactor:
     mantissa: 1
-    exponent: 0
+    exponent: 1
