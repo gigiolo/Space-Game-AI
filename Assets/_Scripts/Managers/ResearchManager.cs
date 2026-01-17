@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI; // Necessario per gestire Layout e Button
 using System.Collections.Generic;
 using BreakInfinity;
 
@@ -7,20 +8,18 @@ public class ResearchManager : MonoBehaviour
     public static ResearchManager Instance { get; private set; }
 
     [Header("UI References")]
-    public GameObject menuPanel;        
-    public Transform listContent;        
+    public GameObject menuPanel;         
+    public Transform listContent;         
     public ResearchSlotUI slotPrefab;    
 
-    [Header("Database (Trascina qui i file ricerca)")]
+    [Header("Database")]
     public List<ResearchDefinition> researchDatabase; 
 
-    [Header("Stato Runtime (Si riempie da solo)")]
+    [Header("Stato Runtime")]
     public List<ResearchItem> allResearches;
 
     private void Awake()
     {
-        // --- MODIFICA: Niente più DontDestroyOnLoad ---
-        // Ogni scena ha il suo ResearchManager che gestisce la propria UI.
         Instance = this;
     }
 
@@ -28,7 +27,6 @@ public class ResearchManager : MonoBehaviour
     {
         if(menuPanel) menuPanel.SetActive(false); 
         
-        // Inizializza se non è stato già fatto
         if (allResearches == null || allResearches.Count == 0)
             InitializeDatabase();
 
@@ -44,7 +42,49 @@ public class ResearchManager : MonoBehaviour
             GameManager.Instance.OnEconomyUpdated -= UpdateAllSlots;
     }
 
-    // Trasforma i file SO in oggetti di gioco
+    // --- LOGICA DI APERTURA / CHIUSURA SEMPLIFICATA (V2) ---
+    public void ToggleMenu()
+    {
+        if (menuPanel == null) return;
+
+        if (menuPanel.activeSelf)
+        {
+            // --- CHIUSURA ---
+            // Cerchiamo lo script dell'effetto animato
+            UIPopupEffect effect = menuPanel.GetComponent<UIPopupEffect>();
+            
+            if (effect != null)
+            {
+                // Se c'è lo script, usiamo la sua chiusura elegante
+                effect.Close();
+            }
+            else
+            {
+                // Fallback: se non hai messo lo script, chiude e basta (nessun errore)
+                menuPanel.SetActive(false);
+            }
+        }
+        else
+        {
+            // --- APERTURA ---
+            // 1. Attiva il pannello (Questo fa partire l'OnEnable di UIPopupEffect automaticamente)
+            menuPanel.SetActive(true);
+
+            // 2. Fix per le ScrollView: Forza Unity a ricalcolare le dimensioni della lista
+            // (Utile se l'animazione parte da scala piccola e la lista si confonde)
+            Canvas.ForceUpdateCanvases();
+            if (listContent != null)
+                LayoutRebuilder.ForceRebuildLayoutImmediate(listContent.GetComponent<RectTransform>());
+            
+            // 3. Aggiorna i dati (prezzi, livelli, colori)
+            UpdateAllSlots();
+        }
+    }
+
+    // -------------------------------------------------------
+    // --- IL RESTO DEL CODICE RIMANE INVARIATO ---
+    // -------------------------------------------------------
+
     public void InitializeDatabase()
     {
         if (allResearches == null) allResearches = new List<ResearchItem>();
@@ -58,15 +98,12 @@ public class ResearchManager : MonoBehaviour
         }
     }
 
-    // Chiamata dal GameManager quando carica il salvataggio
     public void LoadResearchLevels(List<ResearchSaveData> savedData)
     {
-        InitializeDatabase(); // Assicura che la lista esista
+        InitializeDatabase(); 
         
-        // Reset a 0
         foreach(var res in allResearches) res.currentLevel = 0;
 
-        // Applica salvataggi
         if (savedData != null)
         {
             foreach (var saved in savedData)
@@ -80,8 +117,10 @@ public class ResearchManager : MonoBehaviour
 
     void InitializeUI()
     {
+        // Pulisce vecchi slot
         foreach (Transform child in listContent) Destroy(child.gameObject);
 
+        // Crea nuovi slot
         foreach (var research in allResearches)
         {
             GameObject newSlot = Instantiate(slotPrefab.gameObject, listContent);
@@ -105,10 +144,7 @@ public class ResearchManager : MonoBehaviour
 
     void UpdateAllSlots()
     {
-        // Protezione extra: se la UI è stata distrutta, non fare nulla
-        if (menuPanel == null) return;
-
-        if(!menuPanel.activeSelf) return;
+        if (menuPanel == null || !menuPanel.activeSelf) return;
         
         foreach(Transform child in listContent)
         {
@@ -117,33 +153,21 @@ public class ResearchManager : MonoBehaviour
         }
     }
 
-    public void ToggleMenu()
-    {
-        if (menuPanel == null) return;
-        menuPanel.SetActive(!menuPanel.activeSelf);
-        if(menuPanel.activeSelf) UpdateAllSlots();
-    }
-
     public void RecalculateAllResearches()
     {
         if (GameManager.Instance == null) return;
 
-        // 1. Reset Bonus
         GameManager.Instance.ResearchMultiplier = 1;
         GameManager.Instance.LogisticsResearchBonus = 0;
         GameManager.Instance.StorageResearchBonus = 0;
-        
         GameManager.Instance.EmitterAutoGrowthSpeed = GameManager.Instance.BaseAutoGrowthSpeed;
-        
         GameManager.Instance.EmitterCapResearchBonus = 0; 
         
-        // 2. Ricalcola
         foreach (var item in allResearches)
         {
             if (item.currentLevel > 0) ApplyEffectBasedOnTotalLevel(item);
         }
         
-        // 3. Aggiorna Caps
         GameManager.Instance.UpdateCapsFromResearch();
         UpdateAllSlots();
     }

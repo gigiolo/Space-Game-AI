@@ -48,40 +48,58 @@ public class UIManager : MonoBehaviour
 
     private void Awake()
     {
+        // --- MODIFICA IMPORTANTE ---
+        // Abbiamo rimosso DontDestroyOnLoad.
+        // Ogni scena deve avere il suo UIManager collegato al suo Canvas specifico.
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
+            return;
         }
-        else
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
+        Instance = this;
     }
 
     void Start()
     {
         gm = GameManager.Instance;
         pm = PlanetManager.Instance;
+        
         if (gm != null)
         {
+            // Ci iscriviamo agli aggiornamenti
             gm.OnEconomyUpdated += RefreshUI;
             
-            if(prestigeButton) prestigeButton.onClick.AddListener(gm.PerformQuantumReset);
+            if(prestigeButton) 
+            {
+                prestigeButton.onClick.RemoveAllListeners();
+                prestigeButton.onClick.AddListener(gm.PerformQuantumReset);
+            }
 
             // Planet Travel Button Listeners
             if (pm != null)
             {
-                if (startPreparationButton) startPreparationButton.onClick.AddListener(pm.StartLaunchPreparation);
-                if (startTravelButton) startTravelButton.onClick.AddListener(pm.StartInterplanetaryTravel);
+                if (startPreparationButton) 
+                {
+                    startPreparationButton.onClick.RemoveAllListeners();
+                    startPreparationButton.onClick.AddListener(pm.StartLaunchPreparation);
+                }
+                
+                if (startTravelButton) 
+                {
+                    startTravelButton.onClick.RemoveAllListeners();
+                    startTravelButton.onClick.AddListener(pm.StartInterplanetaryTravel);
+                }
             }
 
             if (optionsButton != null && optionsMenuController != null)
             {
+                optionsButton.onClick.RemoveAllListeners();
                 optionsButton.onClick.AddListener(optionsMenuController.ToggleMenu);
             }
             
             SetupHoldButton();
+            
+            // Forziamo un aggiornamento immediato appena parte la scena
             RefreshUI();
         }
     }
@@ -93,16 +111,19 @@ public class UIManager : MonoBehaviour
         EventTrigger trigger = mainEnergyButtonObj.GetComponent<EventTrigger>();
         if (trigger == null) trigger = mainEnergyButtonObj.AddComponent<EventTrigger>();
         
+        // Pulisce trigger precedenti per evitare duplicati nei reload
+        trigger.triggers.Clear();
+
         // Quando premi (PointerDown), chiami OnEnergyButtonPress
         EventTrigger.Entry entryDown = new EventTrigger.Entry();
         entryDown.eventID = EventTriggerType.PointerDown;
-        entryDown.callback.AddListener((data) => { gm.OnEnergyButtonPress(); }); 
+        entryDown.callback.AddListener((data) => { if(gm) gm.OnEnergyButtonPress(); }); 
         trigger.triggers.Add(entryDown);
 
         // Quando rilasci (PointerUp), chiami OnEnergyButtonRelease
         EventTrigger.Entry entryUp = new EventTrigger.Entry();
         entryUp.eventID = EventTriggerType.PointerUp;
-        entryUp.callback.AddListener((data) => { gm.OnEnergyButtonRelease(); });
+        entryUp.callback.AddListener((data) => { if(gm) gm.OnEnergyButtonRelease(); });
         trigger.triggers.Add(entryUp);
     }
 
@@ -115,11 +136,13 @@ public class UIManager : MonoBehaviour
     {
         if (gm == null) return;
 
+        // Tutti i controlli hanno ora '?' o if per evitare errori se l'oggetto è stato distrutto
+
         // 1. ENERGIA (Infinita)
-        if (scoreText) scoreText.text = $"{FormatNumber(gm.CurrentEnergy)} Energy";
+        if (scoreText != null) scoreText.text = $"{FormatNumber(gm.CurrentEnergy)} Energy";
         
         // 2. TEMPO OFFLINE (Sostituisce Max Cap)
-        if (storageText) 
+        if (storageText != null) 
         {
             TimeSpan ts = TimeSpan.FromSeconds(gm.MaxOfflineSeconds);
             string formattedTime = string.Format("{0}h {1:D2}m", (int)ts.TotalHours, ts.Minutes);
@@ -127,10 +150,10 @@ public class UIManager : MonoBehaviour
         }
 
         // 3. INCOME
-        if (incomeText) incomeText.text = $"+{FormatNumber(gm.EffectiveIncomePerSec)}/s";
+        if (incomeText != null) incomeText.text = $"+{FormatNumber(gm.EffectiveIncomePerSec)}/s";
 
         // 4. LOGISTICA E EMETTITORI
-        if (logisticsStatusText)
+        if (logisticsStatusText != null)
         {
             string emitterString = $"Units: {gm.EmitterCount} / {gm.EmitterCap}";
             
@@ -163,7 +186,7 @@ public class UIManager : MonoBehaviour
         }
 
         // 6. RESET QUANTISTICO
-        if (prestigeInfoText)
+        if (prestigeInfoText != null)
         {
             BigDouble potentialNodes = gm.CalculatePotentialNodes();
             prestigeInfoText.text = $"RESET (Current: {gm.ScientificNodes})\nGain: <color=#00FFFF>+{FormatNumber(potentialNodes)} Nodes</color>";
@@ -180,9 +203,11 @@ public class UIManager : MonoBehaviour
         if (pm == null) return;
 
         PlanetData currentPlanet = pm.GetCurrentPlanetData();
+        
+        // Se non abbiamo riferimenti UI o dati, usciamo
         if (currentPlanet == null || planetTravelPanel == null)
         {
-            if(planetTravelPanel) planetTravelPanel.SetActive(false);
+            if(planetTravelPanel != null) planetTravelPanel.SetActive(false);
             return;
         }
 
@@ -192,65 +217,70 @@ public class UIManager : MonoBehaviour
         planetTravelPanel.SetActive(canShowPanel);
         if (!canShowPanel) return;
 
-        if (planetValueText)
+        if (planetValueText != null)
         {
             planetValueText.text = $"Planet Value: {FormatNumber(currentPlanetValue)} / {FormatNumber(currentPlanet.requiredPlanetValue)}";
         }
         
-        if (pm.isTraveling)
-        {
-            // Travel is in progress
-            startPreparationButton.gameObject.SetActive(false);
-            startTravelButton.gameObject.SetActive(false);
-            launchProgressBar.gameObject.SetActive(false);
-            travelStatusText.gameObject.SetActive(true);
+        // Gestione stati visuali
+        bool isTraveling = pm.isTraveling;
+        bool isPreparing = pm.isPreparingForLaunch;
 
-            TimeSpan timeRemaining = TimeSpan.FromSeconds(PlanetManager.TRAVEL_DURATION_SECONDS) - (DateTime.UtcNow - pm.travelStartTime);
-            if (timeRemaining.TotalSeconds > 0)
+        if (isTraveling)
+        {
+            if(startPreparationButton) startPreparationButton.gameObject.SetActive(false);
+            if(startTravelButton) startTravelButton.gameObject.SetActive(false);
+            if(launchProgressBar) launchProgressBar.gameObject.SetActive(false);
+            
+            if(travelStatusText)
             {
-                travelStatusText.text = $"Time to arrival: {timeRemaining.Hours:D2}:{timeRemaining.Minutes:D2}:{timeRemaining.Seconds:D2}";
-            }
-            else
-            {
-                travelStatusText.text = "Arriving...";
+                travelStatusText.gameObject.SetActive(true);
+                TimeSpan timeRemaining = TimeSpan.FromSeconds(PlanetManager.TRAVEL_DURATION_SECONDS) - (DateTime.UtcNow - pm.travelStartTime);
+                if (timeRemaining.TotalSeconds > 0)
+                    travelStatusText.text = $"Time to arrival: {timeRemaining.Hours:D2}:{timeRemaining.Minutes:D2}:{timeRemaining.Seconds:D2}";
+                else
+                    travelStatusText.text = "Arriving...";
             }
         }
-        else if (pm.isPreparingForLaunch)
+        else if (isPreparing)
         {
-            // Preparation is in progress
-            startPreparationButton.gameObject.SetActive(false);
-            startTravelButton.gameObject.SetActive(false);
-            launchProgressBar.gameObject.SetActive(true);
-            travelStatusText.gameObject.SetActive(false);
+            if(startPreparationButton) startPreparationButton.gameObject.SetActive(false);
+            if(startTravelButton) startTravelButton.gameObject.SetActive(false);
+            if(travelStatusText) travelStatusText.gameObject.SetActive(false);
 
-            BigDouble energyRequirement = pm.GetLaunchEnergyRequirement();
-            if (energyRequirement > 0)
+            if(launchProgressBar)
             {
-                // CORREZIONE QUI: Aggiunto .ToDouble() prima del cast a float
-                launchProgressBar.value = (float)(pm.launchPreparationProgress / energyRequirement).ToDouble();
+                launchProgressBar.gameObject.SetActive(true);
+                BigDouble energyRequirement = pm.GetLaunchEnergyRequirement();
+                if (energyRequirement > 0)
+                    launchProgressBar.value = (float)(pm.launchPreparationProgress / energyRequirement).ToDouble();
             }
         }
         else
         {
             // Ready to start preparation or travel
             BigDouble energyRequirement = pm.GetLaunchEnergyRequirement();
+            // Controllo semplificato: se abbiamo finito, la barra è piena
             bool preparationComplete = pm.launchPreparationProgress >= energyRequirement && energyRequirement > 0;
 
-            startPreparationButton.gameObject.SetActive(!preparationComplete);
-            startTravelButton.gameObject.SetActive(preparationComplete);
-            launchProgressBar.gameObject.SetActive(false);
-            travelStatusText.gameObject.SetActive(false);
+            if(startPreparationButton) startPreparationButton.gameObject.SetActive(!preparationComplete);
+            if(startTravelButton) startTravelButton.gameObject.SetActive(preparationComplete);
+            if(launchProgressBar) launchProgressBar.gameObject.SetActive(false);
+            if(travelStatusText) travelStatusText.gameObject.SetActive(false);
 
-            startPreparationButton.interactable = currentPlanetValue >= currentPlanet.requiredPlanetValue;
+            if(startPreparationButton) 
+                startPreparationButton.interactable = currentPlanetValue >= currentPlanet.requiredPlanetValue;
         }
     }
 
     void CheckBottleneck()
     {
+        if (incomeText == null) return;
+        
         bool isBottleneck = gm.RawProductionRate > gm.LogisticsCap;
         Color targetColor = isBottleneck ? warningColor : normalColor;
 
-        if(incomeText) incomeText.color = targetColor;
+        incomeText.color = targetColor;
     }
 
     private string FormatNumber(BigDouble number)

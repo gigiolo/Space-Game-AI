@@ -23,22 +23,25 @@ public class NotificationPopup : MonoBehaviour
         if (rewardIcon && data.icon) rewardIcon.sprite = data.icon;
 
         // Setup bottone recluta
-        claimButton.onClick.RemoveAllListeners();
-        claimButton.onClick.AddListener(OnClaim);
+        if (claimButton)
+        {
+            claimButton.onClick.RemoveAllListeners();
+            claimButton.onClick.AddListener(OnClaim);
+        }
 
+        // Apertura semplice e istantanea
         panel.SetActive(true);
     }
 
     void OnClaim()
     {
-        // Esegue il codice specifico (es. dare soldi, boost, etc.)
         _currentData.onClaimAction?.Invoke();
-
         Close();
     }
 
     public void Close()
     {
+        // Chiusura semplice e istantanea
         panel.SetActive(false);
     }
 }

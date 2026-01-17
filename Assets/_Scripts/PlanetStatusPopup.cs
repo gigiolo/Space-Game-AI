@@ -27,12 +27,14 @@ public class PlanetStatusPopup : MonoBehaviour
     public TextMeshProUGUI progressText;
 
     [Header("--- Settings ---")]
-    public Animator popupAnimator;
+    // L'Animator non serve più se usi UIPopupEffect, ma lo lascio per non rompere i riferimenti se decidi di tornare indietro.
+    public Animator popupAnimator; 
 
     private bool isOpen = false;
 
     private void Start()
     {
+        // All'avvio spegniamo il pannello (se c'è UIPopupEffect si resetterà da solo)
         if(contentPanel != null) contentPanel.SetActive(false);
 
         // --- COLLEGAMENTO DEI BOTTONI ---
@@ -59,6 +61,7 @@ public class PlanetStatusPopup : MonoBehaviour
 
     private void Update()
     {
+        // Aggiorniamo i dati se il popup è aperto OPPURE se il manager sta lavorando in background
         if (isOpen || (PlanetManager.Instance != null && PlanetManager.Instance.isPreparingForLaunch))
         {
             UpdatePlanetValue();
@@ -70,14 +73,20 @@ public class PlanetStatusPopup : MonoBehaviour
     {
         if (contentPanel != null) 
         {
+            // 1. Attiviamo l'oggetto. 
+            // Questo farà partire automaticamente l'OnEnable di UIPopupEffect (animazione apertura)
             contentPanel.SetActive(true);
             isOpen = true;
             
+            // 2. Aggiorniamo subito i testi
             UpdateStaticInfo();
             UpdatePlanetValue();
             UpdateLaunchStatus(); 
             
-            if (popupAnimator != null) popupAnimator.Play("PopupOpen");
+            // NOTA: Se usi UIPopupEffect, l'Animator non serve. 
+            // Se lo hai rimosso dall'Inspector, questa riga viene ignorata.
+            if (popupAnimator != null && contentPanel.GetComponent<UIPopupEffect>() == null) 
+                popupAnimator.Play("PopupOpen");
         }
     }
 
@@ -85,7 +94,22 @@ public class PlanetStatusPopup : MonoBehaviour
     {
         if (contentPanel != null)
         {
-            contentPanel.SetActive(false);
+            // --- MODIFICA CHIAVE ---
+            // Cerchiamo se c'è l'effetto speciale sul pannello
+            UIPopupEffect effect = contentPanel.GetComponent<UIPopupEffect>();
+
+            if (effect != null)
+            {
+                // Se c'è lo script, usiamo la sua chiusura elegante.
+                // Lui farà l'animazione e poi farà SetActive(false) alla fine.
+                effect.Close();
+            }
+            else
+            {
+                // Fallback: se non hai messo lo script, chiude e basta (spegnimento brutale)
+                contentPanel.SetActive(false);
+            }
+
             isOpen = false;
         }
     }
@@ -125,7 +149,6 @@ public class PlanetStatusPopup : MonoBehaviour
         }
     }
 
-    // --- FIX LOGICA QUI SOTTO ---
     private void UpdateLaunchStatus()
     {
         if (PlanetManager.Instance == null) return;
@@ -136,7 +159,6 @@ public class PlanetStatusPopup : MonoBehaviour
         BigDouble currentProgress = PlanetManager.Instance.launchPreparationProgress;
         BigDouble requiredEnergy = PlanetManager.Instance.GetLaunchEnergyRequirement();
         
-        // FIX: Non confrontiamo più con 'requiredEnergy' per decidere se abbiamo finito.
         // Se non stiamo preparando (isPrep == false) e la barra non è vuota (> 10), 
         // significa che il Manager ha terminato il processo con successo.
         bool isFinished = !isPrep && !isTravel && currentProgress > 10;
@@ -152,7 +174,7 @@ public class PlanetStatusPopup : MonoBehaviour
             {
                 if (isFinished)
                 {
-                    // Se è finita, mostriamola piena al 100% anche se il costo è salito nel frattempo
+                    // Se è finita, mostriamola piena al 100%
                     launchProgressBar.value = 1.0f;
                     if (progressText != null) progressText.text = "READY";
                 }

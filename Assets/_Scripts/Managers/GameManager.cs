@@ -17,6 +17,11 @@ public class GameManager : MonoBehaviour
     public PlanetPopulationVisuals planetVisuals; 
     public GameObject[] emitters;
 
+    // --- MODIFICA: Riferimento al DailyGiftManager ---
+    [Tooltip("Trascina qui l'oggetto che ha lo script DailyGiftManager")]
+    public DailyGiftManager dailyGiftManager; 
+    // -----------------------------------------------
+
     [Header("--- BILANCIAMENTO ---")]
     public double offlineProductionRatio = 0.5d;
 
@@ -143,6 +148,10 @@ public class GameManager : MonoBehaviour
         // Questo trova il manager della PRIMA scena
         if (targetResearchManager == null) targetResearchManager = FindFirstObjectByType<ResearchManager>();
 
+        // --- MODIFICA: Inizializzazione DailyGiftManager ---
+        if (dailyGiftManager == null) dailyGiftManager = FindFirstObjectByType<DailyGiftManager>();
+        // --------------------------------------------------
+
         LoadGame(); 
         StartCoroutine(AutoSaveRoutine());
     }
@@ -182,7 +191,7 @@ public class GameManager : MonoBehaviour
                 int toAdd = (int)_emitterAccumulator; 
                 int spaceLeft = EmitterCap - EmitterCount;
                 int actualAdd = Mathf.Min(toAdd, spaceLeft);
-                _emitterAccumulator -= actualAdd;               
+                _emitterAccumulator -= actualAdd;                
                 if (actualAdd < toAdd) _emitterAccumulator = 0;
 
                 if (actualAdd > 0)
@@ -338,6 +347,13 @@ public class GameManager : MonoBehaviour
 
         if (planetVisuals != null)
             data.cityLightPositions = planetVisuals.GetEncodedPositions();
+        
+        // --- MODIFICA: Salvataggio Daily Gift ---
+        if (dailyGiftManager != null)
+        {
+            dailyGiftManager.Save(data);
+        }
+        // ----------------------------------------
 
         if (targetResearchManager != null)
         {
@@ -357,6 +373,11 @@ public class GameManager : MonoBehaviour
         {
             InitializeGameState();
             ScientificNodes = 0;
+
+            // --- MODIFICA: Inizializza Daily Gift per nuovo gioco ---
+            if (dailyGiftManager != null) dailyGiftManager.Initialize(null);
+            // --------------------------------------------------------
+
             return; 
         }
 
@@ -396,6 +417,13 @@ public class GameManager : MonoBehaviour
             planetVisuals.LoadEncodedPositions(data.cityLightPositions);
 
         RecalculateCaps();
+        
+        // --- MODIFICA: Caricamento Daily Gift ---
+        if (dailyGiftManager != null)
+        {
+            dailyGiftManager.Initialize(data);
+        }
+        // ----------------------------------------
 
         if (!string.IsNullOrEmpty(data.lastSaveTime))
             HandleOfflineProgress(data.lastSaveTime);

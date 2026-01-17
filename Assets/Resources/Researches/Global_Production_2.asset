@@ -28,4 +28,4 @@ MonoBehaviour:
   costType: 0
   baseCost: 10
   costFactor: 1.5
-  maxLevel: 0
+  maxLevel: 40
