@@ -1260,14 +1260,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: a6c9d048706f835448fc3aaaf7689b54, type: 2}
   - {fileID: 11400000, guid: 1bae1678004f92142bcd44c79b15ccd3, type: 2}
   - {fileID: 11400000, guid: 5c2653b5424a1bb4b9166eb480b46bb2, type: 2}
-  - {fileID: 11400000, guid: ea98144ecbc7d584e9dd4cb07ff4d6ab, type: 2}
-  - {fileID: 11400000, guid: 64cd6296e6252524bb34589dc1965799, type: 2}
-  - {fileID: 11400000, guid: 6f214f8e9fe52f946aecaf961b0b4f54, type: 2}
-  - {fileID: 11400000, guid: 64e5277699a99f04686d05839d1a9d59, type: 2}
-  - {fileID: 11400000, guid: f5af126a4a56ec84792244fa3d9b8427, type: 2}
-  - {fileID: 11400000, guid: c875e1ee328e89c4fa82061ece7ba44c, type: 2}
-  - {fileID: 11400000, guid: 85d056356600cf14e8bb86cd74f7edd3, type: 2}
-  - {fileID: 11400000, guid: 8e457c6730058884988152e85b9d05d8, type: 2}
   allResearches: []
 --- !u!1 &323325937
 GameObject:
@@ -3337,16 +3329,16 @@ MonoBehaviour:
   maxLights: 2000
   spawnFlashColor: {r: 1, g: 0, b: 0, a: 1}
   flashDuration: 3
-  clusterSpread: 0.14
-  newHubChance: 0.05
-  minSpacing: 0.1
-  maxSpawnRetries: 10
+  clusterSpread: 0.1
+  newHubChance: 0
+  maxStartLatitude: 10
   sunLight: {fileID: 126104936}
   connectionPS: {fileID: 1301505221}
   targetMaterial: {fileID: 2100000, guid: 795908a348d86ac43bfa983c5b0b4ece, type: 2}
   maxConnectionDistance: 0.5
   lineThickness: 0.00125
-  lineHeightOffset: 0.02
+  arcHeight: 0.0025
+  randomHeightVariance: 0.01
   maxConnectionsPerNode: 4
   connectionColor: {r: 0.690566, g: 0.4477296, b: 0, a: 0.8862745}
   fadeCurve:

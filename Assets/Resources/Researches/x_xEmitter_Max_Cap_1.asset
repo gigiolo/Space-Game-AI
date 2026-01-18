@@ -10,22 +10,20 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dac902865c54b7e479540201146bfee3, type: 3}
-  m_Name: Global_Production_2
+  m_Name: x_xEmitter_Max_Cap_1
   m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
-  id: Global_Production_2
-  title: Global_Production_2
-  description: Energy production rate +25%
+  id: x_xEmitter_Max_Cap_1
+  title: x_xEmitter_Max_Cap_1
+  description: Emitter Max Cap + 250
   icon: {fileID: 0}
-  type: 0
-  target: 0
-  bonusValue: 0.25
+  type: 1
+  target: 6
+  bonusValue: 250
   manualCosts:
-  - 2.14
-  - 18.99
-  - 42.87
-  - 76.45
-  - 125.64
+  - 29.12
+  - 56.37
+  - 96.57
   costType: 0
   baseCost: 10
   costFactor: 1.5
-  maxLevel: 40
+  maxLevel: 3

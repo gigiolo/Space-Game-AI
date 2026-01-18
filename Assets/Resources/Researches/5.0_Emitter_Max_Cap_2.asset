@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dac902865c54b7e479540201146bfee3, type: 3}
+  m_Name: 5.0_Emitter_Max_Cap_2
+  m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
+  id: 5.0_Emitter_Max_Cap_2
+  title: 5.0_Emitter_Max_Cap_2
+  description: 
+  icon: {fileID: 0}
+  type: 0
+  target: 6
+  bonusValue: 0.05
+  manualCosts:
+  - 165.11
+  - 341.96
+  - 696.28
+  - 1386.38
+  - 2739.8
+  - 5395.14
+  - 10532.78
+  - 20379.58
+  costType: 1
+  baseCost: 10
+  costFactor: 1.5
+  maxLevel: 8

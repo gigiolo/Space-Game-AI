@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dac902865c54b7e479540201146bfee3, type: 3}
+  m_Name: 4.0_Click_Power_1
+  m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
+  id: 4.0_Click_Power_1
+  title: 4.0_Click_Power_1
+  description: Click power +10%
+  icon: {fileID: 0}
+  type: 1
+  target: 4
+  bonusValue: 0.1
+  manualCosts:
+  - 1.05
+  - 70.95
+  - 267.8
+  - 811.64
+  - 2286.6
+  - 6233.56
+  - 16686
+  - 44125.2
+  - 115656.64
+  - 302055.74
+  - 784522.16
+  - 2025604.18
+  - 5203152.12
+  - 13305231
+  costType: 0
+  baseCost: 33890013.78
+  costFactor: 1.5
+  maxLevel: 25
