@@ -132,6 +132,7 @@ Struttura JSON complessa che include:
 10. Comunica chiaramente ogni modifica significativa al team, includendo dettagli tecnici e motivazioni dietro le decisioni prese.
 11. Mantieni sempre una copia di backup del progetto prima di apportare modifiche sostanziali al codice o alla struttura dei dati.
 12. Non usare Instantiate in Update.
+13. Fornisci sempre gli script interi in modo che possano essere copiati direttamente nel progetto senza errori di compilazione.
 
  ... (fine della sezione Procedura Operativa)
 

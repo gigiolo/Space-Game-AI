@@ -2,7 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.IO; // Necessario per salvare il file
+using System.IO;
 
 [RequireComponent(typeof(ParticleSystem))]
 [ExecuteAlways]
@@ -37,10 +37,13 @@ public class PlanetPopulationVisuals : MonoBehaviour
     public float maxConnectionDistance = 0.5f; 
     
     [Tooltip("Spessore della linea.")]
-    public float lineThickness = 0.0025f;
+    public float lineThickness = 0.00125f; // I tuoi valori ottimali
 
-    [Tooltip("Quanto sollevare le linee dalla superficie.")]
-    public float lineHeightOffset = 1f;
+    [Tooltip("Altezza dell'arco.")]
+    public float arcHeight = 0.0025f; // I tuoi valori ottimali
+
+    [Tooltip("Variazione casuale altezza.")]
+    public float randomHeightVariance = 0.01f;
 
     [Range(1, 5)]
     public int maxConnectionsPerNode = 2;
@@ -48,12 +51,11 @@ public class PlanetPopulationVisuals : MonoBehaviour
     public Color connectionColor = new Color(1f, 0.8f, 0f, 1f);
 
     [Header("Connection Fade Effect")]
-    [Tooltip("Disegna la luminosità lungo la linea. Alto = Bianco (Visibile), Basso = Nero (Invisibile in Additive).")]
     public AnimationCurve fadeCurve = new AnimationCurve(new Keyframe(0, 1), new Keyframe(0.5f, 0), new Keyframe(1, 1));
     
-    private Texture2D _fadeTexture;
+    // --- VARIABILI INTERNE ---
+    private Mesh _arcMesh; 
     
-    // Variabili interne
     private ParticleSystemRenderer _psRenderer;
     private ParticleSystem _ps;
     private ParticleSystem.Particle[] _particlesBuffer; 
@@ -88,6 +90,17 @@ public class PlanetPopulationVisuals : MonoBehaviour
                 connMain.loop = false;
                 connMain.playOnAwake = true;
                 connMain.simulationSpace = ParticleSystemSimulationSpace.Local;
+                
+                GenerateArcMesh();
+                
+                var connRenderer = connectionPS.GetComponent<ParticleSystemRenderer>();
+                if (connRenderer != null && _arcMesh != null)
+                {
+                    connRenderer.renderMode = ParticleSystemRenderMode.Mesh;
+                    connRenderer.mesh = _arcMesh;
+                    connRenderer.alignment = ParticleSystemRenderSpace.Local;
+                }
+
                 connectionPS.Stop();
                 connectionPS.Clear();
                 connectionPS.Play();
@@ -102,20 +115,12 @@ public class PlanetPopulationVisuals : MonoBehaviour
                     sunLight = light.transform;
             }
         }
-
-        // Genera la texture per l'anteprima
-        UpdateTexture();
     }
 
     void Start()
     {
         if (Application.isPlaying && GameManager.Instance != null)
             GameManager.Instance.OnEconomyUpdated += RefreshLights;
-    }
-
-    void OnValidate()
-    {
-        UpdateTexture();
     }
 
     void Update()
@@ -126,60 +131,120 @@ public class PlanetPopulationVisuals : MonoBehaviour
         if (Application.isPlaying) AnimateParticlesColor();
     }
 
-    // --- ANTEPRIMA IN MEMORIA (RGB FIX) ---
-    private void UpdateTexture()
+    // --- FIX UV: MAPPING ORIZZONTALE (U) ---
+    private void GenerateArcMesh()
     {
-        if (targetMaterial == null) return;
+        if (_arcMesh != null) return;
 
-        if (_fadeTexture == null)
+        _arcMesh = new Mesh();
+        _arcMesh.name = "Arc_HorizontalUV";
+
+        int segments = 16; 
+        float width = 1f;  
+        float length = 1f; 
+
+        List<Vector3> vertices = new List<Vector3>();
+        List<int> triangles = new List<int>();
+        List<Vector2> uvs = new List<Vector2>();
+
+        for (int i = 0; i <= segments; i++)
         {
-            _fadeTexture = new Texture2D(1, 128, TextureFormat.ARGB32, false);
-            _fadeTexture.wrapMode = TextureWrapMode.Clamp;
-            _fadeTexture.filterMode = FilterMode.Bilinear;
+            float t = (float)i / segments; 
+            
+            // Z (Lunghezza) da 0 a 1 -> Pivot Start
+            float zPos = t * length;
+            float yPos = Mathf.Sin(t * Mathf.PI); 
+
+            // Vertici
+            vertices.Add(new Vector3(-width/2, yPos, zPos));
+            vertices.Add(new Vector3(width/2, yPos, zPos));
+            
+            // --- FIX QUI: Usiamo 't' sulla coordinata X (U) ---
+            // Mappiamo la lunghezza della linea sull'asse orizzontale della texture
+            uvs.Add(new Vector2(t, 0)); 
+            uvs.Add(new Vector2(t, 1));
+
+            if (i > 0)
+            {
+                int currentBase = i * 2;
+                int prevBase = (i - 1) * 2;
+
+                // Top
+                triangles.Add(prevBase + 0);
+                triangles.Add(currentBase + 0);
+                triangles.Add(prevBase + 1);
+
+                triangles.Add(prevBase + 1);
+                triangles.Add(currentBase + 0);
+                triangles.Add(currentBase + 1);
+                
+                // Bottom
+                triangles.Add(prevBase + 0);
+                triangles.Add(prevBase + 1);
+                triangles.Add(currentBase + 0);
+
+                triangles.Add(prevBase + 1);
+                triangles.Add(currentBase + 1);
+                triangles.Add(currentBase + 0);
+            }
         }
 
-        for (int y = 0; y < 128; y++)
-        {
-            float t = (float)y / 127f;
-            float val = fadeCurve.Evaluate(t);
-            // Additive usa il colore RGB, non l'Alpha.
-            // Dipingiamo da Nero (invisibile) a Bianco (visibile).
-            _fadeTexture.SetPixel(0, y, new Color(val, val, val, 1f));
-        }
-        _fadeTexture.Apply();
-
-        targetMaterial.mainTexture = _fadeTexture;
+        _arcMesh.SetVertices(vertices);
+        _arcMesh.SetTriangles(triangles, 0);
+        _arcMesh.SetUVs(0, uvs);
+        _arcMesh.RecalculateNormals();
     }
 
-    // --- GENERATORE FILE SU DISCO (RGB FIX) ---
+    // --- FIX TEXTURE: GENERAZIONE ORIZZONTALE ---
     [ContextMenu("Genera e Salva Texture Fade")]
     public void SaveTextureToFile()
     {
-        Texture2D tex = new Texture2D(1, 128, TextureFormat.ARGB32, false);
-        // Impostiamo Clamp qui, ma va impostato anche nell'inspector della texture dopo!
+        // Creiamo una texture ORIZZONTALE (128 larghezza, 1 altezza)
+        Texture2D tex = new Texture2D(128, 1, TextureFormat.ARGB32, false);
         tex.wrapMode = TextureWrapMode.Clamp; 
         
-        for (int y = 0; y < 128; y++)
+        for (int x = 0; x < 128; x++)
         {
-            float t = (float)y / 127f;
+            float t = (float)x / 127f;
             float val = fadeCurve.Evaluate(t);
-            // RGB FIX: Scala di grigi invece di Alpha
-            tex.SetPixel(0, y, new Color(val, val, val, 1f));
+            // Scriviamo lungo l'asse X
+            tex.SetPixel(x, 0, new Color(val, val, val, 1f));
         }
         tex.Apply();
 
         byte[] bytes = tex.EncodeToPNG();
         string path = Application.dataPath + "/ConnectionFade.png";
         File.WriteAllBytes(path, bytes);
-        
-        Debug.Log("Texture Fade salvata in: " + path);
-        
+        Debug.Log("Texture Fade Orizzontale salvata in: " + path);
 #if UNITY_EDITOR
         UnityEditor.AssetDatabase.Refresh(); 
 #endif
     }
 
-    // --- LOGICA STANDARD ---
+    private void CreateVisualConnection(Vector3 posA, Vector3 posB, float distance)
+    {
+        ParticleSystem.EmitParams lineParams = new ParticleSystem.EmitParams();
+        lineParams.position = posA; 
+        lineParams.startColor = connectionColor; 
+        lineParams.startLifetime = float.MaxValue;
+
+        Vector3 direction = (posB - posA).normalized;
+        Vector3 chordCenter = (posA + posB).normalized; 
+        
+        Quaternion rotation = Quaternion.LookRotation(direction, chordCenter);
+        lineParams.rotation3D = rotation.eulerAngles;
+
+        float preciseDistance = Vector3.Distance(posA, posB);
+        Vector3 midPoint = (posA + posB) * 0.5f;
+        float sag = surfaceRadius - midPoint.magnitude;
+        float totalHeight = sag + arcHeight + Random.Range(0f, randomHeightVariance);
+
+        lineParams.startSize3D = new Vector3(lineThickness, totalHeight, preciseDistance);
+
+        connectionPS.Emit(lineParams, 1);
+    }
+
+    // --- METODI STANDARD ---
     private void AnimateParticlesColor()
     {
         if(_particlesBuffer == null || _ps == null) return;
@@ -191,7 +256,6 @@ public class PlanetPopulationVisuals : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             Vector4 currentColorV4 = (Vector4)(Color)_particlesBuffer[i].startColor;
-
             if (Vector4.Distance(currentColorV4, targetColorV4) > 0.01f)
             {
                 Vector4 newColorV4 = Vector4.MoveTowards(currentColorV4, targetColorV4, step);
@@ -204,7 +268,6 @@ public class PlanetPopulationVisuals : MonoBehaviour
                 hasChanges = true;
             }
         }
-
         if (hasChanges) _ps.SetParticles(_particlesBuffer, count);
     }
 
@@ -212,8 +275,7 @@ public class PlanetPopulationVisuals : MonoBehaviour
     {
         if (Application.isPlaying && GameManager.Instance != null)
             GameManager.Instance.OnEconomyUpdated -= RefreshLights;
-            
-        if (_fadeTexture != null) DestroyImmediate(_fadeTexture);
+        if (_arcMesh != null) DestroyImmediate(_arcMesh);
     }
 
     public void LoadEncodedPositions(List<string> savedPositions)
@@ -303,29 +365,6 @@ public class PlanetPopulationVisuals : MonoBehaviour
                 CreateVisualConnection(newPos, candidates[k].position, candidates[k].distance);
             }
         }
-    }
-
-    private void CreateVisualConnection(Vector3 posA, Vector3 posB, float distance)
-    {
-        Vector3 midPoint = (posA + posB) / 2f;
-        float currentRadius = surfaceRadius + lineHeightOffset;
-        midPoint = midPoint.normalized * currentRadius;
-
-        ParticleSystem.EmitParams lineParams = new ParticleSystem.EmitParams();
-        lineParams.position = midPoint;
-        lineParams.startColor = connectionColor; 
-        lineParams.startLifetime = float.MaxValue;
-
-        float lengthScaleFactor = currentRadius / surfaceRadius; 
-        float adjustedLength = distance * lengthScaleFactor;
-
-        lineParams.startSize3D = new Vector3(lineThickness, adjustedLength, lineThickness);
-
-        Vector3 direction = (posB - posA).normalized;
-        Quaternion rotation = Quaternion.FromToRotation(Vector3.up, direction);
-        lineParams.rotation3D = rotation.eulerAngles;
-
-        connectionPS.Emit(lineParams, 1);
     }
 
     private Vector3 GetSmartPosition()
