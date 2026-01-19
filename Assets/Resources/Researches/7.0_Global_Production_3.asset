@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: 7.0_Global_Production_3
   m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
   id: 2.0_Global_Production_2
-  title: 2.0_Global_Production_2
+  title: Improved gravity sensors
   description: Energy production rate +25%
   icon: {fileID: 0}
   type: 0

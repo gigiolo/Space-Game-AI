@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: x_xEmitter_Max_Cap_2
   m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
   id: x_xEmitter_Max_Cap_1
-  title: x_xEmitter_Max_Cap_1
+  title: Expansion Program 2
   description: Emitter Max Cap + 500
   icon: {fileID: 0}
   type: 1

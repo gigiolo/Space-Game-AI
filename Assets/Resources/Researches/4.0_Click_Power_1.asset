@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: 4.0_Click_Power_1
   m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
   id: 4.0_Click_Power_1
-  title: 4.0_Click_Power_1
+  title: Convective acceleration of the mantle
   description: Click power +10%
   icon: {fileID: 0}
   type: 1

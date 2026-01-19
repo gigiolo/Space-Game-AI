@@ -13,12 +13,12 @@ MonoBehaviour:
   m_Name: 6.0_Emitter_Production_Speed_1
   m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
   id: 6.0_Emitter_Production_Speed_1
-  title: 6.0_Emitter_Production_Speed_1
-  description: Emitter production speed
+  title: Prefabricated generators
+  description: Emitter production speed + 0.1/sec
   icon: {fileID: 0}
-  type: 0
+  type: 1
   target: 5
-  bonusValue: 0.25
+  bonusValue: 0.3
   manualCosts:
   - 550.02
   - 2303.08

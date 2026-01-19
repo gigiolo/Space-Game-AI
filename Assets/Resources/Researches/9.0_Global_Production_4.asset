@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: 9.0_Global_Production_4
   m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
   id: 9.0_Global_Production_4
-  title: 9.0_Global_Production_4
+  title: Better fermion management
   description: Energy production rate +100%
   icon: {fileID: 0}
   type: 0

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: 1.1_Emitter_Max_Cap_1
   m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
   id: 1.1_Emitter_Max_Cap_1
-  title: 1.1_Emitter_Max_Cap_1
+  title: Base Camp
   description: Active emitter number +5
   icon: {fileID: 0}
   type: 1

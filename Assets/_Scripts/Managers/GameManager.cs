@@ -17,17 +17,15 @@ public class GameManager : MonoBehaviour
     public PlanetPopulationVisuals planetVisuals; 
     public GameObject[] emitters;
 
-    // --- MODIFICA: Riferimento al DailyGiftManager ---
     [Tooltip("Trascina qui l'oggetto che ha lo script DailyGiftManager")]
     public DailyGiftManager dailyGiftManager; 
-    // -----------------------------------------------
 
     [Header("--- BILANCIAMENTO ---")]
     public double offlineProductionRatio = 0.5d;
 
     [Header("--- ENERGY BUTTON ---")]
     [SerializeField] private float energyButton_RampUpDuration = 7.0f;
-    [SerializeField] private float energyButton_MaxMultiplier = 3.0f;
+    [SerializeField] private float energyButton_MaxMultiplier = 3.0f; 
     [SerializeField] private float energyButton_MaxHoldDuration = 12.0f;
     [SerializeField] private float energyButton_RampDownDuration = 7.0f;
     [SerializeField] private float energyButton_CooldownMultiplier = 1.0f;
@@ -54,8 +52,17 @@ public class GameManager : MonoBehaviour
     public BigDouble StorageResearchBonus { get; set; } = 0; 
     public int EmitterCapResearchBonus { get; set; } = 0; 
     
+    public float ClickPowerResearchBonus { get; set; } = 0.0f; 
+
+    // --- FIX CRESCITA EMITTERS ---
     public double BaseAutoGrowthSpeed = 0.3; 
-    public double EmitterAutoGrowthSpeed { get; set; } 
+    // Questa variabile accumula il bonus dalle ricerche (+0.1, +0.2 etc.)
+    public double EmitterSpeedResearchBonus { get; set; } = 0; 
+    
+    // Ora questa è una proprietà calcolata: Base + Bonus
+    public double EmitterAutoGrowthSpeed => BaseAutoGrowthSpeed + EmitterSpeedResearchBonus;
+    // ----------------------------
+
     private double _emitterAccumulator = 0; 
 
     public BigDouble EarningsBonus => 1 + (ScientificNodes * 0.50); 
@@ -105,6 +112,8 @@ public class GameManager : MonoBehaviour
     public BigDouble EffectiveIncomePerSec => BigDouble.Min(RawProductionRate, LogisticsCap);
     public BigDouble EffectiveStableIncomePerSec => BigDouble.Min(RawStableProductionRate, LogisticsCap);
 
+    public float EffectiveMaxMultiplier => energyButton_MaxMultiplier + ClickPowerResearchBonus;
+
     private void Awake()
     {
         if (Instance == null) { Instance = this; DontDestroyOnLoad(gameObject); }
@@ -116,7 +125,6 @@ public class GameManager : MonoBehaviour
         InitializeGameState();
     }
 
-    // --- MODIFICA: Registrazione evento SceneLoaded ---
     private void OnEnable()
     {
         SceneManager.sceneLoaded += OnSceneLoaded;
@@ -127,30 +135,19 @@ public class GameManager : MonoBehaviour
         SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
-    // Questa funzione viene chiamata automaticamente ogni volta che cambia la scena
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        // Cerca il nuovo ResearchManager nella nuova scena
         targetResearchManager = FindFirstObjectByType<ResearchManager>();
-        
-        // Cerca i nuovi visuals del pianeta
         planetVisuals = FindFirstObjectByType<PlanetPopulationVisuals>();
-        
-        // Forza un refresh della UI
         OnEconomyUpdated?.Invoke();
     }
-    // ------------------------------------------------
 
     private void Start()
     {
         if (activeTheme != null) ThemedUIElement.SetGlobalTheme(activeTheme);
         
-        // Questo trova il manager della PRIMA scena
         if (targetResearchManager == null) targetResearchManager = FindFirstObjectByType<ResearchManager>();
-
-        // --- MODIFICA: Inizializzazione DailyGiftManager ---
         if (dailyGiftManager == null) dailyGiftManager = FindFirstObjectByType<DailyGiftManager>();
-        // --------------------------------------------------
 
         LoadGame(); 
         StartCoroutine(AutoSaveRoutine());
@@ -158,7 +155,6 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        // HARD RESET
         if (Input.GetKeyDown(KeyCode.K) || Input.touchCount >= 4)
         {
             PerformFullHardReset();
@@ -182,16 +178,18 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // NANOBOT
-        if (EmitterAutoGrowthSpeed > 0 && EmitterCount < EmitterCap)
+        // Qui usiamo la proprietà calcolata (Base + Bonus)
+        double currentGrowthSpeed = EmitterAutoGrowthSpeed;
+
+        if (currentGrowthSpeed > 0 && EmitterCount < EmitterCap)
         {
-            _emitterAccumulator += EmitterAutoGrowthSpeed * Time.deltaTime;
+            _emitterAccumulator += currentGrowthSpeed * Time.deltaTime;
             if (_emitterAccumulator >= 1.0)
             {
                 int toAdd = (int)_emitterAccumulator; 
                 int spaceLeft = EmitterCap - EmitterCount;
                 int actualAdd = Mathf.Min(toAdd, spaceLeft);
-                _emitterAccumulator -= actualAdd;                
+                _emitterAccumulator -= actualAdd;                 
                 if (actualAdd < toAdd) _emitterAccumulator = 0;
 
                 if (actualAdd > 0)
@@ -209,13 +207,16 @@ public class GameManager : MonoBehaviour
     private void UpdateEnergyButtonState()
     {
         float deltaTime = Time.deltaTime;
+        float targetMax = EffectiveMaxMultiplier;
+
         switch (_energyButtonState)
         {
             case EnergyButtonState.RampingUp:
                 _energyButtonTimer += deltaTime;
-                CurrentEnergyMultiplier = Mathf.Lerp(1.0f, energyButton_MaxMultiplier, _energyButtonTimer / energyButton_RampUpDuration);
+                CurrentEnergyMultiplier = Mathf.Lerp(1.0f, targetMax, _energyButtonTimer / energyButton_RampUpDuration);
+                
                 if (_energyButtonTimer >= energyButton_RampUpDuration) {
-                    CurrentEnergyMultiplier = energyButton_MaxMultiplier;
+                    CurrentEnergyMultiplier = targetMax;
                     _energyButtonState = EnergyButtonState.HoldingMax;
                     _energyButtonTimer = 0.0f; 
                 }
@@ -223,6 +224,7 @@ public class GameManager : MonoBehaviour
             case EnergyButtonState.HoldingMax:
                 _energyButtonTimer += deltaTime;
                 _timeSpentAtMax += deltaTime;
+                CurrentEnergyMultiplier = targetMax;
                 if (_energyButtonTimer >= energyButton_MaxHoldDuration) {
                     _energyButtonState = EnergyButtonState.RampingDown;
                     _energyButtonTimer = 0.0f; 
@@ -277,10 +279,17 @@ public class GameManager : MonoBehaviour
         ScientificNodes += nodesToGain;
         InitializeGameState(); 
 
+        // --- FIX QUANTUM RESET: Ritorno al Pianeta 1 ---
+        if (PlanetManager.Instance != null)
+        {
+            PlanetManager.Instance.currentPlanetIndex = 0;
+            PlanetManager.Instance.isPreparingForLaunch = false;
+            PlanetManager.Instance.isTraveling = false;
+            PlanetManager.Instance.launchPreparationProgress = 0;
+        }
+
         if (planetVisuals != null) planetVisuals.ResetVisuals();
 
-        // NOTA: Qui usiamo targetResearchManager. 
-        // Grazie al fix OnSceneLoaded, questo riferimento è sempre valido per la scena corrente.
         if (targetResearchManager != null)
         {
             foreach(var res in targetResearchManager.allResearches)
@@ -289,6 +298,18 @@ public class GameManager : MonoBehaviour
         }
 
         SaveGame(); 
+        
+        // Carichiamo la scena del primo pianeta se esiste
+        if (PlanetManager.Instance != null && PlanetManager.Instance.planets.Count > 0)
+        {
+            SceneManager.LoadScene(PlanetManager.Instance.planets[0].sceneName);
+        }
+        else
+        {
+            // Fallback: ricarica la scena corrente se qualcosa va storto
+            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        }
+
         OnEconomyUpdated?.Invoke();
     }
     
@@ -296,7 +317,6 @@ public class GameManager : MonoBehaviour
     {
         InitializeGameState();
 
-        // Aggiorna il riferimento per sicurezza (se la scena è appena caricata)
         if (targetResearchManager == null) 
             targetResearchManager = FindFirstObjectByType<ResearchManager>();
 
@@ -320,7 +340,9 @@ public class GameManager : MonoBehaviour
         LogisticsResearchBonus = 0;
         StorageResearchBonus = 0;
         EmitterCapResearchBonus = 0;
-        EmitterAutoGrowthSpeed = BaseAutoGrowthSpeed;
+        ClickPowerResearchBonus = 0;
+        // Reset dei bonus, non della proprietà calcolata
+        EmitterSpeedResearchBonus = 0; 
         _emitterAccumulator = 0;
         RecalculateCaps();
     }
@@ -348,12 +370,7 @@ public class GameManager : MonoBehaviour
         if (planetVisuals != null)
             data.cityLightPositions = planetVisuals.GetEncodedPositions();
         
-        // --- MODIFICA: Salvataggio Daily Gift ---
-        if (dailyGiftManager != null)
-        {
-            dailyGiftManager.Save(data);
-        }
-        // ----------------------------------------
+        if (dailyGiftManager != null) dailyGiftManager.Save(data);
 
         if (targetResearchManager != null)
         {
@@ -373,11 +390,7 @@ public class GameManager : MonoBehaviour
         {
             InitializeGameState();
             ScientificNodes = 0;
-
-            // --- MODIFICA: Inizializza Daily Gift per nuovo gioco ---
             if (dailyGiftManager != null) dailyGiftManager.Initialize(null);
-            // --------------------------------------------------------
-
             return; 
         }
 
@@ -392,6 +405,7 @@ public class GameManager : MonoBehaviour
         else
             ScientificNodes = 0;
             
+        // --- FIX CARICAMENTO SCENA PIANETA ---
         if (PlanetManager.Instance != null)
         {
             PlanetManager.Instance.currentPlanetIndex = data.currentPlanetIndex;
@@ -408,6 +422,20 @@ public class GameManager : MonoBehaviour
                 long binaryTime = long.Parse(data.travelStartTimeBinary);
                 PlanetManager.Instance.travelStartTime = DateTime.FromBinary(binaryTime);
             }
+
+            // CONTROLLO SCENA: Se la scena attuale non corrisponde al pianeta salvato, carichiamo quella giusta.
+            PlanetData savedPlanet = PlanetManager.Instance.GetCurrentPlanetData();
+            if (savedPlanet != null)
+            {
+                string currentSceneName = SceneManager.GetActiveScene().name;
+                // Se non siamo in viaggio e la scena è diversa, carica quella giusta
+                if (!PlanetManager.Instance.isTraveling && currentSceneName != savedPlanet.sceneName)
+                {
+                    Debug.Log($"LoadGame: Scene mismatch. Current: {currentSceneName}, Saved: {savedPlanet.sceneName}. Loading correct scene...");
+                    SceneManager.LoadScene(savedPlanet.sceneName);
+                    // Nota: OnSceneLoaded verrà chiamato dopo, aggiornando l'economia
+                }
+            }
         }
 
         if (targetResearchManager != null)
@@ -418,12 +446,7 @@ public class GameManager : MonoBehaviour
 
         RecalculateCaps();
         
-        // --- MODIFICA: Caricamento Daily Gift ---
-        if (dailyGiftManager != null)
-        {
-            dailyGiftManager.Initialize(data);
-        }
-        // ----------------------------------------
+        if (dailyGiftManager != null) dailyGiftManager.Initialize(data);
 
         if (!string.IsNullOrEmpty(data.lastSaveTime))
             HandleOfflineProgress(data.lastSaveTime);
@@ -473,9 +496,11 @@ public class GameManager : MonoBehaviour
                 LastOfflineEarnings = actualEarnings;
             }
 
-            if (EmitterAutoGrowthSpeed > 0 && EmitterCount < EmitterCap)
+            // Fix calcolo offline usando la velocità corretta
+            double offlineGrowthSpeed = EmitterAutoGrowthSpeed;
+            if (offlineGrowthSpeed > 0 && EmitterCount < EmitterCap)
             {
-                double rawGrowth = EmitterAutoGrowthSpeed * actualSeconds * offlineProductionRatio;
+                double rawGrowth = offlineGrowthSpeed * actualSeconds * offlineProductionRatio;
                 _emitterAccumulator += rawGrowth;
                 int potentialGained = (int)_emitterAccumulator;
 
@@ -516,15 +541,17 @@ public class GameManager : MonoBehaviour
 
     public void OnEnergyButtonRelease()
     {
+        float maxMult = EffectiveMaxMultiplier;
+
         if (_energyButtonState == EnergyButtonState.RampingUp) {
             _rampDownStartMultiplier = CurrentEnergyMultiplier;
-            float multiplierRatio = (_rampDownStartMultiplier - 1.0f) / (energyButton_MaxMultiplier - 1.0f);
+            float multiplierRatio = (_rampDownStartMultiplier - 1.0f) / (maxMult - 1.0f);
             _currentRampDownDuration = energyButton_RampDownDuration * multiplierRatio;
             _energyButtonState = EnergyButtonState.RampingDown;
             _energyButtonTimer = 0.0f;
         }
         else if (_energyButtonState == EnergyButtonState.HoldingMax) {
-            _rampDownStartMultiplier = energyButton_MaxMultiplier;
+            _rampDownStartMultiplier = maxMult;
             _currentRampDownDuration = energyButton_RampDownDuration;
             _energyButtonState = EnergyButtonState.RampingDown;
             _energyButtonTimer = 0.0f;
@@ -561,12 +588,25 @@ public class GameManager : MonoBehaviour
         SaveManager.DeleteSaveFile();
         ScientificNodes = 0; LifetimeEarnings = 0; CurrentEnergy = 0;
         EmitterCount = 1; LogisticsLevel = 1; 
+        
+        if (PlanetManager.Instance != null)
+        {
+            PlanetManager.Instance.currentPlanetIndex = 0;
+            PlanetManager.Instance.isPreparingForLaunch = false;
+            PlanetManager.Instance.isTraveling = false;
+        }
+
         if (targetResearchManager != null) {
             foreach (var item in targetResearchManager.allResearches) item.currentLevel = 0;
             targetResearchManager.RecalculateAllResearches();
         }
         if (planetVisuals != null) planetVisuals.ResetVisuals();
         InitializeGameState();
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        
+        // --- FIX HARD RESET: Carica sempre la scena 0 (primo pianeta) ---
+        if (PlanetManager.Instance != null && PlanetManager.Instance.planets.Count > 0)
+             SceneManager.LoadScene(PlanetManager.Instance.planets[0].sceneName);
+        else
+             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: 1.2_Global_Production_1
   m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
   id: 1.2_Global_Production_1
-  title: 1.2_Global_Production_1
+  title: Gravity inducer
   description: Energy production rate +10%
   icon: {fileID: 0}
   type: 0

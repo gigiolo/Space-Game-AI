@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems; 
-using TMPro;        
+using TMPro;            
 using BreakInfinity; 
 using System; 
 
@@ -17,6 +17,10 @@ public class UIManager : MonoBehaviour
 
     [Tooltip("Collega qui il testo che prima mostrava la Capacità Massima")]
     public TextMeshProUGUI storageText; 
+
+    [Header("--- NUOVO: Nanobot Growth ---")]
+    [Tooltip("Collega qui il testo per visualizzare la velocità di crescita degli emitter")]
+    public TextMeshProUGUI emitterGrowthText;
 
     [Header("Bottom Deck")]
     public GameObject mainEnergyButtonObj; 
@@ -48,9 +52,6 @@ public class UIManager : MonoBehaviour
 
     private void Awake()
     {
-        // --- MODIFICA IMPORTANTE ---
-        // Abbiamo rimosso DontDestroyOnLoad.
-        // Ogni scena deve avere il suo UIManager collegato al suo Canvas specifico.
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -136,8 +137,6 @@ public class UIManager : MonoBehaviour
     {
         if (gm == null) return;
 
-        // Tutti i controlli hanno ora '?' o if per evitare errori se l'oggetto è stato distrutto
-
         // 1. ENERGIA (Infinita)
         if (scoreText != null) scoreText.text = $"{FormatNumber(gm.CurrentEnergy)} Energy";
         
@@ -165,12 +164,28 @@ public class UIManager : MonoBehaviour
             logisticsStatusText.text = $"{emitterString}\nProd: {FormatNumber(gm.RawProductionRate)} | Log Cap: {FormatNumber(gm.LogisticsCap)}";
         }
 
+        // --- NUOVO: Visualizzazione Velocità Crescita Nanobot ---
+        if (emitterGrowthText != null)
+        {
+            // Se siamo pieni, scriviamo MAX
+            if (gm.EmitterCount >= gm.EmitterCap)
+            {
+                emitterGrowthText.text = "Growth: <color=red>PAUSED (Max Cap)</color>";
+            }
+            else
+            {
+                // Mostriamo la velocità: es "+0.30/s"
+                double speed = gm.EmitterAutoGrowthSpeed;
+                emitterGrowthText.text = $"Growth: <color=#00FF00>+{speed:F2}/s</color>";
+            }
+        }
+        // -------------------------------------------------------
+
         // 5. MOLTIPLICATORE ENERGY BUTTON
         if (energyMultiplierText != null)
         {
             float currentMult = gm.CurrentEnergyMultiplier;
 
-            // Se il moltiplicatore è significativamente maggiore di 1
             if (currentMult > 1.01f) 
             {
                 if (!energyMultiplierText.gameObject.activeSelf) 
@@ -204,7 +219,6 @@ public class UIManager : MonoBehaviour
 
         PlanetData currentPlanet = pm.GetCurrentPlanetData();
         
-        // Se non abbiamo riferimenti UI o dati, usciamo
         if (currentPlanet == null || planetTravelPanel == null)
         {
             if(planetTravelPanel != null) planetTravelPanel.SetActive(false);
@@ -222,7 +236,6 @@ public class UIManager : MonoBehaviour
             planetValueText.text = $"Planet Value: {FormatNumber(currentPlanetValue)} / {FormatNumber(currentPlanet.requiredPlanetValue)}";
         }
         
-        // Gestione stati visuali
         bool isTraveling = pm.isTraveling;
         bool isPreparing = pm.isPreparingForLaunch;
 
@@ -258,9 +271,7 @@ public class UIManager : MonoBehaviour
         }
         else
         {
-            // Ready to start preparation or travel
             BigDouble energyRequirement = pm.GetLaunchEnergyRequirement();
-            // Controllo semplificato: se abbiamo finito, la barra è piena
             bool preparationComplete = pm.launchPreparationProgress >= energyRequirement && energyRequirement > 0;
 
             if(startPreparationButton) startPreparationButton.gameObject.SetActive(!preparationComplete);
