@@ -3333,25 +3333,25 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlanetPopulationVisuals
   surfaceRadius: 0.501
-  baseLightSize: 0.00625
+  baseLightSize: 0.002
   maxLights: 2000
-  firstNodeMaxLatitude: 50
-  generalMaxLatitude: 70
-  minDistance: 0.05
+  firstNodeMaxLatitude: 40
+  generalMaxLatitude: 60
+  minDistance: 0.04
   maxSpawnAttempts: 20
-  spawnFlashColor: {r: 1, g: 0, b: 0, a: 1}
-  fadeDuration: 1.5
-  clusterSpread: 0.14
-  newHubChance: 0.05
+  spawnFlashColor: {r: 1, g: 0.42931396, b: 0, a: 1}
+  fadeDuration: 3.5
+  clusterSpread: 0.5
+  newHubChance: 0.01
   sunLight: {fileID: 126104936}
   connectionPS: {fileID: 1301505221}
-  connectionNightColor: {r: 0.5320754, g: 0.10165974, b: 0.003011704, a: 0.5529412}
-  connectionDayColor: {r: 0.1, g: 0.1, b: 0.1, a: 1}
-  maxConnectionDistance: 0.5
-  lineThickness: 0.005
-  arcHeight: 0.007
+  connectionNightColor: {r: 1.0592737, g: 0.9620392, b: 0, a: 0.05882353}
+  connectionDayColor: {r: 0, g: 0, b: 0, a: 0.13725491}
+  maxConnectionDistance: 0.3
+  lineThickness: 0.00125
+  arcHeight: 0.008
   randomHeightVariance: 0
-  maxConnectionsPerNode: 4
+  maxConnectionsPerNode: 2
 --- !u!199 &1058039599
 ParticleSystemRenderer:
   serializedVersion: 7
@@ -14764,9 +14764,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::AsteroidManager
   minSpawnInterval: 2
-  maxSpawnInterval: 4
-  minSpeed: 2
-  maxSpeed: 4
+  maxSpawnInterval: 3
+  minSpeed: 3
+  maxSpeed: 5
   trajectoryAngle: 135
   angleVariance: 45
   curveAmount: 5
