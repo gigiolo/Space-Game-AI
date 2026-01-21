@@ -12,6 +12,7 @@ public class GameManager : MonoBehaviour
 
     [Header("--- COLLEGAMENTI ---")]
     public ResearchManager targetResearchManager; 
+    public SpaceshipManager spaceshipManager; // <--- NUOVO RIFERIMENTO
     public UITheme activeTheme; 
     
     public PlanetPopulationVisuals planetVisuals; 
@@ -143,6 +144,7 @@ public class GameManager : MonoBehaviour
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         targetResearchManager = FindFirstObjectByType<ResearchManager>();
+        spaceshipManager = FindFirstObjectByType<SpaceshipManager>(); // <--- Cerchiamo anche il SpaceshipManager
         planetVisuals = FindFirstObjectByType<PlanetPopulationVisuals>();
         OnEconomyUpdated?.Invoke();
     }
@@ -152,6 +154,7 @@ public class GameManager : MonoBehaviour
         if (activeTheme != null) ThemedUIElement.SetGlobalTheme(activeTheme);
         
         if (targetResearchManager == null) targetResearchManager = FindFirstObjectByType<ResearchManager>();
+        if (spaceshipManager == null) spaceshipManager = FindFirstObjectByType<SpaceshipManager>(); // <--- Fallback
         if (dailyGiftManager == null) dailyGiftManager = FindFirstObjectByType<DailyGiftManager>();
 
         LoadGame(); 
@@ -298,11 +301,20 @@ public class GameManager : MonoBehaviour
 
         if (planetVisuals != null) planetVisuals.ResetVisuals();
 
+        // Reset Ricerche
         if (targetResearchManager != null)
         {
             foreach(var res in targetResearchManager.allResearches)
                 res.currentLevel = 0;
             targetResearchManager.RecalculateAllResearches();
+        }
+
+        // --- NUOVO: Reset Navi ---
+        if (spaceshipManager != null)
+        {
+            foreach(var ship in spaceshipManager.fleet)
+                ship.currentLevel = 0;
+            // Se in futuro lo SpaceshipManager avrà un metodo "Recalculate", chiamalo qui
         }
 
         SaveGame(); 
@@ -326,11 +338,23 @@ public class GameManager : MonoBehaviour
         if (targetResearchManager == null) 
             targetResearchManager = FindFirstObjectByType<ResearchManager>();
 
+        if (spaceshipManager == null)
+            spaceshipManager = FindFirstObjectByType<SpaceshipManager>();
+
+        // Reset Ricerche
         if (targetResearchManager != null)
         {
             foreach(var res in targetResearchManager.allResearches)
                 res.currentLevel = 0;
             targetResearchManager.RecalculateAllResearches();
+        }
+
+        // --- NUOVO: Reset Navi al cambio pianeta ---
+        // Se vuoi che le navi siano persistenti tra i pianeti, rimuovi questo blocco.
+        if (spaceshipManager != null)
+        {
+            foreach(var ship in spaceshipManager.fleet)
+                ship.currentLevel = 0;
         }
 
         OnEconomyUpdated?.Invoke();
@@ -380,6 +404,7 @@ public class GameManager : MonoBehaviour
         
         if (dailyGiftManager != null) dailyGiftManager.Save(data);
 
+        // Salva Ricerche
         if (targetResearchManager != null)
         {
             foreach (var item in targetResearchManager.allResearches)
@@ -388,6 +413,18 @@ public class GameManager : MonoBehaviour
                     data.researches.Add(new ResearchSaveData { id = item.id, level = item.currentLevel });
             }
         }
+
+        // --- NUOVO: Salva Navi ---
+        // Nota: Assicurati di aver aggiornato SaveData.cs con "public List<ResearchSaveData> spaceships;"
+        if (spaceshipManager != null)
+        {
+            foreach (var item in spaceshipManager.fleet)
+            {
+                if (item.currentLevel > 0)
+                    data.spaceships.Add(new ResearchSaveData { id = item.info.id, level = item.currentLevel });
+            }
+        }
+
         SaveManager.Save(data);
     }
 
@@ -446,6 +483,10 @@ public class GameManager : MonoBehaviour
         if (targetResearchManager != null)
             targetResearchManager.LoadResearchLevels(data.researches);
 
+        // --- NUOVO: Carica Navi ---
+        if (spaceshipManager != null)
+            spaceshipManager.LoadFleetLevels(data.spaceships);
+
         if (planetVisuals != null && data.cityLightPositions != null)
             planetVisuals.LoadEncodedPositions(data.cityLightPositions);
 
@@ -465,7 +506,7 @@ public class GameManager : MonoBehaviour
         {
             TimeSpan timeSinceTravelStart = DateTime.UtcNow - PlanetManager.Instance.travelStartTime;
             
-            // --- CORREZIONE QUI: Usiamo il metodo dinamico invece della costante rimossa ---
+            // Usiamo il metodo dinamico del PlanetManager che ora interroga lo SpaceshipManager
             if (timeSinceTravelStart.TotalSeconds >= PlanetManager.Instance.GetTotalTravelDuration())
             {
                 PlanetManager.Instance.CompleteTravel();
@@ -654,6 +695,12 @@ public class GameManager : MonoBehaviour
             foreach (var item in targetResearchManager.allResearches) item.currentLevel = 0;
             targetResearchManager.RecalculateAllResearches();
         }
+
+        // --- NUOVO: Reset Navi Hard ---
+        if (spaceshipManager != null) {
+            foreach (var item in spaceshipManager.fleet) item.currentLevel = 0;
+        }
+
         if (planetVisuals != null) planetVisuals.ResetVisuals();
         
         InitializeGameState();

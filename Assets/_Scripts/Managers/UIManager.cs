@@ -43,7 +43,10 @@ public class UIManager : MonoBehaviour
     public Button startTravelButton;
     public TextMeshProUGUI planetValueText;
     public Slider launchProgressBar;
-    public TextMeshProUGUI travelStatusText;
+    public TextMeshProUGUI travelStatusText; // Il countdown durante il viaggio
+    
+    [Tooltip("NUOVO: Testo per mostrare Velocità Nave e Stima Tempo PRIMA di partire")]
+    public TextMeshProUGUI travelInfoText; 
 
     [Header("OPTIONS MENU")]
     public Button optionsButton;                   
@@ -248,25 +251,32 @@ public class UIManager : MonoBehaviour
         bool isTraveling = pm.isTraveling;
         bool isPreparing = pm.isPreparingForLaunch;
 
+        // Recuperiamo i dati di viaggio dinamici
+        double totalDuration = pm.GetTotalTravelDuration();
+        BigDouble shipSpeed = (SpaceshipManager.Instance != null) ? SpaceshipManager.Instance.GetTotalSpaceshipSpeed() : 0;
+        if (shipSpeed <= 0) shipSpeed = 10; // Fallback visivo
+
         if (isTraveling)
         {
             if(startPreparationButton) startPreparationButton.gameObject.SetActive(false);
             if(startTravelButton) startTravelButton.gameObject.SetActive(false);
             if(launchProgressBar) launchProgressBar.gameObject.SetActive(false);
             
+            // Durante il viaggio mostriamo il countdown
             if(travelStatusText)
             {
                 travelStatusText.gameObject.SetActive(true);
                 
-                // --- MODIFICA QUI: Uso del nuovo metodo dinamico ---
-                double totalDuration = pm.GetTotalTravelDuration();
                 TimeSpan timeRemaining = TimeSpan.FromSeconds(totalDuration) - (DateTime.UtcNow - pm.travelStartTime);
                 
                 if (timeRemaining.TotalSeconds > 0)
-                    travelStatusText.text = $"Arrival in: {timeRemaining.Hours:D2}:{timeRemaining.Minutes:D2}:{timeRemaining.Seconds:D2}";
+                    travelStatusText.text = $"Arriving in: <color=yellow>{FormatTimeSpan(timeRemaining)}</color>";
                 else
-                    travelStatusText.text = "Arriving...";
+                    travelStatusText.text = "Docking...";
             }
+
+            // Nascondiamo le info statiche durante il viaggio per pulizia
+            if(travelInfoText) travelInfoText.gameObject.SetActive(false);
         }
         else if (isPreparing)
         {
@@ -281,9 +291,13 @@ public class UIManager : MonoBehaviour
                 if (energyRequirement > 0)
                     launchProgressBar.value = (float)(pm.launchPreparationProgress / energyRequirement).ToDouble();
             }
+
+            // Mostriamo le info anche durante la preparazione
+            UpdateTravelInfoText(shipSpeed, totalDuration);
         }
         else
         {
+            // FASE IDLE o PRONTI A PARTIRE
             BigDouble energyRequirement = pm.GetLaunchEnergyRequirement();
             bool preparationComplete = pm.launchPreparationProgress >= energyRequirement && energyRequirement > 0;
 
@@ -294,7 +308,29 @@ public class UIManager : MonoBehaviour
 
             if(startPreparationButton) 
                 startPreparationButton.interactable = currentPlanetValue >= currentPlanet.requiredPlanetValue;
+            
+            // Mostriamo le info stimate
+            UpdateTravelInfoText(shipSpeed, totalDuration);
         }
+    }
+
+    private void UpdateTravelInfoText(BigDouble speed, double duration)
+    {
+        if (travelInfoText != null)
+        {
+            travelInfoText.gameObject.SetActive(true);
+            string timeStr = FormatTimeSpan(TimeSpan.FromSeconds(duration));
+            travelInfoText.text = $"Fleet Speed: <color=#00FFFF>{FormatNumber(speed)} km/s</color>\nEst. Duration: <color=yellow>{timeStr}</color>";
+        }
+    }
+
+    // Formattazione hh:mm:ss pulita
+    private string FormatTimeSpan(TimeSpan ts)
+    {
+        if (ts.TotalHours >= 1)
+            return string.Format("{0:D2}:{1:D2}:{2:D2}", (int)ts.TotalHours, ts.Minutes, ts.Seconds);
+        else
+            return string.Format("{0:D2}:{1:D2}", ts.Minutes, ts.Seconds);
     }
 
     void CheckBottleneck()

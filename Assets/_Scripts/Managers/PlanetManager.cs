@@ -11,9 +11,7 @@ public class PlanetManager : MonoBehaviour
     [Tooltip("The list of all planets available in the game, in order of progression.")]
     public List<PlanetData> planets;
 
-    [Header("Spaceship Settings")]
-    [Tooltip("Velocità di viaggio della navicella (Km/s o unità arbitrarie). Tempo = Distanza / Velocità.")]
-    public BigDouble baseSpaceshipSpeed = 100;
+    // Rimosso baseSpaceshipSpeed perché ora è gestito da SpaceshipManager
 
     [HideInInspector]
     public int currentPlanetIndex = 0;
@@ -27,9 +25,6 @@ public class PlanetManager : MonoBehaviour
 
     [HideInInspector] public bool isTraveling = false;
     [HideInInspector] public DateTime travelStartTime;
-
-    // Rimosso il valore costante, ora usiamo GetTotalTravelDuration()
-    // public const float TRAVEL_DURATION_SECONDS = 3; 
 
     private void Awake()
     {
@@ -68,26 +63,29 @@ public class PlanetManager : MonoBehaviour
         return null;
     }
 
-    // --- NUOVO CALCOLO DEL TEMPO DI VIAGGIO ---
+    // --- CALCOLO DINAMICO DEL TEMPO DI VIAGGIO ---
     public double GetTotalTravelDuration()
     {
-        // Otteniamo il pianeta di destinazione (il prossimo nella lista)
         PlanetData destination = GetNextPlanetData();
 
-        // Se non c'è una destinazione (siamo all'ultimo) o la distanza è 0, mettiamo un tempo minimo di debug (3s)
-        if (destination == null || destination.travelDistance <= 0)
-        {
-            return 3.0f; 
-        }
+        // Se non c'è destinazione o distanza è 0, tempo di debug (3s)
+        if (destination == null || destination.travelDistance <= 0) return 3.0f; 
 
-        // Evitiamo divisioni per zero
-        if (baseSpaceshipSpeed <= 0) baseSpaceshipSpeed = 1;
+        // Recupera la velocità totale dalle navi tramite il Manager
+        BigDouble speed = 0;
+        
+        if (SpaceshipManager.Instance != null)
+        {
+            speed = SpaceshipManager.Instance.GetTotalSpaceshipSpeed();
+        }
+        
+        // Fallback: se non hai navi o il manager non c'è, usiamo una velocità minima (es. 10)
+        // per evitare divisioni per zero o viaggi infiniti.
+        if (speed <= 0) speed = 10; 
 
         // Tempo = Distanza / Velocità
-        BigDouble durationBig = destination.travelDistance / baseSpaceshipSpeed;
+        BigDouble durationBig = destination.travelDistance / speed;
         
-        // Convertiamo in double (secondi) per usarlo con DateTime e Time.deltaTime
-        // Nota: Se la distanza è immensa e la velocità bassa, questo numero potrebbe essere alto (ore reali).
         return durationBig.ToDouble(); 
     }
 
@@ -151,7 +149,6 @@ public class PlanetManager : MonoBehaviour
     {
         TimeSpan travelTime = DateTime.UtcNow - travelStartTime;
         
-        // Confrontiamo il tempo trascorso con la durata calcolata dinamicamente
         if (travelTime.TotalSeconds >= GetTotalTravelDuration())
         {
             CompleteTravel();

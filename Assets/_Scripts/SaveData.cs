@@ -12,31 +12,28 @@ public class SaveData
     public int emitterCount;
     public int logisticsLevel;
     
-    // RICERCHE
+    // RICERCHE (Tecnologie)
     public List<ResearchSaveData> researches = new List<ResearchSaveData>();
     
+    // --- NUOVO: SPACESHIPS (Hangar) ---
+    public List<ResearchSaveData> spaceships = new List<ResearchSaveData>();
+
     // PERMANENTI (Soft Prestige)
     public string scientificNodes; 
     public string totalLifetimeEarnings;
 
-    // --- NUOVO: VALUTE PREMIUM & PRE-PREMIUM ---
-    // Queste persistono attraverso Planet Travel e Quantum Reset
-    public string rawIridium;  // Iridio Grezzo (Accumulato in gioco)
-    public string pureIridium; // Iridio Puro (Premium / Convertito)
-    // -------------------------------------------
+    // VALUTE
+    public string rawIridium;
+    public string pureIridium;
 
     // VISUALS
     public List<string> cityLightPositions = new List<string>();
 
-    // REWARD NOTIFICATIONS
-    public float rewardNotificationTimer;
-    public int rewardNotificationCount;
-    
     // DAILY GIFT
     public string dailyGiftLastClaimedTimestamp;
     public int dailyGiftCurrentDayIndex;
 
-    // --- PLANET TRAVEL ---
+    // PLANET TRAVEL
     public int currentPlanetIndex;
     public bool isPreparingForLaunch;
     public string launchPreparationProgress;
@@ -45,6 +42,7 @@ public class SaveData
     public string travelStartTimeBinary;
 }
 
+// Possiamo riusare questa classe anche per le navi dato che contiene solo ID e Level
 [Serializable]
 public class ResearchSaveData
 {
