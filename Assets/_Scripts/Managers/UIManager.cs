@@ -1,22 +1,30 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems; 
-using TMPro;            
+using TMPro;             
 using BreakInfinity; 
 using System; 
+using System.Collections; 
 
 public class UIManager : MonoBehaviour
 {
-    [Header("Top HUD")]
-    public TextMeshProUGUI scoreText;                
-    public TextMeshProUGUI incomeText;               
+    [Header("Top HUD - Standard")]
+    public TextMeshProUGUI scoreText;                 
+    public TextMeshProUGUI incomeText;                
     public TextMeshProUGUI logisticsStatusText; 
     
     [Tooltip("Collega qui il testo che mostra il moltiplicatore attivo (es. x3.0)")]
     public TextMeshProUGUI energyMultiplierText;
 
-    [Tooltip("Collega qui il testo che prima mostrava la Capacità Massima")]
+    [Tooltip("Collega qui il testo che prima mostrava la Capacità Massima (Offline)")]
     public TextMeshProUGUI storageText; 
+
+    [Header("Top HUD - Special Currencies")]
+    [Tooltip("Testo per visualizzare l'Iridio Puro (Premium)")]
+    public TextMeshProUGUI pureIridiumText;
+
+    [Tooltip("Testo per visualizzare l'Iridio Grezzo (Accumulato)")]
+    public TextMeshProUGUI rawIridiumText;
 
     [Header("--- NUOVO: Nanobot Growth ---")]
     [Tooltip("Collega qui il testo per visualizzare la velocità di crescita degli emitter")]
@@ -38,16 +46,19 @@ public class UIManager : MonoBehaviour
     public TextMeshProUGUI travelStatusText;
 
     [Header("OPTIONS MENU")]
-    public Button optionsButton;                  
+    public Button optionsButton;                   
     public OptionsMenu optionsMenuController;
 
     [Header("Visual Feedback")]
     public Color normalColor = Color.white;        
     public Color warningColor = new Color(1f, 0.3f, 0.3f); 
-
+    
     private GameManager gm;
     private PlanetManager pm;
     
+    private Coroutine _iridiumFeedbackRoutine;
+    private bool _isShowingIridiumFeedback = false; 
+
     public static UIManager Instance { get; private set; }
 
     private void Awake()
@@ -67,7 +78,6 @@ public class UIManager : MonoBehaviour
         
         if (gm != null)
         {
-            // Ci iscriviamo agli aggiornamenti
             gm.OnEconomyUpdated += RefreshUI;
             
             if(prestigeButton) 
@@ -76,7 +86,6 @@ public class UIManager : MonoBehaviour
                 prestigeButton.onClick.AddListener(gm.PerformQuantumReset);
             }
 
-            // Planet Travel Button Listeners
             if (pm != null)
             {
                 if (startPreparationButton) 
@@ -99,8 +108,6 @@ public class UIManager : MonoBehaviour
             }
             
             SetupHoldButton();
-            
-            // Forziamo un aggiornamento immediato appena parte la scena
             RefreshUI();
         }
     }
@@ -108,20 +115,13 @@ public class UIManager : MonoBehaviour
     void SetupHoldButton()
     {
         if (mainEnergyButtonObj == null) return;
-
         EventTrigger trigger = mainEnergyButtonObj.GetComponent<EventTrigger>();
         if (trigger == null) trigger = mainEnergyButtonObj.AddComponent<EventTrigger>();
-        
-        // Pulisce trigger precedenti per evitare duplicati nei reload
         trigger.triggers.Clear();
-
-        // Quando premi (PointerDown), chiami OnEnergyButtonPress
         EventTrigger.Entry entryDown = new EventTrigger.Entry();
         entryDown.eventID = EventTriggerType.PointerDown;
         entryDown.callback.AddListener((data) => { if(gm) gm.OnEnergyButtonPress(); }); 
         trigger.triggers.Add(entryDown);
-
-        // Quando rilasci (PointerUp), chiami OnEnergyButtonRelease
         EventTrigger.Entry entryUp = new EventTrigger.Entry();
         entryUp.eventID = EventTriggerType.PointerUp;
         entryUp.callback.AddListener((data) => { if(gm) gm.OnEnergyButtonRelease(); });
@@ -133,14 +133,33 @@ public class UIManager : MonoBehaviour
         if (gm != null) gm.OnEconomyUpdated -= RefreshUI;
     }
 
+    public void ShowPureIridiumFeedback(int gainAmount)
+    {
+        if (pureIridiumText == null) return;
+
+        if (_iridiumFeedbackRoutine != null) StopCoroutine(_iridiumFeedbackRoutine);
+        _iridiumFeedbackRoutine = StartCoroutine(IridiumFeedbackRoutine(gainAmount));
+    }
+
+    IEnumerator IridiumFeedbackRoutine(int gain)
+    {
+        _isShowingIridiumFeedback = true;
+
+        string currentTotal = FormatNumber(GameManager.Instance.PureIridium);
+        pureIridiumText.text = $"Pure Iridium: {currentTotal} <color=#FF00FF>(+{gain})</color>";
+
+        yield return new WaitForSeconds(2.0f);
+
+        _isShowingIridiumFeedback = false;
+        RefreshUI();
+    }
+
     public void RefreshUI()
     {
         if (gm == null) return;
 
-        // 1. ENERGIA (Infinita)
         if (scoreText != null) scoreText.text = $"{FormatNumber(gm.CurrentEnergy)} Energy";
         
-        // 2. TEMPO OFFLINE (Sostituisce Max Cap)
         if (storageText != null) 
         {
             TimeSpan ts = TimeSpan.FromSeconds(gm.MaxOfflineSeconds);
@@ -148,64 +167,57 @@ public class UIManager : MonoBehaviour
             storageText.text = $"Offline: {formattedTime}";
         }
 
-        // 3. INCOME
         if (incomeText != null) incomeText.text = $"+{FormatNumber(gm.EffectiveIncomePerSec)}/s";
 
-        // 4. LOGISTICA E EMETTITORI
+        if (pureIridiumText != null)
+        {
+            if (!_isShowingIridiumFeedback)
+            {
+                pureIridiumText.text = $"Pure Iridium: {FormatNumber(gm.PureIridium)}"; 
+            }
+        }
+
+        if (rawIridiumText != null)
+        {
+            rawIridiumText.text = $"Raw Iridium: {FormatNumber(gm.RawIridium)}";
+        }
+
         if (logisticsStatusText != null)
         {
             string emitterString = $"Units: {gm.EmitterCount} / {gm.EmitterCap}";
-            
-            if (gm.EmitterCount >= gm.EmitterCap)
-            {
-                emitterString = $"<color=red>{emitterString} (MAX)</color>";
-            }
-
+            if (gm.EmitterCount >= gm.EmitterCap) emitterString = $"<color=red>{emitterString} (MAX)</color>";
             logisticsStatusText.text = $"{emitterString}\nProd: {FormatNumber(gm.RawProductionRate)} | Log Cap: {FormatNumber(gm.LogisticsCap)}";
         }
 
-        // --- NUOVO: Visualizzazione Velocità Crescita Nanobot ---
         if (emitterGrowthText != null)
         {
-            // Se siamo pieni, scriviamo MAX
             if (gm.EmitterCount >= gm.EmitterCap)
-            {
                 emitterGrowthText.text = "Growth: <color=red>PAUSED (Max Cap)</color>";
-            }
             else
             {
-                // Mostriamo la velocità: es "+0.30/s"
                 double speed = gm.EmitterAutoGrowthSpeed;
                 emitterGrowthText.text = $"Growth: <color=#00FF00>+{speed:F2}/s</color>";
             }
         }
-        // -------------------------------------------------------
 
-        // 5. MOLTIPLICATORE ENERGY BUTTON
         if (energyMultiplierText != null)
         {
             float currentMult = gm.CurrentEnergyMultiplier;
-
             if (currentMult > 1.01f) 
             {
-                if (!energyMultiplierText.gameObject.activeSelf) 
-                    energyMultiplierText.gameObject.SetActive(true);
-
+                if (!energyMultiplierText.gameObject.activeSelf) energyMultiplierText.gameObject.SetActive(true);
                 energyMultiplierText.text = $"x {currentMult:F2}";
             }
             else
             {
-                if (energyMultiplierText.gameObject.activeSelf) 
-                    energyMultiplierText.gameObject.SetActive(false);
+                if (energyMultiplierText.gameObject.activeSelf) energyMultiplierText.gameObject.SetActive(false);
             }
         }
 
-        // 6. RESET QUANTISTICO
         if (prestigeInfoText != null)
         {
             BigDouble potentialNodes = gm.CalculatePotentialNodes();
             prestigeInfoText.text = $"RESET (Current: {gm.ScientificNodes})\nGain: <color=#00FFFF>+{FormatNumber(potentialNodes)} Nodes</color>";
-            
             if (prestigeButton) prestigeButton.interactable = potentialNodes > 0;
         }
 
@@ -216,7 +228,6 @@ public class UIManager : MonoBehaviour
     void RefreshPlanetUI()
     {
         if (pm == null) return;
-
         PlanetData currentPlanet = pm.GetCurrentPlanetData();
         
         if (currentPlanet == null || planetTravelPanel == null)
@@ -232,9 +243,7 @@ public class UIManager : MonoBehaviour
         if (!canShowPanel) return;
 
         if (planetValueText != null)
-        {
             planetValueText.text = $"Planet Value: {FormatNumber(currentPlanetValue)} / {FormatNumber(currentPlanet.requiredPlanetValue)}";
-        }
         
         bool isTraveling = pm.isTraveling;
         bool isPreparing = pm.isPreparingForLaunch;
@@ -248,9 +257,13 @@ public class UIManager : MonoBehaviour
             if(travelStatusText)
             {
                 travelStatusText.gameObject.SetActive(true);
-                TimeSpan timeRemaining = TimeSpan.FromSeconds(PlanetManager.TRAVEL_DURATION_SECONDS) - (DateTime.UtcNow - pm.travelStartTime);
+                
+                // --- MODIFICA QUI: Uso del nuovo metodo dinamico ---
+                double totalDuration = pm.GetTotalTravelDuration();
+                TimeSpan timeRemaining = TimeSpan.FromSeconds(totalDuration) - (DateTime.UtcNow - pm.travelStartTime);
+                
                 if (timeRemaining.TotalSeconds > 0)
-                    travelStatusText.text = $"Time to arrival: {timeRemaining.Hours:D2}:{timeRemaining.Minutes:D2}:{timeRemaining.Seconds:D2}";
+                    travelStatusText.text = $"Arrival in: {timeRemaining.Hours:D2}:{timeRemaining.Minutes:D2}:{timeRemaining.Seconds:D2}";
                 else
                     travelStatusText.text = "Arriving...";
             }
@@ -287,10 +300,8 @@ public class UIManager : MonoBehaviour
     void CheckBottleneck()
     {
         if (incomeText == null) return;
-        
         bool isBottleneck = gm.RawProductionRate > gm.LogisticsCap;
         Color targetColor = isBottleneck ? warningColor : normalColor;
-
         incomeText.color = targetColor;
     }
 

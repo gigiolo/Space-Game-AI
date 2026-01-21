@@ -1,30 +1,30 @@
 using UnityEngine;
-using BreakInfinity; // Assicurati di avere questo namespace
+using BreakInfinity; 
 
 public class AsteroidEvent : MonoBehaviour
 {
     [Header("Visuals")]
     [SerializeField] private float rotationSpeed = 100f;
     [SerializeField] private ParticleSystem explosionVFX;
-    [SerializeField] private GameObject meshObject; // La sfera/grafica
-
+    [SerializeField] private GameObject meshObject; 
+    
     [Header("Rewards")]
     [SerializeField] private float rewardMultiplier = 15f;
+    [Tooltip("Se vero, questo asteroide darà premi doppi!")]
     [SerializeField] private bool isGolden = false;
 
     // --- VARIABILI INTERNE CURVA ---
-    private Vector3 _p0; // Start
-    private Vector3 _p1; // Controllo (Curva)
-    private Vector3 _p2; // End
+    private Vector3 _p0; 
+    private Vector3 _p1; 
+    private Vector3 _p2; 
     private float _duration;
     private float _timeElapsed;
-    
+     
     // --- STATI ---
     private bool _isInitialized = false;
-    private bool _hasBeenHit = false; // Impedisce doppi click
+    private bool _hasBeenHit = false; 
     private System.Action<AsteroidEvent> _onDespawnCallback;
 
-    // Funzione di Setup chiamata dal Manager
     public void Setup(Vector3 start, Vector3 end, Vector3 curveControlPoint, float speed, System.Action<AsteroidEvent> onDespawn)
     {
         _p0 = start;
@@ -32,22 +32,19 @@ public class AsteroidEvent : MonoBehaviour
         _p1 = curveControlPoint;
         _onDespawnCallback = onDespawn;
 
-        // Calcolo durata viaggio
         float approxDistance = Vector3.Distance(start, end);
         if (speed <= 0) speed = 1f;
         _duration = approxDistance / speed;
         _timeElapsed = 0f;
 
-        // Reset posizione e stati
         transform.position = _p0;
-        transform.rotation = Quaternion.identity; // Reset rotazione del padre
+        transform.rotation = Quaternion.identity; 
         _hasBeenHit = false;
 
-        // Attivazione grafica
         if (meshObject)
         {
             meshObject.SetActive(true);
-            meshObject.transform.rotation = Random.rotation; // Rotazione iniziale casuale della roccia
+            meshObject.transform.rotation = Random.rotation; 
         }
         
         _isInitialized = true;
@@ -57,41 +54,29 @@ public class AsteroidEvent : MonoBehaviour
     {
         if (!_isInitialized) return;
 
-        // 1. Avanzamento del tempo
         _timeElapsed += Time.deltaTime;
         float t = _timeElapsed / _duration;
 
-        // Se il tempo è scaduto (e non l'abbiamo preso), despawna
         if (t >= 1f)
         {
             Despawn();
             return;
         }
 
-        // 2. Calcolo nuova posizione sulla curva (Bezier)
         Vector3 newPos = CalculateBezierPoint(t, _p0, _p1, _p2);
-
-        // 3. Orientamento Dinamico (FONDAMENTALE PER L'INERZIA)
-        // Calcoliamo la direzione verso cui ci stiamo muovendo
         Vector3 direction = (newPos - transform.position).normalized;
         
-        // Ruotiamo l'INTERO oggetto padre verso la direzione di viaggio
-        // Così le particelle "Inherit Velocity" sanno dov'è il "davanti"
         if (direction != Vector3.zero)
         {
             transform.rotation = Quaternion.LookRotation(direction);
         }
         
-        // Applichiamo la posizione
         transform.position = newPos;
 
-        // 4. Rotazione Mesh (Estetica aggiuntiva)
-        // Ruota solo se l'oggetto è ancora integro (non colpito)
         if (!_hasBeenHit && meshObject)
             meshObject.transform.Rotate(Vector3.up, rotationSpeed * Time.deltaTime);
     }
 
-    // Matematica della curva
     private Vector3 CalculateBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2)
     {
         float u = 1 - t;
@@ -107,21 +92,17 @@ public class AsteroidEvent : MonoBehaviour
 
     public void OnHit()
     {
-        // Se non è pronto o è già esploso, ignoriamo il click
         if (!_isInitialized || _hasBeenHit) return;
 
-        _hasBeenHit = true; // Segniamo che è stato colpito
+        _hasBeenHit = true; 
 
-        GiveReward();
+        GiveReward(); 
         PlayExplosion();
         
-        // TRUCCO INERZIA:
-        // Nascondiamo solo la grafica, ma lasciamo attivo il padre (_isInitialized resta true)
-        // Così continua a muoversi invisibile e le particelle ereditano la velocità corretta.
         if (meshObject) meshObject.SetActive(false);
 
         if (explosionVFX != null)
-            Invoke(nameof(Despawn), 1.0f); // Aspetta 1 secondo per far finire l'esplosione
+            Invoke(nameof(Despawn), 1.0f); 
         else
             Despawn();
     }
@@ -130,25 +111,43 @@ public class AsteroidEvent : MonoBehaviour
     {
         if (GameManager.Instance == null) return;
         
-        BigDouble reward = GameManager.Instance.EffectiveIncomePerSec * rewardMultiplier;
-        if (reward <= 0) reward = 10;
+        // --- 1. Calcolo Base Energia ---
+        BigDouble energyReward = GameManager.Instance.EffectiveIncomePerSec * rewardMultiplier;
+        if (energyReward <= 0) energyReward = 10;
 
-        if (isGolden) Debug.Log("TODO: Premium Currency");
-        else GameManager.Instance.AddEnergy(reward);
+        // --- 2. Calcolo Base Iridio (2-10) ---
+        int iridiumReward = Random.Range(2, 11);
+
+        // --- 3. Bonus Golden ---
+        if (isGolden)
+        {
+            energyReward *= 5;
+            iridiumReward *= 2;
+        }
+
+        // Assegnazione valute
+        GameManager.Instance.AddEnergy(energyReward);
+        GameManager.Instance.AddPureIridium(iridiumReward);
+
+        // --- 4. FEEDBACK VISIVO NEL TESTO UI ---
+        // Chiama il metodo che modifica il testo "Pure Iridium" nella UI per 2 secondi
+        if (UIManager.Instance != null)
+        {
+            UIManager.Instance.ShowPureIridiumFeedback(iridiumReward);
+        }
     }
 
     private void PlayExplosion()
     {
         if (explosionVFX != null) 
         {
-            // 'true' forza l'avvio anche di tutti i particle system figli (Debris, Core, Sparks)
             explosionVFX.Play(true); 
         }
     }
 
     private void Despawn()
     {
-        _isInitialized = false; // Blocca l'update
+        _isInitialized = false; 
         _onDespawnCallback?.Invoke(this);
     }
 }

@@ -11,6 +11,10 @@ public class PlanetData : ScriptableObject
     [Tooltip("The name of the scene to load for this planet.")]
     public string sceneName;
 
+    [Header("Travel Mechanics")]
+    [Tooltip("Distanza dal pianeta precedente. Usata per calcolare il tempo di viaggio (Distanza / Velocità Nave). Imposta a 0 per il primo pianeta.")]
+    public BigDouble travelDistance;
+
     [Header("Progression")]
     [Tooltip("The Planet Value required to unlock travel to the next planet.")]
     public BigDouble requiredPlanetValue;

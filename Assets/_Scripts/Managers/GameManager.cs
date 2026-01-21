@@ -33,12 +33,21 @@ public class GameManager : MonoBehaviour
     [Header("--- SALVATAGGIO ---")]
     public float autoSaveInterval = 30f; 
 
-    // --- VARIABILI DI GIOCO ---
+    // --- VARIABILI DI GIOCO (RESETTABILI) ---
     public BigDouble CurrentEnergy { get; private set; }
     public BigDouble LifetimeEarnings { get; private set; }
     public int EmitterCount { get; private set; } 
     public int LogisticsLevel { get; private set; }
+    
+    // --- VARIABILI PERMANENTI (RESET QUANTISTICO) ---
     public BigDouble ScientificNodes { get; private set; } = 0;
+
+    // --- NUOVO: VALUTE IRIDIO (PERSISTENTI) ---
+    // Raw Iridio: Accumulato giocando, convertibile in futuro
+    public BigDouble RawIridium { get; private set; } = 0;
+    // Pure Iridio: Valuta Premium (Acquisti In-App o conversioni rare)
+    public BigDouble PureIridium { get; private set; } = 0;
+    // ------------------------------------------
     
     // --- CAPACITA' & LIMITI ---
     public BigDouble BaseEmissionPerUnit { get; private set; } = 0.01; 
@@ -56,13 +65,9 @@ public class GameManager : MonoBehaviour
 
     // --- FIX CRESCITA EMITTERS ---
     public double BaseAutoGrowthSpeed = 0.3; 
-    // Questa variabile accumula il bonus dalle ricerche (+0.1, +0.2 etc.)
     public double EmitterSpeedResearchBonus { get; set; } = 0; 
-    
-    // Ora questa è una proprietà calcolata: Base + Bonus
     public double EmitterAutoGrowthSpeed => BaseAutoGrowthSpeed + EmitterSpeedResearchBonus;
-    // ----------------------------
-
+    
     private double _emitterAccumulator = 0; 
 
     public BigDouble EarningsBonus => 1 + (ScientificNodes * 0.50); 
@@ -155,6 +160,10 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
+        // DEBUG: Aggiungi Iridio con tasti per testare
+        if (Input.GetKeyDown(KeyCode.I)) AddRawIridium(100);
+        if (Input.GetKeyDown(KeyCode.P)) AddPureIridium(10);
+
         if (Input.GetKeyDown(KeyCode.K) || Input.touchCount >= 4)
         {
             PerformFullHardReset();
@@ -178,7 +187,6 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // Qui usiamo la proprietà calcolata (Base + Bonus)
         double currentGrowthSpeed = EmitterAutoGrowthSpeed;
 
         if (currentGrowthSpeed > 0 && EmitterCount < EmitterCap)
@@ -189,7 +197,7 @@ public class GameManager : MonoBehaviour
                 int toAdd = (int)_emitterAccumulator; 
                 int spaceLeft = EmitterCap - EmitterCount;
                 int actualAdd = Mathf.Min(toAdd, spaceLeft);
-                _emitterAccumulator -= actualAdd;                 
+                _emitterAccumulator -= actualAdd;                   
                 if (actualAdd < toAdd) _emitterAccumulator = 0;
 
                 if (actualAdd > 0)
@@ -277,9 +285,9 @@ public class GameManager : MonoBehaviour
         if (nodesToGain <= 0) return;
 
         ScientificNodes += nodesToGain;
+        
         InitializeGameState(); 
 
-        // --- FIX QUANTUM RESET: Ritorno al Pianeta 1 ---
         if (PlanetManager.Instance != null)
         {
             PlanetManager.Instance.currentPlanetIndex = 0;
@@ -299,14 +307,12 @@ public class GameManager : MonoBehaviour
 
         SaveGame(); 
         
-        // Carichiamo la scena del primo pianeta se esiste
         if (PlanetManager.Instance != null && PlanetManager.Instance.planets.Count > 0)
         {
             SceneManager.LoadScene(PlanetManager.Instance.planets[0].sceneName);
         }
         else
         {
-            // Fallback: ricarica la scena corrente se qualcosa va storto
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
 
@@ -341,7 +347,6 @@ public class GameManager : MonoBehaviour
         StorageResearchBonus = 0;
         EmitterCapResearchBonus = 0;
         ClickPowerResearchBonus = 0;
-        // Reset dei bonus, non della proprietà calcolata
         EmitterSpeedResearchBonus = 0; 
         _emitterAccumulator = 0;
         RecalculateCaps();
@@ -355,7 +360,10 @@ public class GameManager : MonoBehaviour
         data.emitterCount = EmitterCount;
         data.logisticsLevel = LogisticsLevel;
         data.lastSaveTime = DateTime.UtcNow.ToBinary().ToString(); 
+        
         data.scientificNodes = ScientificNodes.ToString();
+        data.rawIridium = RawIridium.ToString();
+        data.pureIridium = PureIridium.ToString();
         
         if (PlanetManager.Instance != null)
         {
@@ -390,6 +398,8 @@ public class GameManager : MonoBehaviour
         {
             InitializeGameState();
             ScientificNodes = 0;
+            RawIridium = 0; 
+            PureIridium = 0; 
             if (dailyGiftManager != null) dailyGiftManager.Initialize(null);
             return; 
         }
@@ -400,12 +410,10 @@ public class GameManager : MonoBehaviour
         EmitterCount = data.emitterCount > 0 ? data.emitterCount : 1;
         LogisticsLevel = data.logisticsLevel > 0 ? data.logisticsLevel : 1;
 
-        if (!string.IsNullOrEmpty(data.scientificNodes))
-            ScientificNodes = BigDouble.Parse(data.scientificNodes);
-        else
-            ScientificNodes = 0;
+        ScientificNodes = !string.IsNullOrEmpty(data.scientificNodes) ? BigDouble.Parse(data.scientificNodes) : 0;
+        RawIridium = !string.IsNullOrEmpty(data.rawIridium) ? BigDouble.Parse(data.rawIridium) : 0;
+        PureIridium = !string.IsNullOrEmpty(data.pureIridium) ? BigDouble.Parse(data.pureIridium) : 0;
             
-        // --- FIX CARICAMENTO SCENA PIANETA ---
         if (PlanetManager.Instance != null)
         {
             PlanetManager.Instance.currentPlanetIndex = data.currentPlanetIndex;
@@ -423,17 +431,14 @@ public class GameManager : MonoBehaviour
                 PlanetManager.Instance.travelStartTime = DateTime.FromBinary(binaryTime);
             }
 
-            // CONTROLLO SCENA: Se la scena attuale non corrisponde al pianeta salvato, carichiamo quella giusta.
             PlanetData savedPlanet = PlanetManager.Instance.GetCurrentPlanetData();
             if (savedPlanet != null)
             {
                 string currentSceneName = SceneManager.GetActiveScene().name;
-                // Se non siamo in viaggio e la scena è diversa, carica quella giusta
                 if (!PlanetManager.Instance.isTraveling && currentSceneName != savedPlanet.sceneName)
                 {
                     Debug.Log($"LoadGame: Scene mismatch. Current: {currentSceneName}, Saved: {savedPlanet.sceneName}. Loading correct scene...");
                     SceneManager.LoadScene(savedPlanet.sceneName);
-                    // Nota: OnSceneLoaded verrà chiamato dopo, aggiornando l'economia
                 }
             }
         }
@@ -459,7 +464,9 @@ public class GameManager : MonoBehaviour
         if (PlanetManager.Instance != null && PlanetManager.Instance.isTraveling)
         {
             TimeSpan timeSinceTravelStart = DateTime.UtcNow - PlanetManager.Instance.travelStartTime;
-            if (timeSinceTravelStart.TotalSeconds >= PlanetManager.TRAVEL_DURATION_SECONDS)
+            
+            // --- CORREZIONE QUI: Usiamo il metodo dinamico invece della costante rimossa ---
+            if (timeSinceTravelStart.TotalSeconds >= PlanetManager.Instance.GetTotalTravelDuration())
             {
                 PlanetManager.Instance.CompleteTravel();
                 return; 
@@ -496,7 +503,6 @@ public class GameManager : MonoBehaviour
                 LastOfflineEarnings = actualEarnings;
             }
 
-            // Fix calcolo offline usando la velocità corretta
             double offlineGrowthSpeed = EmitterAutoGrowthSpeed;
             if (offlineGrowthSpeed > 0 && EmitterCount < EmitterCap)
             {
@@ -582,12 +588,60 @@ public class GameManager : MonoBehaviour
         OnEconomyUpdated?.Invoke();
     }
 
+    // --- METODI GESTIONE IRIDIO ---
+    
+    public void AddRawIridium(BigDouble amount)
+    {
+        RawIridium += amount;
+        OnEconomyUpdated?.Invoke();
+    }
+
+    public void AddPureIridium(BigDouble amount)
+    {
+        PureIridium += amount;
+        SaveGame(); 
+        OnEconomyUpdated?.Invoke();
+    }
+
+    public bool TrySpendPureIridium(BigDouble amount)
+    {
+        if (PureIridium >= amount)
+        {
+            PureIridium -= amount;
+            SaveGame(); 
+            OnEconomyUpdated?.Invoke();
+            return true;
+        }
+        return false;
+    }
+
+    public void ConvertRawToPure(BigDouble rawAmount, double conversionRate)
+    {
+        if (RawIridium >= rawAmount)
+        {
+            RawIridium -= rawAmount;
+            BigDouble pureGained = BigDouble.Floor(rawAmount * conversionRate);
+            PureIridium += pureGained;
+            SaveGame();
+            OnEconomyUpdated?.Invoke();
+        }
+    }
+    // ------------------------------
+
     public void PerformFullHardReset()
     {
         Debug.LogWarning("HARD RESET INIZIATO.");
         SaveManager.DeleteSaveFile();
-        ScientificNodes = 0; LifetimeEarnings = 0; CurrentEnergy = 0;
-        EmitterCount = 1; LogisticsLevel = 1; 
+        
+        ScientificNodes = 0; 
+        LifetimeEarnings = 0; 
+        CurrentEnergy = 0;
+        
+        RawIridium = 0; 
+        PureIridium = 0; 
+        
+        EmitterCount = 1; 
+        LogisticsLevel = 1; 
         
         if (PlanetManager.Instance != null)
         {
@@ -601,9 +655,9 @@ public class GameManager : MonoBehaviour
             targetResearchManager.RecalculateAllResearches();
         }
         if (planetVisuals != null) planetVisuals.ResetVisuals();
+        
         InitializeGameState();
         
-        // --- FIX HARD RESET: Carica sempre la scena 0 (primo pianeta) ---
         if (PlanetManager.Instance != null && PlanetManager.Instance.planets.Count > 0)
              SceneManager.LoadScene(PlanetManager.Instance.planets[0].sceneName);
         else

@@ -6,7 +6,7 @@ public class SaveData
 {
     public string lastSaveTime;
 
-    // ECONOMIA
+    // ECONOMIA BASE
     public string currentEnergy;
     public string lifetimeEarnings;
     public int emitterCount;
@@ -15,9 +15,15 @@ public class SaveData
     // RICERCHE
     public List<ResearchSaveData> researches = new List<ResearchSaveData>();
     
-    // PERMANENTI
+    // PERMANENTI (Soft Prestige)
     public string scientificNodes; 
     public string totalLifetimeEarnings;
+
+    // --- NUOVO: VALUTE PREMIUM & PRE-PREMIUM ---
+    // Queste persistono attraverso Planet Travel e Quantum Reset
+    public string rawIridium;  // Iridio Grezzo (Accumulato in gioco)
+    public string pureIridium; // Iridio Puro (Premium / Convertito)
+    // -------------------------------------------
 
     // VISUALS
     public List<string> cityLightPositions = new List<string>();
@@ -34,11 +40,7 @@ public class SaveData
     public int currentPlanetIndex;
     public bool isPreparingForLaunch;
     public string launchPreparationProgress;
-    
-    // *** NUOVO CAMPO SALVATO ***
     public string lockedLaunchRequirement; 
-    // ***************************
-
     public bool isTraveling;
     public string travelStartTimeBinary;
 }

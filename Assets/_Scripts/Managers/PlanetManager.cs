@@ -11,6 +11,10 @@ public class PlanetManager : MonoBehaviour
     [Tooltip("The list of all planets available in the game, in order of progression.")]
     public List<PlanetData> planets;
 
+    [Header("Spaceship Settings")]
+    [Tooltip("Velocità di viaggio della navicella (Km/s o unità arbitrarie). Tempo = Distanza / Velocità.")]
+    public BigDouble baseSpaceshipSpeed = 100;
+
     [HideInInspector]
     public int currentPlanetIndex = 0;
 
@@ -18,13 +22,14 @@ public class PlanetManager : MonoBehaviour
     [HideInInspector] public bool isPreparingForLaunch = false;
     [HideInInspector] public BigDouble launchPreparationProgress = 0;
     
-    // NUOVO: Memorizza il costo fisso all'inizio del lancio
+    // Costo fisso bloccato all'inizio del lancio
     [HideInInspector] public BigDouble lockedLaunchRequirement = 0; 
 
     [HideInInspector] public bool isTraveling = false;
     [HideInInspector] public DateTime travelStartTime;
 
-    public const float TRAVEL_DURATION_SECONDS = 3; // 1 hour
+    // Rimosso il valore costante, ora usiamo GetTotalTravelDuration()
+    // public const float TRAVEL_DURATION_SECONDS = 3; 
 
     private void Awake()
     {
@@ -54,11 +59,42 @@ public class PlanetManager : MonoBehaviour
         return null;
     }
 
+    public PlanetData GetNextPlanetData()
+    {
+        if (planets != null && planets.Count > currentPlanetIndex + 1)
+        {
+            return planets[currentPlanetIndex + 1];
+        }
+        return null;
+    }
+
+    // --- NUOVO CALCOLO DEL TEMPO DI VIAGGIO ---
+    public double GetTotalTravelDuration()
+    {
+        // Otteniamo il pianeta di destinazione (il prossimo nella lista)
+        PlanetData destination = GetNextPlanetData();
+
+        // Se non c'è una destinazione (siamo all'ultimo) o la distanza è 0, mettiamo un tempo minimo di debug (3s)
+        if (destination == null || destination.travelDistance <= 0)
+        {
+            return 3.0f; 
+        }
+
+        // Evitiamo divisioni per zero
+        if (baseSpaceshipSpeed <= 0) baseSpaceshipSpeed = 1;
+
+        // Tempo = Distanza / Velocità
+        BigDouble durationBig = destination.travelDistance / baseSpaceshipSpeed;
+        
+        // Convertiamo in double (secondi) per usarlo con DateTime e Time.deltaTime
+        // Nota: Se la distanza è immensa e la velocità bassa, questo numero potrebbe essere alto (ore reali).
+        return durationBig.ToDouble(); 
+    }
+
     public BigDouble CalculatePlanetValue()
     {
         if (GameManager.Instance == null) return 0;
 
-        // Usa la produzione stabile per evitare oscillazioni
         BigDouble currentEnergyProduction = GameManager.Instance.EffectiveStableIncomePerSec;
         BigDouble maxEmitters = GameManager.Instance.EmitterCap;
 
@@ -74,39 +110,28 @@ public class PlanetManager : MonoBehaviour
     {
         if (GameManager.Instance == null) return 0;
 
-        // --- FIX CRITICO: SE STIAMO GIA' PREPARANDO, USA IL VALORE BLOCCATO ---
-        // Questo evita che il traguardo si sposti mentre giochi.
         if (isPreparingForLaunch && lockedLaunchRequirement > 0)
         {
             return lockedLaunchRequirement;
         }
 
-        // Altrimenti calcola quello attuale (Produzione Stabile * 60 secondi)
         return GameManager.Instance.EffectiveStableIncomePerSec * 60;
     }
 
     private void UpdateLaunchPreparation()
     {
-        // Ora recupera sempre il valore fisso (grazie alla modifica sopra)
         BigDouble energyRequirement = GetLaunchEnergyRequirement();
         
         if (energyRequirement <= 0) 
         {
-            // Protezione: se per assurdo è 0, finiamo subito
             isPreparingForLaunch = false;
             return;
         }
 
-        // Calcola quanto aggiungere questo frame
         BigDouble energyToConsume = GameManager.Instance.EffectiveIncomePerSec * Time.deltaTime;
-        
-        // Calcola quanto manca
         BigDouble remainingEnergy = energyRequirement - launchPreparationProgress;
         
-        // Non consumare più del necessario
         if (energyToConsume > remainingEnergy) energyToConsume = remainingEnergy;
-        
-        // Non consumare più di quello che hai
         energyToConsume = BigDouble.Min(energyToConsume, GameManager.Instance.CurrentEnergy);
 
         if (GameManager.Instance.TrySpend(energyToConsume))
@@ -114,20 +139,20 @@ public class PlanetManager : MonoBehaviour
             launchPreparationProgress += energyToConsume;
         }
 
-        // Controllo di fine: tolleranza minima per errori di virgola mobile
         if (launchPreparationProgress >= energyRequirement * 0.9999f) 
         {
-            // Arrotonda per pulizia e chiudi
             launchPreparationProgress = energyRequirement;
             isPreparingForLaunch = false;
-            lockedLaunchRequirement = 0; // Reset per il prossimo pianeta
+            lockedLaunchRequirement = 0; 
         }
     }
 
     private void UpdateTravel()
     {
         TimeSpan travelTime = DateTime.UtcNow - travelStartTime;
-        if (travelTime.TotalSeconds >= TRAVEL_DURATION_SECONDS)
+        
+        // Confrontiamo il tempo trascorso con la durata calcolata dinamicamente
+        if (travelTime.TotalSeconds >= GetTotalTravelDuration())
         {
             CompleteTravel();
         }
@@ -146,13 +171,9 @@ public class PlanetManager : MonoBehaviour
         isPreparingForLaunch = true;
         launchPreparationProgress = 0;
         
-        // --- FIX CRITICO: BLOCCHIAMO IL PREZZO ORA ---
         lockedLaunchRequirement = GetLaunchEnergyRequirement();
-        
-        // Sicurezza: se per caso è 0, mettiamo un valore minimo
         if (lockedLaunchRequirement <= 0) lockedLaunchRequirement = 100;
         
-        // Salviamo subito per evitare problemi se il gioco crasha
         GameManager.Instance.SaveGame();
     }
 

@@ -14,6 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlanetData
   planetName: Planet_2
   sceneName: Scene_planet2
+  travelDistance:
+    mantissa: 1
+    exponent: 3
   requiredPlanetValue:
     mantissa: 1.099
     exponent: 3
