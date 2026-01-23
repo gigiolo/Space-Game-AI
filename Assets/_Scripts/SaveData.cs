@@ -15,7 +15,7 @@ public class SaveData
     // RICERCHE (Tecnologie)
     public List<ResearchSaveData> researches = new List<ResearchSaveData>();
     
-    // --- NUOVO: SPACESHIPS (Hangar) ---
+    // SPACESHIPS (Hangar)
     public List<ResearchSaveData> spaceships = new List<ResearchSaveData>();
 
     // PERMANENTI (Soft Prestige)
@@ -40,9 +40,12 @@ public class SaveData
     public string lockedLaunchRequirement; 
     public bool isTraveling;
     public string travelStartTimeBinary;
+
+    // --- NUOVO: Tempo di viaggio bloccato al momento della partenza ---
+    public double lockedTravelDuration; 
 }
 
-// Possiamo riusare questa classe anche per le navi dato che contiene solo ID e Level
+// --- QUESTA È LA CLASSE CHE MANCAVA ---
 [Serializable]
 public class ResearchSaveData
 {

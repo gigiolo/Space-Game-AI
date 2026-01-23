@@ -16,7 +16,18 @@ public class OfflinePopup : MonoBehaviour
     {
         if (GameManager.Instance != null)
         {
+            // 1. Iscriviti all'evento per il futuro (se avviene mentre il gioco è già acceso)
             GameManager.Instance.OnOfflineProductionCalculated += ShowPopup;
+
+            // --- FIX START ---
+            // 2. CONTROLLO MANUALE:
+            // Se il GameManager ha già calcolato i guadagni (LastOfflineEarnings > 0)
+            // e il popup non è ancora visibile, mostriamolo subito!
+            if (GameManager.Instance.LastOfflineEarnings > 0 && !popupPanel.activeSelf)
+            {
+                ShowPopup();
+            }
+            // --- FIX END ---
         }
     }
 
@@ -31,6 +42,10 @@ public class OfflinePopup : MonoBehaviour
     private void ShowPopup()
     {
         BigDouble earnings = GameManager.Instance.LastOfflineEarnings;
+        
+        // Se per qualche motivo i guadagni sono 0, non mostrare nulla (evita popup vuoti)
+        if (earnings <= 0) return;
+
         TimeSpan timeAway = GameManager.Instance.LastOfflineTimeSpan;
         
         // CORREZIONE: Usiamo MaxOfflineSeconds invece di StorageCap
@@ -40,12 +55,12 @@ public class OfflinePopup : MonoBehaviour
         string timeStr = "";
         if (timeAway.Days > 0) timeStr += $"{timeAway.Days}d ";
         if (timeAway.Hours > 0) timeStr += $"{timeAway.Hours}h ";
-        timeStr += $"{timeAway.Minutes}m";
+        timeStr += $"{timeAway.Minutes}m {timeAway.Seconds}s"; // Aggiunti i secondi per precisione
 
         string earnStr = FormatNumber(earnings);
 
         if(timeText) timeText.text = $"Time Away: <color=yellow>{timeStr}</color>";
-        if(earningsText) earningsText.text = $"Offline Production (50%):\n<size=150%><color=#00FFFF>+{earnStr}</color></size>";
+        if(earningsText) earningsText.text = $"Offline Production ({GameManager.Instance.offlineProductionRatio * 100}%):\n<size=150%><color=#00FFFF>+{earnStr}</color></size>";
         
         // NUOVO CONTROLLO: BATTERIE ESAURITE
         if (capWarningText)
@@ -64,11 +79,22 @@ public class OfflinePopup : MonoBehaviour
         }
 
         popupPanel.SetActive(true);
+        
+        // Blocchiamo l'input della camera planetaria per non ruotare il pianeta mentre leggiamo
         PlanetOrbitCamera.IsInputBlocked = true;
     }
 
     public void ClosePopup()
     {
+        // Quando chiudiamo, resettiamo il valore nel GameManager per evitare 
+        // che il popup si riapra se ricarichiamo la scena senza chiudere il gioco
+        if (GameManager.Instance != null)
+        {
+            // Nota: LastOfflineEarnings è read-only pubblicamente nel tuo codice attuale.
+            // Se volessi azzerarlo servirebbe un metodo pubblico nel GameManager.
+            // Per ora va bene così, perché il controllo in Start verifica !popupPanel.activeSelf
+        }
+
         if(popupPanel) popupPanel.SetActive(false);
         PlanetOrbitCamera.IsInputBlocked = false;
     }

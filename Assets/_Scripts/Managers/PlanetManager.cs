@@ -11,8 +11,6 @@ public class PlanetManager : MonoBehaviour
     [Tooltip("The list of all planets available in the game, in order of progression.")]
     public List<PlanetData> planets;
 
-    // Rimosso baseSpaceshipSpeed perché ora è gestito da SpaceshipManager
-
     [HideInInspector]
     public int currentPlanetIndex = 0;
 
@@ -25,6 +23,9 @@ public class PlanetManager : MonoBehaviour
 
     [HideInInspector] public bool isTraveling = false;
     [HideInInspector] public DateTime travelStartTime;
+
+    // --- NUOVO: Durata fissata al momento della partenza ---
+    [HideInInspector] public double currentLockedDuration = 0f;
 
     private void Awake()
     {
@@ -63,30 +64,34 @@ public class PlanetManager : MonoBehaviour
         return null;
     }
 
-    // --- CALCOLO DINAMICO DEL TEMPO DI VIAGGIO ---
-    public double GetTotalTravelDuration()
+    // --- NUOVO METODO PRIVATO: Calcola la durata basandosi SOLO sulle stats attuali ---
+    private double CalculateTheoreticalDuration()
     {
         PlanetData destination = GetNextPlanetData();
-
-        // Se non c'è destinazione o distanza è 0, tempo di debug (3s)
         if (destination == null || destination.travelDistance <= 0) return 3.0f; 
 
-        // Recupera la velocità totale dalle navi tramite il Manager
         BigDouble speed = 0;
-        
         if (SpaceshipManager.Instance != null)
         {
             speed = SpaceshipManager.Instance.GetTotalSpaceshipSpeed();
         }
         
-        // Fallback: se non hai navi o il manager non c'è, usiamo una velocità minima (es. 10)
-        // per evitare divisioni per zero o viaggi infiniti.
         if (speed <= 0) speed = 10; 
 
-        // Tempo = Distanza / Velocità
         BigDouble durationBig = destination.travelDistance / speed;
-        
         return durationBig.ToDouble(); 
+    }
+
+    // --- METODO PUBBLICO MODIFICATO ---
+    // Se stiamo viaggiando, restituisce il tempo bloccato.
+    // Se siamo fermi, restituisce la stima basata sulle navi attuali.
+    public double GetTotalTravelDuration()
+    {
+        if (isTraveling && currentLockedDuration > 0)
+        {
+            return currentLockedDuration;
+        }
+        return CalculateTheoreticalDuration();
     }
 
     public BigDouble CalculatePlanetValue()
@@ -149,6 +154,7 @@ public class PlanetManager : MonoBehaviour
     {
         TimeSpan travelTime = DateTime.UtcNow - travelStartTime;
         
+        // Usa GetTotalTravelDuration() che ora restituisce il tempo bloccato
         if (travelTime.TotalSeconds >= GetTotalTravelDuration())
         {
             CompleteTravel();
@@ -179,6 +185,10 @@ public class PlanetManager : MonoBehaviour
         if (isTraveling || isPreparingForLaunch) return;
 
         isTraveling = true;
+        
+        // --- MODIFICA: Blocchiamo la durata ORA ---
+        currentLockedDuration = CalculateTheoreticalDuration();
+        
         travelStartTime = DateTime.UtcNow;
         GameManager.Instance.SaveGame();
     }
@@ -186,6 +196,8 @@ public class PlanetManager : MonoBehaviour
     public void CompleteTravel()
     {
         isTraveling = false;
+        currentLockedDuration = 0; // Reset del blocco
+        
         currentPlanetIndex++;
 
         if (planets == null || currentPlanetIndex >= planets.Count)

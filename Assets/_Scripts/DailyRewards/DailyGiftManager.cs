@@ -1,7 +1,7 @@
 using UnityEngine;
 using System;
 using System.Collections.Generic;
-using BreakInfinity; // <--- Aggiunto per far funzionare BigDouble
+using BreakInfinity; // Necessario per BigDouble
 
 public class DailyGiftManager : MonoBehaviour
 {
@@ -12,6 +12,9 @@ public class DailyGiftManager : MonoBehaviour
     [Header("References")]
     [Tooltip("Reference to the NotificationManager to show alerts.")]
     public NotificationManager notificationManager;
+
+    // ID univoco per la notifica locale del Daily Gift (per non sovrascrivere quella dei viaggi)
+    private const int DAILY_GIFT_NOTIF_ID = 200;
 
     // Player State
     private DateTime lastClaimedTimestamp;
@@ -56,11 +59,21 @@ public class DailyGiftManager : MonoBehaviour
                 CheckForDailyGift();
             }
             
-            // If a reward is available but the notification hasn't been shown, show it.
+            // If a reward is available but the notification hasn't been shown, show it (In-Game UI).
             if (isRewardAvailable && !isNotificationShowing)
             {
                 CreateNotification();
             }
+        }
+    }
+
+    // --- NUOVO: Schedula la notifica quando l'app va in pausa ---
+    private void OnApplicationPause(bool pauseStatus)
+    {
+        if (pauseStatus) // L'app sta andando in background
+        {
+            // Se abbiamo già riscosso (o stiamo aspettando), assicuriamoci che la notifica per domani sia pronta
+            ScheduleNextGiftNotification();
         }
     }
 
@@ -117,8 +130,8 @@ public class DailyGiftManager : MonoBehaviour
             notificationManager = NotificationManager.Instance;
             if (notificationManager == null)
             {
-                Debug.LogError("NotificationManager not found in the scene!");
-                return;
+                // Se non c'è il manager in scena (es. scena di caricamento), usciamo
+                return; 
             }
         }
         
@@ -184,13 +197,14 @@ public class DailyGiftManager : MonoBehaviour
                 GameManager.Instance.AddEnergy(_cachedRewardAmount);
                 break;
             case DailyRewardSO.RewardType.PremiumCurrency:
-                Debug.Log($"TODO: Implement logic to add {_cachedRewardAmount} Premium Currency.");
+                // Implementazione futura Iridio Puro
+                GameManager.Instance.AddPureIridium(_cachedRewardAmount);
                 break;
             case DailyRewardSO.RewardType.ScienceNodes:
-                Debug.Log($"TODO: Implement logic to add {_cachedRewardAmount} Science Nodes.");
+                // Implementazione futura Nodi
                 break;
             case DailyRewardSO.RewardType.QuantumMultiplier:
-                 Debug.Log($"TODO: Implement logic to add a Quantum Multiplier.");
+                 // Implementazione futura
                 break;
         }
 
@@ -204,6 +218,9 @@ public class DailyGiftManager : MonoBehaviour
         GameManager.Instance.SaveGame();
         
         Debug.Log($"Claimed reward for day {currentDayIndex}. Next reward is day {currentDayIndex + 1}.");
+
+        // --- NUOVO: Schedula la notifica per domani ---
+        ScheduleNextGiftNotification();
     }
 
     private BigDouble CalculateCurrentRewardAmount()
@@ -222,19 +239,42 @@ public class DailyGiftManager : MonoBehaviour
                     // Example: Production per second * multiplier (e.g., 20 seconds of production)
                     return GameManager.Instance.EffectiveIncomePerSec * rewardSO.dynamicMultiplier;
                 
-                // --- PLACEHOLDERS FOR FUTURE DYNAMIC REWARDS ---
                 case DailyRewardSO.RewardType.PremiumCurrency:
-                      Debug.LogWarning("Dynamic Premium Currency calculation not yet implemented. Returning placeholder value.");
                     return 10; // Placeholder
                 case DailyRewardSO.RewardType.ScienceNodes:
-                    Debug.LogWarning("Dynamic Science Nodes calculation not yet implemented. Returning placeholder value.");
                     return 5; // Placeholder
                 case DailyRewardSO.RewardType.QuantumMultiplier:
-                      Debug.LogWarning("Dynamic Quantum Multiplier not yet implemented. Returning placeholder value.");
                     return 1; // Placeholder
             }
         }
 
         return 0;
+    }
+
+    // --- NUOVO METODO: Gestione Notifica Locale ---
+    private void ScheduleNextGiftNotification()
+    {
+        // Se il sistema di notifiche non è pronto, usciamo
+        if (LocalNotificationController.Instance == null) return;
+
+        // 1. Calcoliamo quando scatta il prossimo reset (ore 03:00)
+        DateTime now = DateTime.Now;
+        DateTime nextReset = now.Date.AddHours(3); // Oggi alle 03:00
+
+        // Se sono già passate le 3 di notte di oggi, il prossimo reset è domani alle 3
+        if (now >= nextReset)
+        {
+            nextReset = nextReset.AddDays(1);
+        }
+
+        // 2. Programmiamo la notifica usando l'ID dedicato (200)
+        LocalNotificationController.Instance.ScheduleNotification(
+            "Regalo Disponibile! 🎁",
+            "Il rifornimento giornaliero è arrivato. Torna in gioco per riscattarlo!",
+            nextReset,
+            DAILY_GIFT_NOTIF_ID
+        );
+        
+        Debug.Log($"[DailyGift] Notifica schedulata per: {nextReset}");
     }
 }

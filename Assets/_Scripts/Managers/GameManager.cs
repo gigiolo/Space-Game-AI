@@ -12,7 +12,7 @@ public class GameManager : MonoBehaviour
 
     [Header("--- COLLEGAMENTI ---")]
     public ResearchManager targetResearchManager; 
-    public SpaceshipManager spaceshipManager; // <--- NUOVO RIFERIMENTO
+    public SpaceshipManager spaceshipManager; 
     public UITheme activeTheme; 
     
     public PlanetPopulationVisuals planetVisuals; 
@@ -44,11 +44,8 @@ public class GameManager : MonoBehaviour
     public BigDouble ScientificNodes { get; private set; } = 0;
 
     // --- NUOVO: VALUTE IRIDIO (PERSISTENTI) ---
-    // Raw Iridio: Accumulato giocando, convertibile in futuro
     public BigDouble RawIridium { get; private set; } = 0;
-    // Pure Iridio: Valuta Premium (Acquisti In-App o conversioni rare)
     public BigDouble PureIridium { get; private set; } = 0;
-    // ------------------------------------------
     
     // --- CAPACITA' & LIMITI ---
     public BigDouble BaseEmissionPerUnit { get; private set; } = 0.01; 
@@ -120,15 +117,53 @@ public class GameManager : MonoBehaviour
 
     public float EffectiveMaxMultiplier => energyButton_MaxMultiplier + ClickPowerResearchBonus;
 
+    // --- MODIFICA DEBUG: Awake diagnostico ---
     private void Awake()
     {
-        if (Instance == null) { Instance = this; DontDestroyOnLoad(gameObject); }
-        else { Destroy(gameObject); }
+        // 1. Identifichiamo l'oggetto corrente
+        string objInfo = $"'{gameObject.name}' (ID: {gameObject.GetInstanceID()})";
+        Debug.Log($"[GM_DEBUG] 🚀 Tentativo di avvio GameManager su: {objInfo}");
+
+        // 2. Controllo Singleton
+        if (Instance == null) 
+        { 
+            Debug.Log($"[GM_DEBUG] ✅ Nessuna istanza precedente trovata. Sono io il prescelto! ({objInfo}). Eseguo DontDestroyOnLoad.");
+            Instance = this; 
+            
+            // Importante: controlliamo se siamo figli di qualcuno
+            if (transform.parent != null)
+            {
+                Debug.LogWarning($"[GM_DEBUG] ⚠️ ATTENZIONE: Questo GameManager è figlio di '{transform.parent.name}'. DontDestroyOnLoad potrebbe non funzionare!");
+            }
+
+            DontDestroyOnLoad(gameObject);
+            InitializeGameState();
+        }
+        else 
+        { 
+            // 3. Rilevamento Duplicato
+            string existingInfo = $"'{Instance.gameObject.name}' (ID: {Instance.gameObject.GetInstanceID()})";
+            Debug.LogError($"[GM_DEBUG] ❌ RILEVATO DUPLICATO! Esiste già un'istanza attiva su: {existingInfo}. Distruggo me stesso ({objInfo}).");
+            Destroy(gameObject); 
+            return; // Usciamo subito per evitare danni
+        }
         
         QualitySettings.vSyncCount = 0; 
         Application.targetFrameRate = 60; 
-        
-        InitializeGameState();
+    }
+
+    // --- MODIFICA DEBUG: OnDestroy per tracciare la morte ---
+    private void OnDestroy()
+    {
+        // Se sta morendo l'istanza principale, è grave (a meno che non stiamo chiudendo il gioco)
+        if (Instance == this)
+        {
+            Debug.LogWarning($"[GM_DEBUG] 💀 Il GameManager PRINCIPALE sta venendo distrutto! Se il gioco sta girando, questo è un BUG.");
+        }
+        else
+        {
+            Debug.Log($"[GM_DEBUG] 🗑️ Un GameManager duplicato è stato rimosso correttamente.");
+        }
     }
 
     private void OnEnable()
@@ -144,7 +179,7 @@ public class GameManager : MonoBehaviour
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         targetResearchManager = FindFirstObjectByType<ResearchManager>();
-        spaceshipManager = FindFirstObjectByType<SpaceshipManager>(); // <--- Cerchiamo anche il SpaceshipManager
+        spaceshipManager = FindFirstObjectByType<SpaceshipManager>(); 
         planetVisuals = FindFirstObjectByType<PlanetPopulationVisuals>();
         OnEconomyUpdated?.Invoke();
     }
@@ -154,7 +189,7 @@ public class GameManager : MonoBehaviour
         if (activeTheme != null) ThemedUIElement.SetGlobalTheme(activeTheme);
         
         if (targetResearchManager == null) targetResearchManager = FindFirstObjectByType<ResearchManager>();
-        if (spaceshipManager == null) spaceshipManager = FindFirstObjectByType<SpaceshipManager>(); // <--- Fallback
+        if (spaceshipManager == null) spaceshipManager = FindFirstObjectByType<SpaceshipManager>(); 
         if (dailyGiftManager == null) dailyGiftManager = FindFirstObjectByType<DailyGiftManager>();
 
         LoadGame(); 
@@ -200,7 +235,7 @@ public class GameManager : MonoBehaviour
                 int toAdd = (int)_emitterAccumulator; 
                 int spaceLeft = EmitterCap - EmitterCount;
                 int actualAdd = Mathf.Min(toAdd, spaceLeft);
-                _emitterAccumulator -= actualAdd;                   
+                _emitterAccumulator -= actualAdd;                     
                 if (actualAdd < toAdd) _emitterAccumulator = 0;
 
                 if (actualAdd > 0)
@@ -297,6 +332,8 @@ public class GameManager : MonoBehaviour
             PlanetManager.Instance.isPreparingForLaunch = false;
             PlanetManager.Instance.isTraveling = false;
             PlanetManager.Instance.launchPreparationProgress = 0;
+            // Reset anche della durata bloccata per sicurezza
+            PlanetManager.Instance.currentLockedDuration = 0;
         }
 
         if (planetVisuals != null) planetVisuals.ResetVisuals();
@@ -309,12 +346,11 @@ public class GameManager : MonoBehaviour
             targetResearchManager.RecalculateAllResearches();
         }
 
-        // --- NUOVO: Reset Navi ---
+        // Reset Navi
         if (spaceshipManager != null)
         {
             foreach(var ship in spaceshipManager.fleet)
                 ship.currentLevel = 0;
-            // Se in futuro lo SpaceshipManager avrà un metodo "Recalculate", chiamalo qui
         }
 
         SaveGame(); 
@@ -349,13 +385,7 @@ public class GameManager : MonoBehaviour
             targetResearchManager.RecalculateAllResearches();
         }
 
-        // --- NUOVO: Reset Navi al cambio pianeta ---
-        // Se vuoi che le navi siano persistenti tra i pianeti, rimuovi questo blocco.
-        if (spaceshipManager != null)
-        {
-            foreach(var ship in spaceshipManager.fleet)
-                ship.currentLevel = 0;
-        }
+        // --- Le navi sono persistenti, quindi NON le resettiamo qui ---
 
         OnEconomyUpdated?.Invoke();
     }
@@ -397,6 +427,9 @@ public class GameManager : MonoBehaviour
             data.lockedLaunchRequirement = PlanetManager.Instance.lockedLaunchRequirement.ToString();
             data.isTraveling = PlanetManager.Instance.isTraveling;
             data.travelStartTimeBinary = PlanetManager.Instance.travelStartTime.ToBinary().ToString();
+
+            // --- NUOVO: Salva la durata bloccata per mantenere il tempo fisso ---
+            data.lockedTravelDuration = PlanetManager.Instance.currentLockedDuration;
         }
 
         if (planetVisuals != null)
@@ -414,8 +447,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // --- NUOVO: Salva Navi ---
-        // Nota: Assicurati di aver aggiornato SaveData.cs con "public List<ResearchSaveData> spaceships;"
+        // Salva Navi
         if (spaceshipManager != null)
         {
             foreach (var item in spaceshipManager.fleet)
@@ -468,6 +500,9 @@ public class GameManager : MonoBehaviour
                 PlanetManager.Instance.travelStartTime = DateTime.FromBinary(binaryTime);
             }
 
+            // --- NUOVO: Carica la durata bloccata ---
+            PlanetManager.Instance.currentLockedDuration = data.lockedTravelDuration;
+
             PlanetData savedPlanet = PlanetManager.Instance.GetCurrentPlanetData();
             if (savedPlanet != null)
             {
@@ -483,7 +518,6 @@ public class GameManager : MonoBehaviour
         if (targetResearchManager != null)
             targetResearchManager.LoadResearchLevels(data.researches);
 
-        // --- NUOVO: Carica Navi ---
         if (spaceshipManager != null)
             spaceshipManager.LoadFleetLevels(data.spaceships);
 
@@ -506,7 +540,7 @@ public class GameManager : MonoBehaviour
         {
             TimeSpan timeSinceTravelStart = DateTime.UtcNow - PlanetManager.Instance.travelStartTime;
             
-            // Usiamo il metodo dinamico del PlanetManager che ora interroga lo SpaceshipManager
+            // Usiamo il metodo dinamico del PlanetManager che ora gestisce il tempo bloccato
             if (timeSinceTravelStart.TotalSeconds >= PlanetManager.Instance.GetTotalTravelDuration())
             {
                 PlanetManager.Instance.CompleteTravel();
@@ -689,6 +723,7 @@ public class GameManager : MonoBehaviour
             PlanetManager.Instance.currentPlanetIndex = 0;
             PlanetManager.Instance.isPreparingForLaunch = false;
             PlanetManager.Instance.isTraveling = false;
+            PlanetManager.Instance.currentLockedDuration = 0; // Reset
         }
 
         if (targetResearchManager != null) {
@@ -696,7 +731,6 @@ public class GameManager : MonoBehaviour
             targetResearchManager.RecalculateAllResearches();
         }
 
-        // --- NUOVO: Reset Navi Hard ---
         if (spaceshipManager != null) {
             foreach (var item in spaceshipManager.fleet) item.currentLevel = 0;
         }
