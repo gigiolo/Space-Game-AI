@@ -28,7 +28,6 @@ public class LaunchSiteVisuals : MonoBehaviour
     [Tooltip("Tempo totale in secondi prima che la particella venga distrutta")]
     public float postLaunchDuration = 5.0f;
     
-    // --- NUOVO: Durata della dissolvenza finale ---
     [Tooltip("Quanti secondi dura la dissolvenza finale (deve essere minore di Post Launch Duration)")]
     public float fadeOutDuration = 2.0f;
 
@@ -38,7 +37,6 @@ public class LaunchSiteVisuals : MonoBehaviour
     private bool _isActive = false;
     private Vector3 _currentDirection;
     
-    // --- NUOVO: Moltiplicatore per la dissolvenza (1 = Visibile, 0 = Invisibile) ---
     private float _fadeMultiplier = 1.0f;
 
     private void Awake()
@@ -81,7 +79,7 @@ public class LaunchSiteVisuals : MonoBehaviour
                 
                 if (PlanetManager.Instance != null && PlanetManager.Instance.isTraveling)
                 {
-                     StartCoroutine(WaitAndKillRoutine());
+                      StartCoroutine(WaitAndKillRoutine());
                 }
             }
         }
@@ -126,7 +124,6 @@ public class LaunchSiteVisuals : MonoBehaviour
         _ps.Clear(); 
         _currentDirection = pos.normalized;
         
-        // --- RESET FADE ---
         _fadeMultiplier = 1.0f;
 
         ParticleSystem.EmitParams emitParams = new ParticleSystem.EmitParams();
@@ -147,27 +144,21 @@ public class LaunchSiteVisuals : MonoBehaviour
         }
     }
 
-    // --- LOGICA MODIFICATA PER LA DISSOLVENZA ---
     private IEnumerator WaitAndKillRoutine()
     {
-        // 1. Calcoliamo quanto tempo stare "fermi" prima di iniziare a svanire
-        // Esempio: Se dura 5s e il fade è 2s -> Aspettiamo 3s, poi sfumiamo per 2s.
         float waitTime = Mathf.Max(0f, postLaunchDuration - fadeOutDuration);
         
         if (waitTime > 0)
             yield return new WaitForSeconds(waitTime);
 
-        // 2. Loop di dissolvenza
         float timer = 0f;
         while (timer < fadeOutDuration)
         {
             timer += Time.deltaTime;
-            // Lerp da 1 a 0
             _fadeMultiplier = Mathf.Lerp(1.0f, 0.0f, timer / fadeOutDuration);
-            yield return null; // Aspetta il frame successivo
+            yield return null; 
         }
 
-        // 3. Fine sicura
         _fadeMultiplier = 0f;
         _isActive = false;
         _ps.Clear();
@@ -184,16 +175,10 @@ public class LaunchSiteVisuals : MonoBehaviour
         int count = _ps.GetParticles(_buffer);
         if (count > 0)
         {
-            // Blink (Onda sinusoidale)
             float wave = (Mathf.Sin(Time.time * blinkSpeed * Mathf.PI * 2f) + 1f) * 0.5f;
             float brightness = Mathf.Lerp(0.2f, 1f, wave);
 
-            // --- APPLICAZIONE FADE ---
-            // Moltiplichiamo il colore calcolato anche per _fadeMultiplier.
-            // Quando _fadeMultiplier scende a 0, la particella diventa nera/trasparente.
             _buffer[0].startColor = particleColor * brightness * _fadeMultiplier;
-
-            // Aggiornamento Posizione
             _buffer[0].position = _currentDirection * surfaceRadius;
             
             _ps.SetParticles(_buffer, count);
@@ -247,5 +232,18 @@ public class LaunchSiteVisuals : MonoBehaviour
         float y = float.Parse(parts[1], CultureInfo.InvariantCulture); 
         float z = float.Parse(parts[2], CultureInfo.InvariantCulture);
         return new Vector3(x, y, z);
+    }
+
+    // --- NUOVO METODO AGGIUNTO ---
+    public Vector3 GetCurrentWorldPosition()
+    {
+        // Se non è attivo o non c'è direzione, ritorniamo zero
+        if (!_isActive) return Vector3.zero;
+
+        // Ricostruiamo la posizione locale
+        Vector3 localPos = _currentDirection * surfaceRadius;
+
+        // Convertiamo in Coordinate World basate sulla posizione/rotazione attuale del pianeta padre
+        return transform.TransformPoint(localPos);
     }
 }
