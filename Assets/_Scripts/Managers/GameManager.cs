@@ -88,6 +88,10 @@ public class GameManager : MonoBehaviour
     private float _rampDownStartMultiplier = 1.0f;
     private float _currentRampDownDuration = 0.0f;
 
+    // --- NUOVO: Variabile per memorizzare la posizione del sito di lancio ---
+    // Questa stringa salva le coordinate "X|Y|Z" per far ricomparire la particella al riavvio
+    public string StoredLaunchSitePosition { get; set; } = "";
+
     // FORMULE
     public BigDouble RawProductionRate 
     {
@@ -117,7 +121,6 @@ public class GameManager : MonoBehaviour
 
     public float EffectiveMaxMultiplier => energyButton_MaxMultiplier + ClickPowerResearchBonus;
 
-    // --- MODIFICA DEBUG: Awake diagnostico ---
     private void Awake()
     {
         // 1. Identifichiamo l'oggetto corrente
@@ -152,10 +155,8 @@ public class GameManager : MonoBehaviour
         Application.targetFrameRate = 60; 
     }
 
-    // --- MODIFICA DEBUG: OnDestroy per tracciare la morte ---
     private void OnDestroy()
     {
-        // Se sta morendo l'istanza principale, è grave (a meno che non stiamo chiudendo il gioco)
         if (Instance == this)
         {
             Debug.LogWarning($"[GM_DEBUG] 💀 Il GameManager PRINCIPALE sta venendo distrutto! Se il gioco sta girando, questo è un BUG.");
@@ -235,7 +236,7 @@ public class GameManager : MonoBehaviour
                 int toAdd = (int)_emitterAccumulator; 
                 int spaceLeft = EmitterCap - EmitterCount;
                 int actualAdd = Mathf.Min(toAdd, spaceLeft);
-                _emitterAccumulator -= actualAdd;                     
+                _emitterAccumulator -= actualAdd;                      
                 if (actualAdd < toAdd) _emitterAccumulator = 0;
 
                 if (actualAdd > 0)
@@ -403,6 +404,10 @@ public class GameManager : MonoBehaviour
         ClickPowerResearchBonus = 0;
         EmitterSpeedResearchBonus = 0; 
         _emitterAccumulator = 0;
+        
+        // Reset della posizione del sito di lancio (verrà gestita da LaunchSiteVisuals)
+        StoredLaunchSitePosition = ""; 
+        
         RecalculateCaps();
     }
 
@@ -457,6 +462,9 @@ public class GameManager : MonoBehaviour
             }
         }
 
+        // --- NUOVO: Salviamo la posizione del sito di lancio ---
+        data.launchSitePosition = StoredLaunchSitePosition;
+
         SaveManager.Save(data);
     }
 
@@ -470,6 +478,7 @@ public class GameManager : MonoBehaviour
             RawIridium = 0; 
             PureIridium = 0; 
             if (dailyGiftManager != null) dailyGiftManager.Initialize(null);
+            StoredLaunchSitePosition = ""; // Reset
             return; 
         }
 
@@ -527,6 +536,16 @@ public class GameManager : MonoBehaviour
         RecalculateCaps();
         
         if (dailyGiftManager != null) dailyGiftManager.Initialize(data);
+
+        // --- NUOVO: Carichiamo la posizione del sito di lancio ---
+        if (!string.IsNullOrEmpty(data.launchSitePosition))
+        {
+            StoredLaunchSitePosition = data.launchSitePosition;
+        }
+        else
+        {
+            StoredLaunchSitePosition = "";
+        }
 
         if (!string.IsNullOrEmpty(data.lastSaveTime))
             HandleOfflineProgress(data.lastSaveTime);
@@ -717,6 +736,9 @@ public class GameManager : MonoBehaviour
         
         EmitterCount = 1; 
         LogisticsLevel = 1; 
+
+        // --- NUOVO: Reset posizione launch site ---
+        StoredLaunchSitePosition = "";
         
         if (PlanetManager.Instance != null)
         {

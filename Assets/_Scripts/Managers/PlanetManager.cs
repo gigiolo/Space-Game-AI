@@ -7,6 +7,10 @@ public class PlanetManager : MonoBehaviour
 {
     public static PlanetManager Instance { get; private set; }
 
+    // --- EVENTI NUOVI ---
+    public event Action OnLaunchPrepStarted;
+    public event Action OnTravelStarted;
+
     [Header("Planet Configuration")]
     [Tooltip("The list of all planets available in the game, in order of progression.")]
     public List<PlanetData> planets;
@@ -178,6 +182,9 @@ public class PlanetManager : MonoBehaviour
         if (lockedLaunchRequirement <= 0) lockedLaunchRequirement = 100;
         
         GameManager.Instance.SaveGame();
+
+        // --- INVOCA EVENTO ---
+        OnLaunchPrepStarted?.Invoke();
     }
 
     public void StartInterplanetaryTravel()
@@ -191,6 +198,9 @@ public class PlanetManager : MonoBehaviour
         
         travelStartTime = DateTime.UtcNow;
         GameManager.Instance.SaveGame();
+
+        // --- INVOCA EVENTO ---
+        OnTravelStarted?.Invoke();
     }
 
     public void CompleteTravel()

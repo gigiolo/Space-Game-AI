@@ -6,49 +6,55 @@ public class SaveData
 {
     public string lastSaveTime;
 
-    // ECONOMIA BASE
+    // --- ECONOMIA BASE ---
     public string currentEnergy;
     public string lifetimeEarnings;
     public int emitterCount;
     public int logisticsLevel;
     
-    // RICERCHE (Tecnologie)
+    // --- RICERCHE & NAVI ---
+    // Usano la classe definita in fondo a questo file
     public List<ResearchSaveData> researches = new List<ResearchSaveData>();
-    
-    // SPACESHIPS (Hangar)
     public List<ResearchSaveData> spaceships = new List<ResearchSaveData>();
 
-    // PERMANENTI (Soft Prestige)
+    // --- PERMANENTI (Prestigio) ---
     public string scientificNodes; 
     public string totalLifetimeEarnings;
 
-    // VALUTE
+    // --- VALUTE SPECIALI ---
     public string rawIridium;
     public string pureIridium;
 
-    // VISUALS
+    // --- VISUALS ---
     public List<string> cityLightPositions = new List<string>();
 
-    // DAILY GIFT
+    // --- DAILY GIFT ---
     public string dailyGiftLastClaimedTimestamp;
     public int dailyGiftCurrentDayIndex;
 
-    // PLANET TRAVEL
+    // --- PLANET TRAVEL ---
     public int currentPlanetIndex;
     public bool isPreparingForLaunch;
     public string launchPreparationProgress;
     public string lockedLaunchRequirement; 
     public bool isTraveling;
     public string travelStartTimeBinary;
-
-    // --- NUOVO: Tempo di viaggio bloccato al momento della partenza ---
+    
+    // Durata bloccata del viaggio (calcolata alla partenza)
     public double lockedTravelDuration; 
+
+    // --- NUOVO: Posizione salvata del sito di lancio ---
+    // Memorizza la coordinata "X|Y|Z" della particella lampeggiante
+    public string launchSitePosition; 
 }
 
-// --- QUESTA È LA CLASSE CHE MANCAVA ---
+// =================================================================================
+// CLASSE HELPER PER SALVARE LISTE DI OGGETTI (Ricerche, Navi, ecc.)
+// Deve stare fuori dalla classe SaveData per essere vista dagli altri script.
+// =================================================================================
 [Serializable]
 public class ResearchSaveData
 {
-    public string id;
-    public int level;
+    public string id;   // ID univoco (es. "res_production_1")
+    public int level;   // Livello attuale
 }

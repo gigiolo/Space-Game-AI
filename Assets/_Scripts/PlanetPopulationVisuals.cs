@@ -8,6 +8,18 @@ using System.IO;
 [ExecuteAlways]
 public class PlanetPopulationVisuals : MonoBehaviour
 {
+    // ... [TUTTO IL CODICE PRECEDENTE RIMANE UGUALE FINO ALLA FINE] ...
+
+    // --- AGGIUNGI QUESTO METODO PUBBLICO ---
+    public IReadOnlyList<Vector3> GetOccupiedPositions()
+    {
+        return _occupiedPositions;
+    }
+
+    // ... [Il resto del codice rimane invariato: LoadEncodedPositions, ecc.] ...
+    
+    // (Per brevità riporto solo la parte modificata, incolla il metodo sopra prima di LoadEncodedPositions o alla fine della classe)
+    
     [Header("CONFIGURAZIONE")]
     public float surfaceRadius = 1.60f; 
     public float baseLightSize = 0.05f;
