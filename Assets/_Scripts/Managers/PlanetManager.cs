@@ -195,9 +195,17 @@ public class PlanetManager : MonoBehaviour
 
     public void CompleteTravel()
     {
+        // 1. Reset stato Viaggio
         isTraveling = false;
-        currentLockedDuration = 0; // Reset del blocco
+        currentLockedDuration = 0; 
         
+        // 2. [FIX IMPORTANTE] Reset stato Preparazione per il prossimo pianeta
+        // Se non resettiamo questo, il gioco penserà che siamo già pronti a ripartire
+        isPreparingForLaunch = false;
+        launchPreparationProgress = 0;
+        lockedLaunchRequirement = 0;
+
+        // 3. Incremento Indice Pianeta
         currentPlanetIndex++;
 
         if (planets == null || currentPlanetIndex >= planets.Count)

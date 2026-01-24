@@ -120,6 +120,7 @@ Material:
     - _DistortionStrengthScaled: 0
     - _DstBlend: 10
     - _DstBlendAlpha: 0
+    - _EdgeSoftness: 0.5
     - _EmissionEnabled: 0
     - _EnvironmentReflections: 1
     - _FlipbookMode: 0
@@ -152,11 +153,12 @@ Material:
     - _CameraFadeParams: {r: 0, g: Infinity, b: 0, a: 0}
     - _Color: {r: 0.0124860145, g: 0.0124860145, b: 0.0124860145, a: 0.48235294}
     - _ColorAddSubDiff: {r: 1, g: 0, b: 0, a: 0}
-    - _DayColor: {r: 0.06415099, g: 0.06415099, b: 0.06415099, a: 1}
+    - _DayColor: {r: 0, g: 0, b: 0, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _NightColor: {r: 0.16981131, g: 0.09008746, b: 0, a: 0.5058824}
+    - _NightColor: {r: 0.07604913, g: 0.069068305, b: 0, a: 1}
+    - _PlanetPosition: {r: 0, g: 0, b: 0, a: 0}
     - _SoftParticleFadeParams: {r: 0, g: 0, b: 0, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
-    - _SunDirection: {r: 0, g: 0, b: 1, a: 0}
+    - _SunDirection: {r: 0.63487005, g: -0.0063487035, b: 0.77259314, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
