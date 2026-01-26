@@ -15,7 +15,7 @@ MonoBehaviour:
   id: 6.0_Emitter_Production_Speed_1
   title: Prefabricated generators
   description: Emitter production speed + 0.1/sec
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: ebcdac4b77892394b803e1735fd959b7, type: 3}
   type: 1
   target: 5
   bonusValue: 0.3

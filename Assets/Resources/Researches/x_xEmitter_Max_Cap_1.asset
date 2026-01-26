@@ -15,7 +15,7 @@ MonoBehaviour:
   id: x_xEmitter_Max_Cap_1
   title: Expansion Program 1
   description: Emitter Max Cap + 250
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: f627f1dc580600745bf33ceb68b0f43c, type: 3}
   type: 1
   target: 6
   bonusValue: 250

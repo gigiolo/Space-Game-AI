@@ -15,7 +15,7 @@ MonoBehaviour:
   id: 4.0_Click_Power_1
   title: Convective acceleration of the mantle
   description: Click power +10%
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: b8edae01c2d72ba45aa7ddf93536c51e, type: 3}
   type: 1
   target: 4
   bonusValue: 0.1

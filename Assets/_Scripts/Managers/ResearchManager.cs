@@ -17,19 +17,16 @@ public class ResearchManager : MonoBehaviour
 
     [Header("Stato Runtime")]
     public List<ResearchItem> allResearches;
+    
+    // CACHE DEGLI SLOT: Per evitare lag nello scroll
+    private List<ResearchSlotUI> _activeSlots = new List<ResearchSlotUI>();
 
-    private void Awake()
-    {
-        Instance = this;
-    }
+    private void Awake() => Instance = this;
 
     private void Start()
     {
         if(menuPanel) menuPanel.SetActive(false); 
-        
-        if (allResearches == null || allResearches.Count == 0)
-            InitializeDatabase();
-
+        if (allResearches == null || allResearches.Count == 0) InitializeDatabase();
         InitializeUI();
         
         if(GameManager.Instance)
@@ -45,8 +42,9 @@ public class ResearchManager : MonoBehaviour
     public void ToggleMenu()
     {
         if (menuPanel == null) return;
+        bool opening = !menuPanel.activeSelf;
 
-        if (menuPanel.activeSelf)
+        if (!opening)
         {
             UIPopupEffect effect = menuPanel.GetComponent<UIPopupEffect>();
             if (effect != null) effect.Close();
@@ -55,24 +53,17 @@ public class ResearchManager : MonoBehaviour
         else
         {
             menuPanel.SetActive(true);
-            Canvas.ForceUpdateCanvases();
-            if (listContent != null)
-                LayoutRebuilder.ForceRebuildLayoutImmediate(listContent.GetComponent<RectTransform>());
-            
-            UpdateAllSlots();
+            UpdateAllSlots(); // Aggiorna subito all'apertura
         }
     }
 
     public void InitializeDatabase()
     {
         if (allResearches == null) allResearches = new List<ResearchItem>();
-
         foreach (var def in researchDatabase)
         {
             if (!allResearches.Exists(r => r.id == def.id))
-            {
                 allResearches.Add(new ResearchItem(def));
-            }
         }
     }
 
@@ -80,7 +71,6 @@ public class ResearchManager : MonoBehaviour
     {
         InitializeDatabase(); 
         foreach(var res in allResearches) res.currentLevel = 0;
-
         if (savedData != null)
         {
             foreach (var saved in savedData)
@@ -95,22 +85,21 @@ public class ResearchManager : MonoBehaviour
     void InitializeUI()
     {
         foreach (Transform child in listContent) Destroy(child.gameObject);
+        _activeSlots.Clear();
 
         foreach (var research in allResearches)
         {
-            GameObject newSlot = Instantiate(slotPrefab.gameObject, listContent);
+            ResearchSlotUI newSlot = Instantiate(slotPrefab, listContent);
             newSlot.transform.localScale = Vector3.one; 
-            newSlot.GetComponent<ResearchSlotUI>().Setup(research, OnBuyResearch);
+            newSlot.Setup(research, OnBuyResearch);
+            _activeSlots.Add(newSlot);
         }
     }
 
     void OnBuyResearch(ResearchItem item)
     {
         if (item.IsMaxed()) return;
-
-        BigDouble cost = item.GetCost();
-
-        if (GameManager.Instance.TrySpend(cost))
+        if (GameManager.Instance.TrySpend(item.GetCost()))
         {
             item.currentLevel++;
             RecalculateAllResearches(); 
@@ -119,12 +108,13 @@ public class ResearchManager : MonoBehaviour
 
     void UpdateAllSlots()
     {
+        // Se il menù è chiuso, non sprecare CPU!
         if (menuPanel == null || !menuPanel.activeSelf) return;
         
-        foreach(Transform child in listContent)
+        // Usiamo la lista cache invece di cercare nei figli
+        for (int i = 0; i < _activeSlots.Count; i++)
         {
-            if (child != null)
-                child.GetComponent<ResearchSlotUI>().RefreshUI();
+            _activeSlots[i].RefreshUI();
         }
     }
 
@@ -132,13 +122,11 @@ public class ResearchManager : MonoBehaviour
     {
         if (GameManager.Instance == null) return;
 
-        // Reset di tutti i bonus
         GameManager.Instance.ResearchMultiplier = 1;
         GameManager.Instance.LogisticsResearchBonus = 0;
         GameManager.Instance.StorageResearchBonus = 0;
         GameManager.Instance.EmitterCapResearchBonus = 0; 
         GameManager.Instance.ClickPowerResearchBonus = 0; 
-        // Reset del Bonus velocità (non della velocità base!)
         GameManager.Instance.EmitterSpeedResearchBonus = 0;
         
         foreach (var item in allResearches)
@@ -172,9 +160,7 @@ public class ResearchManager : MonoBehaviour
 
             else if (item.target == ResearchTarget.ClickPower)
                 GameManager.Instance.ClickPowerResearchBonus += (float)totalAdditive;
-                
-            // --- FIX Emitter Production Speed ---
-            // Ora sommiamo al BONUS, lasciando intatta la BASE
+            
             else if (item.target == ResearchTarget.EmitterProductionSpeed)
                 GameManager.Instance.EmitterSpeedResearchBonus += totalAdditive;
         }

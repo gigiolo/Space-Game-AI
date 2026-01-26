@@ -2,49 +2,43 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.IO;
 
 [RequireComponent(typeof(ParticleSystem))]
 [ExecuteAlways]
 public class PlanetPopulationVisuals : MonoBehaviour
 {
-    // ... [TUTTO IL CODICE PRECEDENTE RIMANE UGUALE FINO ALLA FINE] ...
-
-    // --- AGGIUNGI QUESTO METODO PUBBLICO ---
+    // ... [METODI PUBBLICI PER IL SALVATAGGIO RIMANGONO INVARIATI] ...
     public IReadOnlyList<Vector3> GetOccupiedPositions()
     {
         return _occupiedPositions;
     }
 
-    // ... [Il resto del codice rimane invariato: LoadEncodedPositions, ecc.] ...
-    
-    // (Per brevità riporto solo la parte modificata, incolla il metodo sopra prima di LoadEncodedPositions o alla fine della classe)
-    
-    [Header("CONFIGURAZIONE")]
+    [Header("CONFIGURAZIONE STANDARD")]
     public float surfaceRadius = 1.60f; 
     public float baseLightSize = 0.05f;
     public int maxLights = 2000;
 
+    [Header("ENERGY FEEDBACK (Power Button)")]
+    [Tooltip("Colore quando il tasto NON è premuto (es. Arancione/Giallo caldo).")]
+    [ColorUsage(true, true)] // Abilita HDR nell'inspector
+    public Color idleColor = new Color(1f, 0.6f, 0.2f, 1f); 
+    public float idleIntensity = 1.0f;
+
+    [Tooltip("Colore quando il moltiplicatore è al MASSIMO (es. Azzurro/Bianco freddo).")]
+    [ColorUsage(true, true)]
+    public Color maxPowerColor = new Color(0.4f, 0.8f, 1f, 1f); 
+    public float maxPowerIntensity = 2.5f;
+
     [Header("Vincoli di Generazione")]
-    [Tooltip("Latitudine massima per il PRIMO nodo.")]
     [Range(0f, 90f)] 
     public float firstNodeMaxLatitude = 50f;
-
-    [Tooltip("Latitudine massima per tutti gli ALTRI nodi.")]
     [Range(0f, 90f)] 
     public float generalMaxLatitude = 70f;
-
-    [Tooltip("Distanza minima tra due luci.")]
     public float minDistance = 0.05f;
-
-    [Tooltip("Tentativi spawn.")]
     public int maxSpawnAttempts = 20;
 
-    [Header("Animazione Spawn (Dissolvenza)")] 
-    public Color spawnFlashColor = Color.red; 
-    
-    // --- MODIFICA QUI: Variabile rinominata e spiegata ---
-    [Tooltip("Durata in secondi dell'animazione di comparsa (Valori bassi = Veloce, Alti = Lento)")]
+    [Header("Animazione Spawn")] 
+    [Tooltip("Durata in secondi dell'animazione di comparsa.")]
     [Range(0.1f, 5.0f)] 
     public float fadeDuration = 1.5f; 
 
@@ -55,20 +49,15 @@ public class PlanetPopulationVisuals : MonoBehaviour
     [Header("Rendering Giorno/Notte")]
     public Transform sunLight; 
 
-    // --- SEZIONE CONNESSIONI ---
     [Header("Visual Connections (Lines)")]
     public ParticleSystem connectionPS; 
-    
-    [Header(">>> COLORI GIORNO/NOTTE <<<")]
     [ColorUsage(true, true)] 
     public Color connectionNightColor = new Color(1f, 0.8f, 0f, 1f);
     public Color connectionDayColor = new Color(0.1f, 0.1f, 0.1f, 0.8f);
-
     public float maxConnectionDistance = 0.5f; 
     public float lineThickness = 0.00125f;
     public float arcHeight = 0.0025f;
     public float randomHeightVariance = 0.01f;
-
     [Range(1, 5)]
     public int maxConnectionsPerNode = 2;
 
@@ -154,6 +143,7 @@ public class PlanetPopulationVisuals : MonoBehaviour
 
     void Update()
     {
+        // 1. Aggiornamento Shader Giorno/Notte
         if (Application.isPlaying && sunLight != null)
         {
             Vector3 sunDir = -sunLight.forward;
@@ -169,44 +159,99 @@ public class PlanetPopulationVisuals : MonoBehaviour
             }
         }
 
+        // 2. Calcolo Colore Energetico (Feedback Tasto)
+        Color currentTargetColor = idleColor * idleIntensity;
+        
+        if (Application.isPlaying && GameManager.Instance != null)
+        {
+            // Ottieni lo stato del moltiplicatore
+            float currentMult = GameManager.Instance.CurrentEnergyMultiplier;
+            float maxMult = GameManager.Instance.EffectiveMaxMultiplier;
+
+            // Normalizza da 0 a 1 (0 = Idle, 1 = Max Power)
+            float t = 0f;
+            if (maxMult > 1.0f)
+            {
+                t = Mathf.Clamp01((currentMult - 1.0f) / (maxMult - 1.0f));
+            }
+
+            // Interpola colore e intensità
+            Color c = Color.Lerp(idleColor, maxPowerColor, t);
+            float i = Mathf.Lerp(idleIntensity, maxPowerIntensity, t);
+            
+            // Colore HDR Finale
+            currentTargetColor = c * i;
+        }
+
+        // 3. Animazione Particelle
         if (Application.isPlaying) 
         {
-            AnimateSystem(_ps, _particlesBuffer, true);
-            AnimateSystem(connectionPS, _connectionsBuffer, false);
+            // Passiamo il colore calcolato dinamicamente
+            AnimateSystem(_ps, _particlesBuffer, true, currentTargetColor);
+            
+            // Le connessioni usano una logica diversa (alpha fissa o gestita dallo shader), 
+            // ma passiamo null o colore base per ora se vogliamo mantenerle standard
+            AnimateSystem(connectionPS, _connectionsBuffer, false, Color.white);
         }
     }
 
-    private void AnimateSystem(ParticleSystem sys, ParticleSystem.Particle[] buffer, bool isLightNode)
+    private void AnimateSystem(ParticleSystem sys, ParticleSystem.Particle[] buffer, bool isLightNode, Color targetRGB)
     {
         if(sys == null || buffer == null) return;
         
         int count = sys.GetParticles(buffer);
         bool hasChanges = false;
         
-        // --- MODIFICA QUI: Usa fadeDuration invece di flashDuration ---
-        float step = (1f / Mathf.Max(fadeDuration, 0.01f)) * Time.deltaTime;
+        // Velocità di fade per lo spawn
+        float fadeStep = (1f / Mathf.Max(fadeDuration, 0.01f)) * Time.deltaTime;
         
-        Vector4 targetColor = new Vector4(1, 1, 1, 1); 
-
         for (int i = 0; i < count; i++)
         {
-            Vector4 current = (Vector4)(Color)buffer[i].startColor;
+            // Gestione Alpha (Spawn)
+            float currentAlpha = buffer[i].startColor.a;
             
-            if (Vector4.Distance(current, targetColor) > 0.01f)
+            // Se non è ancora completamente visibile, aumenta l'alpha
+            if (currentAlpha < 1f)
             {
-                Vector4 next = Vector4.MoveTowards(current, targetColor, step);
-                buffer[i].startColor = (Color)next;
+                currentAlpha = Mathf.MoveTowards(currentAlpha, 1f, fadeStep);
                 hasChanges = true;
             }
-            else if (buffer[i].startColor.a < 0.99f || (isLightNode && buffer[i].startColor != Color.white))
+
+            // Gestione Colore RGB (Energy Feedback)
+            if (isLightNode)
             {
-                buffer[i].startColor = Color.white;
-                hasChanges = true;
+                // Applica il colore RGB calcolato dal GameManager, ma conserva l'alpha dello spawn
+                Color newColor = targetRGB;
+                newColor.a = currentAlpha;
+                
+                // Assegna solo se diverso per ottimizzare (anche se SetParticles fa comunque tutto)
+                if (buffer[i].startColor != newColor)
+                {
+                    buffer[i].startColor = newColor;
+                    hasChanges = true;
+                }
+            }
+            else
+            {
+                // Per le connessioni o altro, gestiamo solo l'alpha di spawn
+                Color c = buffer[i].startColor;
+                if (c.a != currentAlpha)
+                {
+                    c.a = currentAlpha;
+                    buffer[i].startColor = c;
+                    hasChanges = true;
+                }
             }
         }
         
         if (hasChanges) sys.SetParticles(buffer, count);
     }
+
+    // [IL RESTO DELLO SCRIPT (GenerateArcMesh, CreateVisualConnection, LoadEncodedPositions, ecc.) 
+    // RIMANE IDENTICO A PRIMA. COPIALO DAL FILE PRECEDENTE O LASCIA CHE RIMANGA INTATTO SE MODIFICHI SOLO UPDATE]
+    
+    // ... INCOLLA QUI I METODI RIMANENTI (GenerateArcMesh, CreateVisualConnection, ecc.) ...
+    // Per comodità, ecco i metodi essenziali per non rompere il copia-incolla:
 
     private void GenerateArcMesh()
     {
@@ -283,9 +328,9 @@ public class PlanetPopulationVisuals : MonoBehaviour
     private void SpawnParticles(int count)
     {
         ParticleSystem.EmitParams emitParams = new ParticleSystem.EmitParams();
-        
-        // Start Alpha 0 con il colore del flash
-        emitParams.startColor = new Color(spawnFlashColor.r, spawnFlashColor.g, spawnFlashColor.b, 0f); 
+        // Start Alpha 0. Il colore RGB qui non conta molto perché viene sovrascritto in Update,
+        // ma impostiamolo bianco per sicurezza.
+        emitParams.startColor = new Color(1, 1, 1, 0f); 
         
         emitParams.startLifetime = float.MaxValue;
         float parentScale = transform.parent != null ? transform.parent.localScale.x : 1f;

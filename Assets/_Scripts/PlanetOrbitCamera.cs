@@ -10,6 +10,11 @@ public class PlanetOrbitCamera : MonoBehaviour
     public float sensitivity = 0.2f;
     public float damping = 5.0f;
 
+    [Header("Posizione Iniziale")]
+    [Tooltip("Regola questo valore (0-360) per ruotare la camera attorno al pianeta all'avvio.")]
+    [Range(0f, 360f)]
+    public float startAngle = 0.0f;
+
     // --- VARIABILE STATICA GLOBALE ---
     // Questa è accessibile da qualsiasi script del gioco.
     // Se è vera, l'input utente viene ignorato.
@@ -25,9 +30,12 @@ public class PlanetOrbitCamera : MonoBehaviour
     {
         if (planetTarget != null)
         {
-            Vector3 angles = transform.eulerAngles;
-            currentAngleH = angles.y;
-            targetAngleH = angles.y;
+            // --- MODIFICA: Usiamo l'angolo definito nell'Inspector invece di quello della scena ---
+            currentAngleH = startAngle;
+            targetAngleH = startAngle;
+
+            // Aggiorniamo subito la posizione al primo frame per evitare scatti
+            UpdateCameraPosition();
         }
     }
 
@@ -45,6 +53,12 @@ public class PlanetOrbitCamera : MonoBehaviour
         // Se stiamo animando, targetAngleH viene pilotato dalla coroutine frame per frame
         currentAngleH = Mathf.Lerp(currentAngleH, targetAngleH, Time.deltaTime * damping);
         
+        UpdateCameraPosition();
+    }
+
+    // Metodo separato per pulizia, calcola posizione e rotazione
+    void UpdateCameraPosition()
+    {
         // Calcolo posizione
         Quaternion rotation = Quaternion.Euler(0, currentAngleH, 0);
         
@@ -95,25 +109,18 @@ public class PlanetOrbitCamera : MonoBehaviour
         IsInputBlocked = true; // Blocchiamo l'input utente durante l'animazione
 
         // 1. Calcoliamo la direzione dal Centro del Pianeta al Sito di Lancio
-        // Questo vettore punta "fuori" dalla superficie verso lo spazio
         Vector3 directionFromCenter = (worldPoint - planetTarget.position).normalized;
 
         // 2. Calcoliamo la rotazione necessaria.
-        // La logica nel LateUpdate posiziona la camera "indietro" (Vector3.back * distance).
-        // Quindi, per guardare il sito di lancio, la camera deve trovarsi lungo la linea 'directionFromCenter'.
-        // Matematicamente: rotation * Vector3.back deve essere allineato con directionFromCenter.
-        // Oppure: rotation * Vector3.forward deve essere allineato con -directionFromCenter.
-        // Usiamo LookRotation per trovare l'angolo Y che guarda verso il centro del pianeta partendo dal sito.
         Quaternion targetLookRotation = Quaternion.LookRotation(-directionFromCenter);
         float targetBaseAngle = targetLookRotation.eulerAngles.y;
 
-        // 3. Aggiungiamo l'offset desiderato (es. 45 gradi per vedere la navicella di profilo)
+        // 3. Aggiungiamo l'offset desiderato
         float finalAngle = targetBaseAngle + offset;
 
         // 4. Calcolo del percorso più breve (Shortest Path)
-        // Usiamo DeltaAngle per evitare giri di 360° inutili (es. da 350° a 10°)
-        float startAngle = currentAngleH;
-        float deltaAngle = Mathf.DeltaAngle(startAngle, finalAngle);
+        float startRotation = currentAngleH;
+        float deltaAngle = Mathf.DeltaAngle(startRotation, finalAngle);
         
         float timer = 0f;
 
@@ -122,27 +129,23 @@ public class PlanetOrbitCamera : MonoBehaviour
             timer += Time.deltaTime;
             float t = timer / duration;
             
-            // SmoothStep per un movimento morbido (accelera all'inizio, frena alla fine)
+            // SmoothStep per un movimento morbido
             t = t * t * (3f - 2f * t); 
 
             // Interpoliamo l'angolo target
-            targetAngleH = startAngle + (deltaAngle * t);
+            targetAngleH = startRotation + (deltaAngle * t);
             
-            // Forziamo anche currentAngleH per evitare che il Lerp nel LateUpdate introduca ritardo/elasticità indesiderata
-            // durante la cinematica precisa. Vogliamo controllo totale qui.
+            // Forziamo anche currentAngleH per controllo totale durante la cinematica
             currentAngleH = targetAngleH; 
 
             yield return null;
         }
 
-        // 5. Fine sicura: assicuriamoci di essere arrivati esattamente al punto
-        targetAngleH = startAngle + deltaAngle;
+        // 5. Fine sicura
+        targetAngleH = startRotation + deltaAngle;
         currentAngleH = targetAngleH;
         
         _isAnimating = false;
-        
-        // Nota: Non sblocchiamo IsInputBlocked qui perché probabilmente sta iniziando il lancio 
-        // e non vogliamo che il giocatore ruoti la camera mentre la nave parte.
         
         onComplete?.Invoke();
     }
