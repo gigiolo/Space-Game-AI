@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections;
+using UnityEngine.EventSystems; // NECESSARIO PER RILEVARE I CLICK SUI BOTTONI
 
 public class PlanetOrbitCamera : MonoBehaviour
 {
@@ -30,7 +31,7 @@ public class PlanetOrbitCamera : MonoBehaviour
     {
         if (planetTarget != null)
         {
-            // --- MODIFICA: Usiamo l'angolo definito nell'Inspector invece di quello della scena ---
+            // Usiamo l'angolo definito nell'Inspector
             currentAngleH = startAngle;
             targetAngleH = startAngle;
 
@@ -76,10 +77,14 @@ public class PlanetOrbitCamera : MonoBehaviour
     
     void HandleInput()
     {
-        // 1. Blocco Totale (da UI o Eventi)
+        // 1. Blocco Totale (da UI Blockers o Eventi)
         if (IsInputBlocked) return;
 
-        // 2. Input Touch
+        // 2. NUOVO: Controllo se stiamo toccando un bottone o un pannello UI
+        // Se il puntatore è sopra la UI, IGNORIAMO la rotazione della camera
+        if (IsPointerOverUIObject()) return;
+
+        // 3. Input Touch (Mobile)
         if (Input.touchCount > 0)
         {
             Touch touch = Input.GetTouch(0);
@@ -88,11 +93,25 @@ public class PlanetOrbitCamera : MonoBehaviour
                 targetAngleH += touch.deltaPosition.x * sensitivity;
             }
         }
-        // 3. Input Mouse (Editor/PC)
+        // 4. Input Mouse (Editor/PC)
         else if (Input.GetMouseButton(0))
         {
             targetAngleH += Input.GetAxis("Mouse X") * sensitivity * 5;
         }
+    }
+
+    // --- METODO DI CONTROLLO UI ---
+    // Ritorna TRUE se stiamo cliccando/toccando un elemento della Canvas
+    private bool IsPointerOverUIObject()
+    {
+        // A. Controllo Touch (per Mobile)
+        if (Input.touchCount > 0)
+        {
+            return EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId);
+        }
+        
+        // B. Controllo Mouse (per Editor/PC)
+        return EventSystem.current.IsPointerOverGameObject();
     }
 
     // --- METODO PUBBLICO: Avvia la rotazione cinematica ---

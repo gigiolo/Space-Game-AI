@@ -4,13 +4,13 @@ using System.Collections;
 
 public class LaunchSequenceController : MonoBehaviour
 {
-    [Header("References")]
+    [Header("References (Auto-Found if null)")]
     public PlanetOrbitCamera orbitCamera;
-    public PlanetStatusPopup statusPopup; // Per chiudere la UI
+    public PlanetStatusPopup statusPopup; // Questo è UI, quindi sta in Core_Systems
     
     [Header("Spaceship Assets")]
-    public SpaceshipFlight spaceshipPrefab; // Trascina qui il prefab della nave
-    public ParticleSystem launchVFX; // Fumo/Fuoco al suolo (opzionale - lascia vuoto per pulizia)
+    public SpaceshipFlight spaceshipPrefab; 
+    public ParticleSystem launchVFX; 
 
     [Header("Camera Animation Settings")]
     [Tooltip("Angolo offset per inquadrare la nave (45° = vista 3/4)")]
@@ -19,19 +19,27 @@ public class LaunchSequenceController : MonoBehaviour
     public float cameraRotationDuration = 2.0f;
 
     [Header("Debug")]
-    public bool testLaunch = false; // Checkalo in playmode per testare il lancio senza requisiti
+    public bool testLaunch = false; 
 
     private void Start()
     {
+        // --- AUTO-COLLEGAMENTO INTELLIGENTE ---
+        // Se i campi sono vuoti nell'inspector, li cerchiamo automaticamente.
+        
+        // 1. Cerca la Camera (che dovrebbe essere nella Scena)
+        if (orbitCamera == null) 
+            orbitCamera = FindFirstObjectByType<PlanetOrbitCamera>();
+
+        // 2. Cerca il Popup (che è dentro Core_Systems)
+        if (statusPopup == null) 
+            statusPopup = FindFirstObjectByType<PlanetStatusPopup>();
+
+        // --------------------------------------
+
         if (PlanetManager.Instance != null)
         {
-            // Ci iscriviamo all'evento: quando il manager dice "Si parte", noi facciamo lo show
             PlanetManager.Instance.OnTravelStarted += StartSequence;
         }
-        
-        // Trova i riferimenti se non assegnati manualmente
-        if (orbitCamera == null) orbitCamera = FindFirstObjectByType<PlanetOrbitCamera>();
-        if (statusPopup == null) statusPopup = FindFirstObjectByType<PlanetStatusPopup>();
     }
 
     private void OnDestroy()
@@ -44,7 +52,6 @@ public class LaunchSequenceController : MonoBehaviour
 
     private void Update()
     {
-        // Logica per il test rapido da Inspector
         if (testLaunch)
         {
             testLaunch = false;
@@ -54,36 +61,32 @@ public class LaunchSequenceController : MonoBehaviour
 
     public void StartSequence()
     {
-        // 1. Chiudi UI
+        // 1. Chiudi UI (Usa il riferimento trovato automaticamente)
         if (statusPopup != null) statusPopup.ClosePopup();
 
         // 2. Trova posizione LaunchSite
         Vector3 launchPos = Vector3.zero;
         
-        // TENTATIVO A: Chiediamo direttamente al Visual Script (Più preciso, include rotazione attuale)
         var visualScript = FindFirstObjectByType<LaunchSiteVisuals>();
         if (visualScript != null)
         {
             launchPos = visualScript.GetCurrentWorldPosition();
         }
 
-        // TENTATIVO B: Fallback GameManager (Posizione salvata)
         if (launchPos == Vector3.zero && GameManager.Instance != null && !string.IsNullOrEmpty(GameManager.Instance.StoredLaunchSitePosition))
         {
             Vector3 localPos = StringToVector3(GameManager.Instance.StoredLaunchSitePosition);
             
-            // Convertiamo da locale a world usando il pianeta target della camera
             if (orbitCamera != null && orbitCamera.planetTarget != null)
             {
                 launchPos = orbitCamera.planetTarget.TransformPoint(localPos);
             }
             else
             {
-                launchPos = localPos; // Fallback estremo
+                launchPos = localPos; 
             }
         }
 
-        // TENTATIVO C: Default assoluto (davanti alla camera, se tutto fallisce)
         if (launchPos == Vector3.zero)
         {
             Debug.LogWarning("LaunchSequence: Posizione LaunchSite non trovata, uso default.");
@@ -98,19 +101,13 @@ public class LaunchSequenceController : MonoBehaviour
         {
             orbitCamera.AnimateToLookAt(launchPos, viewAngleOffset, cameraRotationDuration, () => 
             {
-                // --- CALLBACK DI FINE ROTAZIONE ---
-                
-                // A) Lancia la nave
                 SpawnSpaceship(launchPos);
-
-                // B) SBLOCCA L'INPUT DELLA CAMERA IMMEDIATAMENTE
-                // Permette al giocatore di ruotare/ammirare mentre la nave parte
                 PlanetOrbitCamera.IsInputBlocked = false;
             });
         }
         else
         {
-            // Se non c'è lo script camera, lancia subito e sblocca
+            // Se non c'è lo script camera, lancia subito
             SpawnSpaceship(launchPos);
             PlanetOrbitCamera.IsInputBlocked = false;
         }
@@ -120,25 +117,18 @@ public class LaunchSequenceController : MonoBehaviour
     {
         if (spaceshipPrefab != null)
         {
-            // Istanzia la nave
             SpaceshipFlight ship = Instantiate(spaceshipPrefab);
             
-            // Calcolo preciso della normale alla superficie (Vettore "Su")
-            // Necessario per la nuova logica di traiettoria curva
             Vector3 planetCenter = Vector3.zero;
             if (orbitCamera != null && orbitCamera.planetTarget != null)
             {
                 planetCenter = orbitCamera.planetTarget.position;
             }
 
-            // La normale va dal centro del pianeta verso il punto di lancio
             Vector3 surfaceNormal = (pos - planetCenter).normalized;
-            
-            // Avvia la logica di volo passando posizione e direzione verticale
             ship.Launch(pos, surfaceNormal);
         }
 
-        // (Opzionale) Effetto a terra, se presente
         if (launchVFX != null)
         {
             launchVFX.transform.position = pos;
@@ -147,7 +137,6 @@ public class LaunchSequenceController : MonoBehaviour
         }
     }
 
-    // Helper per leggere la stringa "x|y|z" salvata dal GameManager
     private Vector3 StringToVector3(string s) 
     {
         if (string.IsNullOrEmpty(s)) return Vector3.zero;

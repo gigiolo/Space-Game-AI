@@ -16,7 +16,7 @@ public class AsteroidManager : MonoBehaviour
     [Header("Traiettoria (Angolo)")]
     [Tooltip("Angolo di arrivo in gradi (0 = Dall'alto verso il basso, 90 = Da destra a sx, ecc.)")]
     [Range(0f, 360f)] 
-    public float trajectoryAngle = 45f; // Default diagonale
+    public float trajectoryAngle = 45f; 
     
     [Tooltip("Quanto può variare l'angolo casualmente (+/- gradi)")]
     [Range(0f, 180f)]
@@ -39,6 +39,7 @@ public class AsteroidManager : MonoBehaviour
 
     private void Start()
     {
+        // Se non assegnata, cerca la camera (ma potrebbe cambiare se cambi scena)
         if (mainCamera == null) mainCamera = Camera.main;
         ResetTimer();
     }
@@ -61,29 +62,33 @@ public class AsteroidManager : MonoBehaviour
 
     private void SpawnAsteroid()
     {
-        if (asteroidPrefab == null || mainCamera == null) return;
+        if (asteroidPrefab == null) return;
+
+        // --- FIX 1: Aggiornamento Camera Persistente ---
+        // Se la camera è nulla (o è stata distrutta nel cambio scena), cerchiamo quella nuova
+        if (mainCamera == null) 
+        {
+            mainCamera = Camera.main;
+        }
+
+        // --- FIX 2: Controllo Validità Camera ---
+        // Se non c'è camera, o se la camera non ha ancora dimensioni (loading screen), usciamo
+        if (mainCamera == null || mainCamera.pixelRect.width <= 0 || mainCamera.pixelRect.height <= 0) 
+        {
+            return;
+        }
 
         // 1. CALCOLO DELL'ANGOLO DI MOVIMENTO
-        // Aggiungiamo la varianza casuale all'angolo scelto nell'Inspector
         float currentAngle = trajectoryAngle + Random.Range(-angleVariance, angleVariance);
         
-        // Convertiamo l'angolo in una direzione Vector2 (Spazio Schermo Normalizzato)
-        // Usiamo Math geometrica di base: Angolo -> Direzione (X,Y)
         float rad = currentAngle * Mathf.Deg2Rad;
         Vector2 direction = new Vector2(Mathf.Sin(rad), Mathf.Cos(rad)); 
-        // Nota: Sin/Cos invertiti o segni cambiati in base a dove vuoi che sia lo 0.
-        // Qui: 0 gradi = direzione (0, 1) cioè va VERSO l'alto? No, noi vogliamo provenienza.
-        // Facciamo che l'angolo indica la DIREZIONE DI MOVIMENTO.
         
         // 2. CALCOLO PUNTI VIEWPORT (Fuori schermo)
-        // Centro schermo è (0.5, 0.5). Ci spostiamo dal centro in direzione opposta per trovare Start
-        // e in direzione dell'angolo per trovare End.
         Vector2 center = new Vector2(0.5f, 0.5f);
-        float spawnRadius = 1.0f; // Abbastanza grande da uscire dallo schermo (Viewport va da 0 a 1)
+        float spawnRadius = 1.0f; 
         
-        // Start: parte "dietro" rispetto alla direzione
         Vector2 startViewport = center - (direction * spawnRadius);
-        // End: arriva "avanti"
         Vector2 endViewport = center + (direction * spawnRadius);
 
         // 3. PROFONDITA' 3D
@@ -93,24 +98,18 @@ public class AsteroidManager : MonoBehaviour
         Vector3 startView3D = new Vector3(startViewport.x, startViewport.y, startDepth);
         Vector3 endView3D = new Vector3(endViewport.x, endViewport.y, endDepth);
 
-        // 4. CONVERSIONE IN WORLD SPACE
+        // 4. CONVERSIONE IN WORLD SPACE (Qui avveniva l'errore)
         Vector3 worldStart = mainCamera.ViewportToWorldPoint(startView3D);
         Vector3 worldEnd = mainCamera.ViewportToWorldPoint(endView3D);
 
-        // 5. CALCOLO PUNTO DI CONTROLLO (Per la curva ellittica)
-        // Troviamo il punto medio
+        // 5. CALCOLO PUNTO DI CONTROLLO
         Vector3 midPoint = (worldStart + worldEnd) * 0.5f;
         
-        // Calcoliamo una direzione perpendicolare alla traiettoria per spostare il punto di controllo.
-        // Cross product con "Forward" della camera ci dà una destra/sinistra relativa.
         Vector3 pathDir = (worldEnd - worldStart).normalized;
         Vector3 cameraForward = mainCamera.transform.forward;
         Vector3 perpendicular = Vector3.Cross(pathDir, cameraForward).normalized;
         
-        // Aggiungiamo anche un po' di offset verso l'alto/basso locale per renderlo 3D
-        float randomSide = Random.value > 0.5f ? 1f : -1f; // Curva a dx o sx
-        
-        // Il punto di controllo è: Mezzo + (Perpendicolare * ForzaCurva)
+        float randomSide = Random.value > 0.5f ? 1f : -1f; 
         Vector3 controlPoint = midPoint + (perpendicular * curveAmount * randomSide);
 
         // 6. VELOCITA'
@@ -126,6 +125,9 @@ public class AsteroidManager : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
+            if (mainCamera == null) mainCamera = Camera.main;
+            if (mainCamera == null) return;
+
             Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray, out RaycastHit hit))
             {
@@ -141,12 +143,10 @@ public class AsteroidManager : MonoBehaviour
         if(asteroid != null) Destroy(asteroid.gameObject);
     }
     
-    // Disegna la linea di spawn nell'editor per capire dove andranno gli asteroidi
     private void OnDrawGizmos()
     {
         if (mainCamera == null) return;
         
-        // Visualizzazione rapida della direzione nell'editor
         float rad = trajectoryAngle * Mathf.Deg2Rad;
         Vector2 direction = new Vector2(Mathf.Sin(rad), Mathf.Cos(rad));
         Vector3 worldDir = mainCamera.transform.TransformDirection(new Vector3(direction.x, direction.y, 0));

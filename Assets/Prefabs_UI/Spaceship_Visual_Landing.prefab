@@ -287,7 +287,7 @@ ParticleSystem:
     startSize:
       serializedVersion: 2
       minMaxState: 0
-      scalar: 0.01
+      scalar: 0.02
       minScalar: 1
       maxCurve:
         serializedVersion: 2
@@ -4803,7 +4803,7 @@ ParticleSystemRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 0
+  m_SortingOrder: 20
   m_MaskInteraction: 0
   m_RenderMode: 0
   m_MeshDistribution: 0
@@ -4845,9 +4845,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5167070987683618829}
-  - component: {fileID: 4910136065611436529}
+  - component: {fileID: 108002904326403704}
   m_Layer: 0
-  m_Name: Spaceship_Visual
+  m_Name: Spaceship_Visual_Landing
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4870,7 +4870,7 @@ Transform:
   - {fileID: 4094670983138644137}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &4910136065611436529
+--- !u!114 &108002904326403704
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -4879,65 +4879,47 @@ MonoBehaviour:
   m_GameObject: {fileID: 3073144219602006129}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 503c2a89614fb3c4b83ed2061a064825, type: 3}
+  m_Script: {fileID: 11500000, guid: bd52be4c8e8c6984e9c371c6a9e33972, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::SpaceshipFlight
-  verticalDuration: 0.2
-  curveDuration: 10
-  turnCurve:
+  m_EditorClassIdentifier: Assembly-CSharp::SpaceshipLanding
+  duration: 5
+  movementCurve:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
       time: 0
       value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 1
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  startSpeed: 0.05
-  endSpeed: 3
-  accelerationCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    - serializedVersion: 3
-      time: 1
-      value: 1
       inSlope: 2
       outSlope: 2
       tangentMode: 0
       weightedMode: 0
       inWeight: 0
       outWeight: 0
+    - serializedVersion: 3
+      time: 0.28587413
+      value: 0.6415795
+      inSlope: 1.2349184
+      outSlope: 1.2349184
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  lifeTime: 30
-  fadeDuration: 3
-  shipRenderers:
-  - {fileID: 0}
+  fixInvertedModel: 1
+  trailVisuals: {fileID: 1428241516090150532}
+  landingVFX: {fileID: 0}
+  shipMesh: {fileID: 4751846740254274474}
 --- !u!1 &4751846740254274474
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,44 +1,63 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement; // Serve per ricaricare la scena dopo il Wipe
+using UnityEngine.SceneManagement; 
 using TMPro;
 
 public class OptionsMenu : MonoBehaviour
 {
     [Header("UI References")]
-    public GameObject panelVisuals; // Il GameObject "Window" o "Panel" dentro il Canvas
+    public GameObject panelVisuals; 
     
     [Header("Buttons")]
     public Button saveButton;
-    public Button wipeSaveButton; // Tasto rosso per cancellare tutto
+    public Button wipeSaveButton; 
     public Button closeButton;
 
     [Header("Feedback Texts")]
-    public TextMeshProUGUI statusText; // Per messaggi tipo "Game Saved!"
+    public TextMeshProUGUI statusText; 
 
-    // Variabile per gestire la conferma della cancellazione
     private bool _isWipeConfirmationActive = false;
 
     private void Start()
     {
-        // Setup Button Listeners
+        // --- REGISTRAZIONE MENU ---
+        if (UIManager.Instance != null && panelVisuals != null)
+            UIManager.Instance.RegisterMenu(panelVisuals);
+
         if(saveButton) saveButton.onClick.AddListener(OnSaveClicked);
         if(wipeSaveButton) wipeSaveButton.onClick.AddListener(OnWipeClicked);
         if(closeButton) closeButton.onClick.AddListener(CloseMenu);
 
-        // Assicuriamoci che il pannello sia spento all'avvio
         if(panelVisuals) panelVisuals.SetActive(false);
     }
 
     public void ToggleMenu()
     {
-        bool isActive = !panelVisuals.activeSelf;
-        panelVisuals.SetActive(isActive);
+        if (panelVisuals == null) return;
 
-        // Blocca/Sblocca la camera del pianeta
+        bool isActive = !panelVisuals.activeSelf;
+
+        if (isActive)
+        {
+            // APERTURA - Chiudi gli altri!
+            if (UIManager.Instance != null)
+                UIManager.Instance.CloseAllMenusExcept(panelVisuals);
+        }
+        else
+        {
+            // CHIUSURA - Usa l'effetto se c'è
+            UIPopupEffect effect = panelVisuals.GetComponent<UIPopupEffect>();
+            if (effect != null) 
+            {
+                effect.Close();
+                PlanetOrbitCamera.IsInputBlocked = false;
+                return; // Esce qui perché la chiusura è gestita dall'effetto
+            }
+        }
+
+        panelVisuals.SetActive(isActive);
         PlanetOrbitCamera.IsInputBlocked = isActive;
 
-        // Reset dello stato UI quando apri
         if (isActive)
         {
             _isWipeConfirmationActive = false;
@@ -53,7 +72,12 @@ public class OptionsMenu : MonoBehaviour
 
     public void CloseMenu()
     {
-        if(panelVisuals) panelVisuals.SetActive(false);
+        if (panelVisuals)
+        {
+             UIPopupEffect effect = panelVisuals.GetComponent<UIPopupEffect>();
+             if (effect != null) effect.Close();
+             else panelVisuals.SetActive(false);
+        }
         PlanetOrbitCamera.IsInputBlocked = false;
     }
 
@@ -64,7 +88,6 @@ public class OptionsMenu : MonoBehaviour
             GameManager.Instance.SaveGame();
             if(statusText) statusText.text = "<color=green>GAME SAVED!</color>";
             
-            // Ripristina il testo dopo 1.5 secondi
             CancelInvoke("ResetStatusText");
             Invoke("ResetStatusText", 1.5f);
         }
@@ -72,23 +95,18 @@ public class OptionsMenu : MonoBehaviour
 
     private void OnWipeClicked()
     {
-        // Logica a due step per evitare click accidentali
         if (!_isWipeConfirmationActive)
         {
             _isWipeConfirmationActive = true;
             if(statusText) statusText.text = "<color=red>ARE YOU SURE?</color>";
             
-            // Cambia testo bottone se possibile
             var btnText = wipeSaveButton.GetComponentInChildren<TextMeshProUGUI>();
             if (btnText) btnText.text = "CONFIRM DELETE";
         }
         else
         {
-            // ESEGUI CANCELLAZIONE
             SaveManager.DeleteSaveFile();
             Debug.Log("Save File Deleted. Restarting...");
-            
-            // Ricarica la scena corrente per resettare tutto
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
     }

@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 1677581577892946704}
   - component: {fileID: 7562125447728911004}
   - component: {fileID: 2442554287752022172}
+  - component: {fileID: 7060215585002779739}
   m_Layer: 5
   m_Name: NotificationButton
   m_TagString: Untagged
@@ -62,7 +63,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.7372549, g: 0.07450981, b: 0.99607843, a: 1}
+  m_Color: {r: 1, g: 0.16470589, b: 0.42745098, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -138,6 +139,9 @@ MonoBehaviour:
   iconImage: {fileID: 0}
   myButton: {fileID: 1677581577892946704}
   adsBadge: {fileID: 0}
+  popInDuration: 0.4
+  popOutDuration: 0.3
+  peakScale: 1.2
 --- !u!114 &2442554287752022172
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -150,7 +154,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fd4b54da7804a3e47bc302fdae12f000, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ThemedUIElement
-  type: 3
+  type: 4
+--- !u!114 &7060215585002779739
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2140532402723781414}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 306cc8c2b49d7114eaa3623786fc2126, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.LayoutElement
+  m_IgnoreLayout: 0
+  m_MinWidth: -1
+  m_MinHeight: -1
+  m_PreferredWidth: -1
+  m_PreferredHeight: -1
+  m_FlexibleWidth: -1
+  m_FlexibleHeight: -1
+  m_LayoutPriority: 1
 --- !u!1 &3916624979532965538
 GameObject:
   m_ObjectHideFlags: 0

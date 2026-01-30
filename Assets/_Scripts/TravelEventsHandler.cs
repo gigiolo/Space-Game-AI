@@ -3,20 +3,38 @@ using System;
 
 public class TravelEventsHandler : MonoBehaviour
 {
+    // Usiamo l'ID 100 per differenziarlo dai regali giornalieri (ID 200)
     private const int TRAVEL_NOTIF_ID = 100;
 
     private void Start()
     {
-        DontDestroyOnLoad(gameObject);
+        // Ci iscriviamo all'evento: appena la nave parte, programmiamo la notifica
+        if (PlanetManager.Instance != null)
+        {
+            PlanetManager.Instance.OnTravelStarted += ScheduleTravelNotification;
+        }
+    }
+
+    private void OnDestroy()
+    {
+        // Buona pratica: pulire i riferimenti agli eventi quando l'oggetto sparisce
+        if (PlanetManager.Instance != null)
+        {
+            PlanetManager.Instance.OnTravelStarted -= ScheduleTravelNotification;
+        }
     }
 
     private void OnApplicationPause(bool pauseStatus)
     {
-        if (pauseStatus) ScheduleTravelNotification();
+        if (pauseStatus)
+        {
+            // Se mettiamo in pausa, programmiamo (o aggiorniamo) la notifica
+            ScheduleTravelNotification();
+        }
         else 
         {
-            // Cancelliamo SOLO la notifica del viaggio quando rientriamo, lasciando quella del Daily attiva
-            if(LocalNotificationController.Instance) 
+            // Se torniamo in gioco, cancelliamo la notifica pendente perché siamo già qui!
+            if(LocalNotificationController.Instance != null) 
                 LocalNotificationController.Instance.CancelNotification(TRAVEL_NOTIF_ID);
         }
     }
@@ -26,26 +44,33 @@ public class TravelEventsHandler : MonoBehaviour
         ScheduleTravelNotification();
     }
 
-    private void ScheduleTravelNotification()
+    public void ScheduleTravelNotification()
     {
+        // Controlli di sicurezza
         if (PlanetManager.Instance == null || LocalNotificationController.Instance == null) return;
 
-        if (PlanetManager.Instance.isTraveling)
-        {
-            DateTime startTime = PlanetManager.Instance.travelStartTime;
-            double durationSeconds = PlanetManager.Instance.GetTotalTravelDuration();
-            DateTime arrivalTime = startTime.AddSeconds(durationSeconds);
+        // Se non stiamo viaggiando, non c'è nulla da notificare
+        if (!PlanetManager.Instance.isTraveling) return;
 
-            if (arrivalTime > DateTime.Now)
-            {
-                // Usiamo l'ID 100
-                LocalNotificationController.Instance.ScheduleNotification(
-                    "Viaggio Completato! 🚀",
-                    "La tua nave è arrivata a destinazione. Tocca per atterrare!",
-                    arrivalTime,
-                    TRAVEL_NOTIF_ID 
-                );
-            }
+        DateTime startTime = PlanetManager.Instance.travelStartTime;
+        double durationSeconds = PlanetManager.Instance.GetTotalTravelDuration();
+        
+        // Calcoliamo il momento esatto dell'arrivo
+        DateTime arrivalTime = startTime.AddSeconds(durationSeconds);
+
+        // Programmiamo la notifica solo se il tempo non è già passato
+        if (arrivalTime > DateTime.Now)
+        {
+            string planetName = PlanetManager.Instance.GetNextPlanetData()?.planetName ?? "nuovo pianeta";
+
+            LocalNotificationController.Instance.ScheduleNotification(
+                "Arrivo a Destinazione! 🚀",
+                $"La tua flotta è atterrata su {planetName}. Vieni a colonizzarlo!",
+                arrivalTime,
+                TRAVEL_NOTIF_ID 
+            );
+            
+            Debug.Log($"[Notifica Viaggio] Programmata per le: {arrivalTime}");
         }
     }
 }

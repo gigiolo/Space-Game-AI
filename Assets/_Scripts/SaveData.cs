@@ -12,8 +12,10 @@ public class SaveData
     public int emitterCount;
     public int logisticsLevel;
     
+    // --- NUOVO: Rotazione Sole/Pianeta ---
+    public float sunRotationY; // <--- AGGIUNTO QUI
+
     // --- RICERCHE & NAVI ---
-    // Usano la classe definita in fondo a questo file
     public List<ResearchSaveData> researches = new List<ResearchSaveData>();
     public List<ResearchSaveData> spaceships = new List<ResearchSaveData>();
 
@@ -39,22 +41,15 @@ public class SaveData
     public string lockedLaunchRequirement; 
     public bool isTraveling;
     public string travelStartTimeBinary;
-    
-    // Durata bloccata del viaggio (calcolata alla partenza)
     public double lockedTravelDuration; 
 
-    // --- NUOVO: Posizione salvata del sito di lancio ---
-    // Memorizza la coordinata "X|Y|Z" della particella lampeggiante
+    // --- LAUNCH SITE ---
     public string launchSitePosition; 
 }
 
-// =================================================================================
-// CLASSE HELPER PER SALVARE LISTE DI OGGETTI (Ricerche, Navi, ecc.)
-// Deve stare fuori dalla classe SaveData per essere vista dagli altri script.
-// =================================================================================
 [Serializable]
 public class ResearchSaveData
 {
-    public string id;   // ID univoco (es. "res_production_1")
-    public int level;   // Livello attuale
+    public string id;   
+    public int level;   
 }

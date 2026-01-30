@@ -1,13 +1,16 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems; 
-using TMPro;             
+using TMPro;            
 using BreakInfinity; 
 using System; 
 using System.Collections; 
+using System.Collections.Generic; // Necessario per le Liste
 
 public class UIManager : MonoBehaviour
 {
+    public static UIManager Instance { get; private set; }
+
     [Header("Top HUD - Standard")]
     public TextMeshProUGUI scoreText;                 
     public TextMeshProUGUI incomeText;                
@@ -43,13 +46,13 @@ public class UIManager : MonoBehaviour
     public Button startTravelButton;
     public TextMeshProUGUI planetValueText;
     public Slider launchProgressBar;
-    public TextMeshProUGUI travelStatusText; // Il countdown durante il viaggio
+    public TextMeshProUGUI travelStatusText; 
     
     [Tooltip("NUOVO: Testo per mostrare Velocità Nave e Stima Tempo PRIMA di partire")]
     public TextMeshProUGUI travelInfoText; 
 
     [Header("OPTIONS MENU")]
-    public Button optionsButton;                   
+    public Button optionsButton;                    
     public OptionsMenu optionsMenuController;
 
     [Header("Visual Feedback")]
@@ -62,16 +65,21 @@ public class UIManager : MonoBehaviour
     private Coroutine _iridiumFeedbackRoutine;
     private bool _isShowingIridiumFeedback = false; 
 
-    public static UIManager Instance { get; private set; }
+    // --- NUOVO SISTEMA MENU ESCLUSIVI ---
+    private List<GameObject> _registeredMenus = new List<GameObject>();
 
     private void Awake()
     {
+        // --- MODIFICA SINGLETON ---
         if (Instance != null && Instance != this)
         {
-            Destroy(gameObject);
+            Destroy(gameObject); 
             return;
         }
         Instance = this;
+        
+        // RIMOSSO: DontDestroyOnLoad(transform.root.gameObject);
+        // Ci pensa il GameManager (che è nello stesso prefab root) a mantenere vivo tutto.
     }
 
     void Start()
@@ -81,6 +89,7 @@ public class UIManager : MonoBehaviour
         
         if (gm != null)
         {
+            gm.OnEconomyUpdated -= RefreshUI; 
             gm.OnEconomyUpdated += RefreshUI;
             
             if(prestigeButton) 
@@ -89,29 +98,78 @@ public class UIManager : MonoBehaviour
                 prestigeButton.onClick.AddListener(gm.PerformQuantumReset);
             }
 
-            if (pm != null)
-            {
-                if (startPreparationButton) 
-                {
-                    startPreparationButton.onClick.RemoveAllListeners();
-                    startPreparationButton.onClick.AddListener(pm.StartLaunchPreparation);
-                }
-                
-                if (startTravelButton) 
-                {
-                    startTravelButton.onClick.RemoveAllListeners();
-                    startTravelButton.onClick.AddListener(pm.StartInterplanetaryTravel);
-                }
-            }
+            SetupPlanetButtons(); 
 
             if (optionsButton != null && optionsMenuController != null)
             {
+                // Registriamo il menu opzioni
+                RegisterMenu(optionsMenuController.panelVisuals);
+
                 optionsButton.onClick.RemoveAllListeners();
                 optionsButton.onClick.AddListener(optionsMenuController.ToggleMenu);
             }
             
             SetupHoldButton();
             RefreshUI();
+        }
+    }
+
+    // --- NUOVI METODI PER GESTIONE MENU ---
+    
+    // I Manager chiameranno questo metodo in Start() per farsi conoscere
+    public void RegisterMenu(GameObject menuPanel)
+    {
+        if (menuPanel != null && !_registeredMenus.Contains(menuPanel))
+        {
+            _registeredMenus.Add(menuPanel);
+        }
+    }
+
+    // I Manager chiameranno questo metodo PRIMA di aprirsi
+    public void CloseAllMenusExcept(GameObject menuToKeepOpen)
+    {
+        // Rimuoviamo eventuali riferimenti nulli (in caso di cambi scena/distruzioni)
+        _registeredMenus.RemoveAll(x => x == null);
+
+        foreach (var menu in _registeredMenus)
+        {
+            // Saltiamo quello che vogliamo aprire
+            if (menu == menuToKeepOpen) continue;
+
+            // Se il menu è attivo, chiudiamolo
+            if (menu.activeSelf)
+            {
+                // Proviamo a chiudere elegantemente con l'effetto
+                UIPopupEffect effect = menu.GetComponent<UIPopupEffect>();
+                if (effect != null)
+                {
+                    effect.Close();
+                }
+                else
+                {
+                    // Chiusura brutale se non c'è l'effetto
+                    menu.SetActive(false);
+                }
+            }
+        }
+    }
+
+    // --------------------------------------
+
+    private void SetupPlanetButtons()
+    {
+        if (pm == null) return;
+        
+        if (startPreparationButton) 
+        {
+            startPreparationButton.onClick.RemoveAllListeners();
+            startPreparationButton.onClick.AddListener(pm.StartLaunchPreparation);
+        }
+        
+        if (startTravelButton) 
+        {
+            startTravelButton.onClick.RemoveAllListeners();
+            startTravelButton.onClick.AddListener(pm.StartInterplanetaryTravel);
         }
     }
     
@@ -134,6 +192,28 @@ public class UIManager : MonoBehaviour
     void OnDestroy()
     {
         if (gm != null) gm.OnEconomyUpdated -= RefreshUI;
+    }
+
+    void OnEnable()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    void OnDisable()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        gm = GameManager.Instance;
+        pm = PlanetManager.Instance;
+        
+        // Puliamo la lista menu quando cambiamo scena per evitare riferimenti a oggetti distrutti
+        // (Nota: I manager persistenti si ri-registreranno da soli, quelli di scena verranno distrutti)
+        _registeredMenus.RemoveAll(x => x == null);
+
+        RefreshUI();
     }
 
     public void ShowPureIridiumFeedback(int gainAmount)
@@ -251,10 +331,9 @@ public class UIManager : MonoBehaviour
         bool isTraveling = pm.isTraveling;
         bool isPreparing = pm.isPreparingForLaunch;
 
-        // Recuperiamo i dati di viaggio dinamici
         double totalDuration = pm.GetTotalTravelDuration();
         BigDouble shipSpeed = (SpaceshipManager.Instance != null) ? SpaceshipManager.Instance.GetTotalSpaceshipSpeed() : 0;
-        if (shipSpeed <= 0) shipSpeed = 10; // Fallback visivo
+        if (shipSpeed <= 0) shipSpeed = 10; 
 
         if (isTraveling)
         {
@@ -262,7 +341,6 @@ public class UIManager : MonoBehaviour
             if(startTravelButton) startTravelButton.gameObject.SetActive(false);
             if(launchProgressBar) launchProgressBar.gameObject.SetActive(false);
             
-            // Durante il viaggio mostriamo il countdown
             if(travelStatusText)
             {
                 travelStatusText.gameObject.SetActive(true);
@@ -275,7 +353,6 @@ public class UIManager : MonoBehaviour
                     travelStatusText.text = "Docking...";
             }
 
-            // Nascondiamo le info statiche durante il viaggio per pulizia
             if(travelInfoText) travelInfoText.gameObject.SetActive(false);
         }
         else if (isPreparing)
@@ -292,12 +369,10 @@ public class UIManager : MonoBehaviour
                     launchProgressBar.value = (float)(pm.launchPreparationProgress / energyRequirement).ToDouble();
             }
 
-            // Mostriamo le info anche durante la preparazione
             UpdateTravelInfoText(shipSpeed, totalDuration);
         }
         else
         {
-            // FASE IDLE o PRONTI A PARTIRE
             BigDouble energyRequirement = pm.GetLaunchEnergyRequirement();
             bool preparationComplete = pm.launchPreparationProgress >= energyRequirement && energyRequirement > 0;
 
@@ -309,7 +384,6 @@ public class UIManager : MonoBehaviour
             if(startPreparationButton) 
                 startPreparationButton.interactable = currentPlanetValue >= currentPlanet.requiredPlanetValue;
             
-            // Mostriamo le info stimate
             UpdateTravelInfoText(shipSpeed, totalDuration);
         }
     }
@@ -324,7 +398,6 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    // Formattazione hh:mm:ss pulita
     private string FormatTimeSpan(TimeSpan ts)
     {
         if (ts.TotalHours >= 1)

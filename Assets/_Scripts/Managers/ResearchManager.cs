@@ -8,8 +8,8 @@ public class ResearchManager : MonoBehaviour
     public static ResearchManager Instance { get; private set; }
 
     [Header("UI References")]
-    public GameObject menuPanel;          
-    public Transform listContent;          
+    public GameObject menuPanel;            
+    public Transform listContent;            
     public ResearchSlotUI slotPrefab;    
 
     [Header("Database")]
@@ -18,15 +18,35 @@ public class ResearchManager : MonoBehaviour
     [Header("Stato Runtime")]
     public List<ResearchItem> allResearches;
     
-    // CACHE DEGLI SLOT: Per evitare lag nello scroll
+    // CACHE DEGLI SLOT
     private List<ResearchSlotUI> _activeSlots = new List<ResearchSlotUI>();
 
-    private void Awake() => Instance = this;
+    private void Awake() 
+    {
+        if (Instance != null && Instance != this) 
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+    }
 
     private void Start()
     {
-        if(menuPanel) menuPanel.SetActive(false); 
-        if (allResearches == null || allResearches.Count == 0) InitializeDatabase();
+        if(menuPanel) 
+        {
+            menuPanel.SetActive(false);
+            
+            // --- REGISTRAZIONE MENU AL UIMANAGER ---
+            if (UIManager.Instance != null)
+                UIManager.Instance.RegisterMenu(menuPanel);
+        }
+        
+        if (allResearches == null || allResearches.Count == 0) 
+        {
+            InitializeDatabase();
+        }
+        
         InitializeUI();
         
         if(GameManager.Instance)
@@ -46,20 +66,26 @@ public class ResearchManager : MonoBehaviour
 
         if (!opening)
         {
+            // CHIUSURA
             UIPopupEffect effect = menuPanel.GetComponent<UIPopupEffect>();
             if (effect != null) effect.Close();
             else menuPanel.SetActive(false);
         }
         else
         {
+            // APERTURA - Chiudi prima gli altri!
+            if (UIManager.Instance != null)
+                UIManager.Instance.CloseAllMenusExcept(menuPanel);
+
             menuPanel.SetActive(true);
-            UpdateAllSlots(); // Aggiorna subito all'apertura
+            UpdateAllSlots(); 
         }
     }
 
     public void InitializeDatabase()
     {
         if (allResearches == null) allResearches = new List<ResearchItem>();
+        
         foreach (var def in researchDatabase)
         {
             if (!allResearches.Exists(r => r.id == def.id))
@@ -108,10 +134,10 @@ public class ResearchManager : MonoBehaviour
 
     void UpdateAllSlots()
     {
-        // Se il menù è chiuso, non sprecare CPU!
         if (menuPanel == null || !menuPanel.activeSelf) return;
         
-        // Usiamo la lista cache invece di cercare nei figli
+        _activeSlots.RemoveAll(s => s == null);
+
         for (int i = 0; i < _activeSlots.Count; i++)
         {
             _activeSlots[i].RefreshUI();

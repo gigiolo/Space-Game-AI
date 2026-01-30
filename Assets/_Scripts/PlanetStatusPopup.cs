@@ -14,30 +14,25 @@ public class PlanetStatusPopup : MonoBehaviour
     public Image planetIcon;
 
     [Header("--- Buttons & Progress ---")]
-    [Tooltip("Il tasto per avviare il caricamento (Start Preparation)")]
     public Button startPreparationButton;
-    
-    [Tooltip("Il tasto per partire (Start Travel) - Appare alla fine")]
     public Button startTravelButton;
-    
-    [Tooltip("La barra di caricamento (Slider)")]
     public Slider launchProgressBar;
-    
-    [Tooltip("Testo opzionale per la percentuale (es. '50%')")]
     public TextMeshProUGUI progressText;
 
     [Header("--- Settings ---")]
-    // L'Animator non serve più se usi UIPopupEffect, ma lo lascio per non rompere i riferimenti se decidi di tornare indietro.
     public Animator popupAnimator; 
 
     private bool isOpen = false;
 
     private void Start()
     {
-        // All'avvio spegniamo il pannello (se c'è UIPopupEffect si resetterà da solo)
-        if(contentPanel != null) contentPanel.SetActive(false);
+        if(contentPanel != null) 
+        {
+            contentPanel.SetActive(false);
+            if (UIManager.Instance != null)
+                UIManager.Instance.RegisterMenu(contentPanel);
+        }
 
-        // --- COLLEGAMENTO DEI BOTTONI ---
         if (startPreparationButton != null)
         {
             startPreparationButton.onClick.RemoveAllListeners();
@@ -54,14 +49,18 @@ public class PlanetStatusPopup : MonoBehaviour
             startTravelButton.onClick.AddListener(() => 
             {
                 if (PlanetManager.Instance != null) 
+                {
+                    // 1. Avvia la logica di viaggio
                     PlanetManager.Instance.StartInterplanetaryTravel();
+                    // 2. Chiudi immediatamente questo popup
+                    ClosePopup();
+                }
             });
         }
     }
 
     private void Update()
     {
-        // Aggiorniamo i dati se il popup è aperto OPPURE se il manager sta lavorando in background
         if (isOpen || (PlanetManager.Instance != null && PlanetManager.Instance.isPreparingForLaunch))
         {
             UpdatePlanetValue();
@@ -73,18 +72,16 @@ public class PlanetStatusPopup : MonoBehaviour
     {
         if (contentPanel != null) 
         {
-            // 1. Attiviamo l'oggetto. 
-            // Questo farà partire automaticamente l'OnEnable di UIPopupEffect (animazione apertura)
+            if (UIManager.Instance != null)
+                UIManager.Instance.CloseAllMenusExcept(contentPanel);
+
             contentPanel.SetActive(true);
             isOpen = true;
             
-            // 2. Aggiorniamo subito i testi
             UpdateStaticInfo();
             UpdatePlanetValue();
             UpdateLaunchStatus(); 
             
-            // NOTA: Se usi UIPopupEffect, l'Animator non serve. 
-            // Se lo hai rimosso dall'Inspector, questa riga viene ignorata.
             if (popupAnimator != null && contentPanel.GetComponent<UIPopupEffect>() == null) 
                 popupAnimator.Play("PopupOpen");
         }
@@ -94,22 +91,15 @@ public class PlanetStatusPopup : MonoBehaviour
     {
         if (contentPanel != null)
         {
-            // --- MODIFICA CHIAVE ---
-            // Cerchiamo se c'è l'effetto speciale sul pannello
             UIPopupEffect effect = contentPanel.GetComponent<UIPopupEffect>();
-
             if (effect != null)
             {
-                // Se c'è lo script, usiamo la sua chiusura elegante.
-                // Lui farà l'animazione e poi farà SetActive(false) alla fine.
                 effect.Close();
             }
             else
             {
-                // Fallback: se non hai messo lo script, chiude e basta (spegnimento brutale)
                 contentPanel.SetActive(false);
             }
-
             isOpen = false;
         }
     }
@@ -117,33 +107,24 @@ public class PlanetStatusPopup : MonoBehaviour
     private void UpdateStaticInfo()
     {
         if (PlanetManager.Instance == null) return;
-
         var planetData = PlanetManager.Instance.GetCurrentPlanetData();
         int currentIndex = PlanetManager.Instance.currentPlanetIndex;
-
         if (planetData != null)
         {
-            if (planetNameText != null) 
-                planetNameText.text = planetData.planetName;
-
-            if (multiplierText != null) 
-                multiplierText.text = $"Multi: x{FormatMultiplier(planetData.productionMultiplier)}";
-
-            if (descriptionText != null)
-                descriptionText.text = $"Planet #{currentIndex + 1}\nGravity: Stable";
+            if (planetNameText != null) planetNameText.text = planetData.planetName;
+            if (multiplierText != null) multiplierText.text = $"Multi: x{FormatMultiplier(planetData.productionMultiplier)}";
+            if (descriptionText != null) descriptionText.text = $"Planet #{currentIndex + 1}\nGravity: Stable";
         }
     }
 
     private void UpdatePlanetValue()
     {
         if (PlanetManager.Instance == null) return;
-
         var planetData = PlanetManager.Instance.GetCurrentPlanetData();
         if (planetData != null)
         {
             BigDouble currentVal = PlanetManager.Instance.CalculatePlanetValue();
             BigDouble requiredVal = planetData.requiredPlanetValue;
-
             if (planetValueText != null)
                 planetValueText.text = $"Value: {FormatNumber(currentVal)} / {FormatNumber(requiredVal)}";
         }
@@ -155,32 +136,23 @@ public class PlanetStatusPopup : MonoBehaviour
 
         bool isPrep = PlanetManager.Instance.isPreparingForLaunch;
         bool isTravel = PlanetManager.Instance.isTraveling;
-        
         BigDouble currentProgress = PlanetManager.Instance.launchPreparationProgress;
         BigDouble requiredEnergy = PlanetManager.Instance.GetLaunchEnergyRequirement();
-        
-        // Se non stiamo preparando (isPrep == false) e la barra non è vuota (> 10), 
-        // significa che il Manager ha terminato il processo con successo.
         bool isFinished = !isPrep && !isTravel && currentProgress > 10;
 
-        // 1. Gestione Barra di Progressione
         if (launchProgressBar != null)
         {
-            // Mostriamo la barra durante la preparazione O quando è finita (piena)
             bool showBar = isPrep || isFinished;
             launchProgressBar.gameObject.SetActive(showBar);
-
             if (showBar && requiredEnergy > 0)
             {
                 if (isFinished)
                 {
-                    // Se è finita, mostriamola piena al 100%
                     launchProgressBar.value = 1.0f;
                     if (progressText != null) progressText.text = "READY";
                 }
                 else
                 {
-                    // Durante il caricamento, calcolo normale
                     float progress = (float)(currentProgress / requiredEnergy).ToDouble();
                     launchProgressBar.value = progress;
                     if (progressText != null) progressText.text = $"{progress * 100:F0}%";
@@ -188,13 +160,10 @@ public class PlanetStatusPopup : MonoBehaviour
             }
         }
 
-        // 2. Gestione Bottoni
         if (startPreparationButton != null)
         {
-            // Il tasto Start si vede solo se NON stiamo facendo nulla e NON abbiamo finito
             bool showPrepBtn = !isPrep && !isTravel && !isFinished;
             startPreparationButton.gameObject.SetActive(showPrepBtn);
-
             if (showPrepBtn)
             {
                 var pData = PlanetManager.Instance.GetCurrentPlanetData();
@@ -205,15 +174,11 @@ public class PlanetStatusPopup : MonoBehaviour
 
         if (startTravelButton != null)
         {
-            // Il tasto Viaggio appare quando è FINITO
             startTravelButton.gameObject.SetActive(isFinished);
         }
     }
 
-    private string FormatMultiplier(BigDouble number)
-    {
-        return number < 1000 ? number.ToString("F2") : number.ToString("F0");
-    }
+    private string FormatMultiplier(BigDouble number) => number < 1000 ? number.ToString("F2") : number.ToString("F0");
 
     private string FormatNumber(BigDouble number)
     {

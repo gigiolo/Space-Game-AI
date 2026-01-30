@@ -20,8 +20,13 @@ public class LaunchSiteVisuals : MonoBehaviour
     public float surfaceRadius = 1.60f;
     [Range(0f, 90f)]
     public float maxLatitude = 60f;
-    public float minDistanceFromEmitters = 0.1f;
-    public float maxDistanceFromEmitters = 0.5f;
+    
+    [Tooltip("Distanza MINIMA da un emitter esistente (Zona di esclusione).")]
+    public float minDistanceFromEmitters = 0.15f; 
+    
+    [Tooltip("Distanza MASSIMA da un emitter esistente (Zona di inclusione). Il sito apparirà entro questo raggio da una colonia.")]
+    public float maxDistanceFromEmitters = 0.6f;
+    
     public int placementAttempts = 50;
 
     [Header("Post-Launch")]
@@ -185,20 +190,51 @@ public class LaunchSiteVisuals : MonoBehaviour
         }
     }
 
+    // --- METODO MODIFICATO PER LA LOGICA "VICINO MA NON TROPPO" ---
     private Vector3 FindValidPosition()
     {
         var existingPositions = populationVisuals != null ? populationVisuals.GetOccupiedPositions() : null;
         float maxY = Mathf.Sin(maxLatitude * Mathf.Deg2Rad);
+        
+        bool hasColonies = existingPositions != null && existingPositions.Count > 0;
 
         for (int i = 0; i < placementAttempts; i++)
         {
-            Vector3 direction = Random.onUnitSphere; 
-            Vector3 candidate = direction * surfaceRadius;
+            Vector3 candidate = Vector3.zero;
 
+            if (hasColonies)
+            {
+                // LOGICA SMART: Scegliamo un vicino esistente come ancora
+                Vector3 randomNeighbor = existingPositions[Random.Range(0, existingPositions.Count)];
+                
+                // Generiamo una direzione casuale (offset)
+                Vector3 randomOffsetDir = Random.onUnitSphere;
+                
+                // Calcoliamo una distanza casuale che sia:
+                // > Min Distance (per non sovrapporsi)
+                // < Max Distance (per stare "vicino")
+                float randomDist = Random.Range(minDistanceFromEmitters, maxDistanceFromEmitters);
+                
+                // Calcoliamo la posizione grezza
+                Vector3 roughPos = randomNeighbor + (randomOffsetDir * randomDist);
+                
+                // Proiettiamo sulla superficie sferica corretta
+                candidate = roughPos.normalized * surfaceRadius;
+            }
+            else
+            {
+                // Se non ci sono colonie (es. inizio gioco ma impossibile in questa fase), fallback casuale
+                candidate = Random.onUnitSphere * surfaceRadius;
+            }
+
+            // 1. Controllo Latitudine (Non troppo ai poli)
             float normalizedY = candidate.y / surfaceRadius;
             if (Mathf.Abs(normalizedY) > maxY) continue;
 
-            if (existingPositions != null && existingPositions.Count > 0)
+            // 2. Controllo Collisioni
+            // Anche se abbiamo generato "vicino" a un vicino, potremmo essere finiti 
+            // troppo vicini a un ALTRO vicino diverso. Controlliamo.
+            if (hasColonies)
             {
                 bool tooClose = false;
                 foreach (Vector3 existing in existingPositions)
@@ -212,8 +248,12 @@ public class LaunchSiteVisuals : MonoBehaviour
                 }
                 if (tooClose) continue;
             }
+            
+            // Se siamo arrivati qui, la posizione è valida
             return candidate;
         }
+        
+        // Se falliscono tutti i tentativi "smart" (es. pianeta pienissimo), fallback casuale puro
         return Random.onUnitSphere * surfaceRadius;
     }
 
@@ -234,16 +274,10 @@ public class LaunchSiteVisuals : MonoBehaviour
         return new Vector3(x, y, z);
     }
 
-    // --- NUOVO METODO AGGIUNTO ---
     public Vector3 GetCurrentWorldPosition()
     {
-        // Se non è attivo o non c'è direzione, ritorniamo zero
         if (!_isActive) return Vector3.zero;
-
-        // Ricostruiamo la posizione locale
         Vector3 localPos = _currentDirection * surfaceRadius;
-
-        // Convertiamo in Coordinate World basate sulla posizione/rotazione attuale del pianeta padre
         return transform.TransformPoint(localPos);
     }
 }

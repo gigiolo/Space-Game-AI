@@ -7,7 +7,7 @@ public class PlanetManager : MonoBehaviour
 {
     public static PlanetManager Instance { get; private set; }
 
-    // --- EVENTI NUOVI ---
+    // --- EVENTI ---
     public event Action OnLaunchPrepStarted;
     public event Action OnTravelStarted;
 
@@ -28,8 +28,11 @@ public class PlanetManager : MonoBehaviour
     [HideInInspector] public bool isTraveling = false;
     [HideInInspector] public DateTime travelStartTime;
 
-    // --- NUOVO: Durata fissata al momento della partenza ---
+    // Durata fissata al momento della partenza
     [HideInInspector] public double currentLockedDuration = 0f;
+
+    // --- NUOVO: Flag per indicare alla prossima scena di suonare l'animazione di atterraggio ---
+    [HideInInspector] public bool pendingLanding = false; 
 
     private void Awake()
     {
@@ -40,7 +43,8 @@ public class PlanetManager : MonoBehaviour
         else
         {
             Instance = this;
-            DontDestroyOnLoad(gameObject);
+            // RIMOSSO: DontDestroyOnLoad(transform.root.gameObject);
+            // Essendo parte del prefab Core_Systems, non serve.
         }
     }
 
@@ -68,7 +72,6 @@ public class PlanetManager : MonoBehaviour
         return null;
     }
 
-    // --- NUOVO METODO PRIVATO: Calcola la durata basandosi SOLO sulle stats attuali ---
     private double CalculateTheoreticalDuration()
     {
         PlanetData destination = GetNextPlanetData();
@@ -86,9 +89,6 @@ public class PlanetManager : MonoBehaviour
         return durationBig.ToDouble(); 
     }
 
-    // --- METODO PUBBLICO MODIFICATO ---
-    // Se stiamo viaggiando, restituisce il tempo bloccato.
-    // Se siamo fermi, restituisce la stima basata sulle navi attuali.
     public double GetTotalTravelDuration()
     {
         if (isTraveling && currentLockedDuration > 0)
@@ -158,7 +158,6 @@ public class PlanetManager : MonoBehaviour
     {
         TimeSpan travelTime = DateTime.UtcNow - travelStartTime;
         
-        // Usa GetTotalTravelDuration() che ora restituisce il tempo bloccato
         if (travelTime.TotalSeconds >= GetTotalTravelDuration())
         {
             CompleteTravel();
@@ -183,7 +182,6 @@ public class PlanetManager : MonoBehaviour
         
         GameManager.Instance.SaveGame();
 
-        // --- INVOCA EVENTO ---
         OnLaunchPrepStarted?.Invoke();
     }
 
@@ -192,14 +190,10 @@ public class PlanetManager : MonoBehaviour
         if (isTraveling || isPreparingForLaunch) return;
 
         isTraveling = true;
-        
-        // --- MODIFICA: Blocchiamo la durata ORA ---
         currentLockedDuration = CalculateTheoreticalDuration();
-        
         travelStartTime = DateTime.UtcNow;
         GameManager.Instance.SaveGame();
 
-        // --- INVOCA EVENTO ---
         OnTravelStarted?.Invoke();
     }
 
@@ -209,8 +203,7 @@ public class PlanetManager : MonoBehaviour
         isTraveling = false;
         currentLockedDuration = 0; 
         
-        // 2. [FIX IMPORTANTE] Reset stato Preparazione per il prossimo pianeta
-        // Se non resettiamo questo, il gioco penserà che siamo già pronti a ripartire
+        // 2. Reset stato Preparazione per il prossimo pianeta
         isPreparingForLaunch = false;
         launchPreparationProgress = 0;
         lockedLaunchRequirement = 0;
@@ -218,14 +211,43 @@ public class PlanetManager : MonoBehaviour
         // 3. Incremento Indice Pianeta
         currentPlanetIndex++;
 
+        // Segnaliamo che dobbiamo atterrare
+        pendingLanding = true;
+
         if (planets == null || currentPlanetIndex >= planets.Count)
         {
             currentPlanetIndex = (planets != null) ? planets.Count - 1 : 0;
             return;
         }
 
-        UnityEngine.SceneManagement.SceneManager.LoadScene(GetCurrentPlanetData().sceneName);
+        string nextSceneName = GetCurrentPlanetData().sceneName;
+
+        // --- CORREZIONE: Reset dei dati PRIMA di caricare la scena ---
+        
+        // A. Reset standard (mette EmitterCount = 1 di default)
         GameManager.Instance.PerformPlanetChangeReset();
+        
+        // B. Sovrascriviamo: Il pianeta deve essere deserto finché la nave non atterra (0 emitter)
+        GameManager.Instance.OverrideEmitterCount(0);
+
+        // C. FIX CRITICO: Resettiamo anche i dati visivi correnti in memoria, 
+        // così quando SaveGame viene chiamato, scriverà una lista vuota di luci.
+        if (GameManager.Instance.planetVisuals != null)
+        {
+            GameManager.Instance.planetVisuals.ResetVisuals();
+        }
+        
+        // D. Salviamo questo stato "pulito" IMMEDIATAMENTE
         GameManager.Instance.SaveGame();
+
+        // E. Ora carichiamo la scena. Quando la nuova scena farà LoadGame(), troverà 0 emitter e 0 luci.
+        if (SceneFader.Instance != null)
+        {
+            SceneFader.Instance.FadeAndLoadScene(nextSceneName, null);
+        }
+        else
+        {
+            UnityEngine.SceneManagement.SceneManager.LoadScene(nextSceneName);
+        }
     }
 }

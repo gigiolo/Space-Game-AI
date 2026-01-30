@@ -15,6 +15,7 @@ public class GameManager : MonoBehaviour
     public SpaceshipManager spaceshipManager; 
     public UITheme activeTheme; 
     
+    // Questo cambia a ogni scena, quindi va cercato dinamicamente
     public PlanetPopulationVisuals planetVisuals; 
     public GameObject[] emitters;
 
@@ -72,6 +73,9 @@ public class GameManager : MonoBehaviour
 
     // --- STATO & TIMER ---
     public BigDouble LastOfflineEarnings { get; private set; } = 0;
+    // --- NUOVO: Conteggio Emitter guadagnati offline ---
+    public int LastOfflineEmittersGained { get; private set; } = 0; 
+    
     public TimeSpan LastOfflineTimeSpan { get; private set; }
     public event Action OnEconomyUpdated;
     public event Action OnOfflineProductionCalculated;
@@ -88,9 +92,12 @@ public class GameManager : MonoBehaviour
     private float _rampDownStartMultiplier = 1.0f;
     private float _currentRampDownDuration = 0.0f;
 
-    // --- NUOVO: Variabile per memorizzare la posizione del sito di lancio ---
-    // Questa stringa salva le coordinate "X|Y|Z" per far ricomparire la particella al riavvio
+    // --- POSIZIONE SITO DI LANCIO ---
     public string StoredLaunchSitePosition { get; set; } = "";
+
+    // --- ROTAZIONE SOLE E TEMPO OFFLINE ---
+    public float StoredSunRotation { get; set; } = 0f;
+    public double PendingOfflineSeconds { get; set; } = 0f;
 
     // FORMULE
     public BigDouble RawProductionRate 
@@ -123,48 +130,22 @@ public class GameManager : MonoBehaviour
 
     private void Awake()
     {
-        // 1. Identifichiamo l'oggetto corrente
         string objInfo = $"'{gameObject.name}' (ID: {gameObject.GetInstanceID()})";
-        Debug.Log($"[GM_DEBUG] 🚀 Tentativo di avvio GameManager su: {objInfo}");
-
-        // 2. Controllo Singleton
+        
         if (Instance == null) 
         { 
-            Debug.Log($"[GM_DEBUG] ✅ Nessuna istanza precedente trovata. Sono io il prescelto! ({objInfo}). Eseguo DontDestroyOnLoad.");
             Instance = this; 
-            
-            // Importante: controlliamo se siamo figli di qualcuno
-            if (transform.parent != null)
-            {
-                Debug.LogWarning($"[GM_DEBUG] ⚠️ ATTENZIONE: Questo GameManager è figlio di '{transform.parent.name}'. DontDestroyOnLoad potrebbe non funzionare!");
-            }
-
-            DontDestroyOnLoad(gameObject);
+            DontDestroyOnLoad(transform.root.gameObject);
             InitializeGameState();
         }
         else 
         { 
-            // 3. Rilevamento Duplicato
-            string existingInfo = $"'{Instance.gameObject.name}' (ID: {Instance.gameObject.GetInstanceID()})";
-            Debug.LogError($"[GM_DEBUG] ❌ RILEVATO DUPLICATO! Esiste già un'istanza attiva su: {existingInfo}. Distruggo me stesso ({objInfo}).");
-            Destroy(gameObject); 
-            return; // Usciamo subito per evitare danni
+            Destroy(transform.root.gameObject); 
+            return; 
         }
         
         QualitySettings.vSyncCount = 0; 
         Application.targetFrameRate = 60; 
-    }
-
-    private void OnDestroy()
-    {
-        if (Instance == this)
-        {
-            Debug.LogWarning($"[GM_DEBUG] 💀 Il GameManager PRINCIPALE sta venendo distrutto! Se il gioco sta girando, questo è un BUG.");
-        }
-        else
-        {
-            Debug.Log($"[GM_DEBUG] 🗑️ Un GameManager duplicato è stato rimosso correttamente.");
-        }
     }
 
     private void OnEnable()
@@ -179,9 +160,11 @@ public class GameManager : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        targetResearchManager = FindFirstObjectByType<ResearchManager>();
-        spaceshipManager = FindFirstObjectByType<SpaceshipManager>(); 
+        if (targetResearchManager == null) targetResearchManager = FindFirstObjectByType<ResearchManager>();
+        if (spaceshipManager == null) spaceshipManager = FindFirstObjectByType<SpaceshipManager>();
+        
         planetVisuals = FindFirstObjectByType<PlanetPopulationVisuals>();
+        
         OnEconomyUpdated?.Invoke();
     }
 
@@ -189,8 +172,8 @@ public class GameManager : MonoBehaviour
     {
         if (activeTheme != null) ThemedUIElement.SetGlobalTheme(activeTheme);
         
-        if (targetResearchManager == null) targetResearchManager = FindFirstObjectByType<ResearchManager>();
-        if (spaceshipManager == null) spaceshipManager = FindFirstObjectByType<SpaceshipManager>(); 
+        if (targetResearchManager == null) targetResearchManager = ResearchManager.Instance;
+        if (spaceshipManager == null) spaceshipManager = SpaceshipManager.Instance;
         if (dailyGiftManager == null) dailyGiftManager = FindFirstObjectByType<DailyGiftManager>();
 
         LoadGame(); 
@@ -199,16 +182,6 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        // DEBUG: Aggiungi Iridio con tasti per testare
-        if (Input.GetKeyDown(KeyCode.I)) AddRawIridium(100);
-        if (Input.GetKeyDown(KeyCode.P)) AddPureIridium(10);
-
-        if (Input.GetKeyDown(KeyCode.K) || Input.touchCount >= 4)
-        {
-            PerformFullHardReset();
-            return;
-        }
-
         UpdateEnergyButtonState();
 
         BigDouble income = EffectiveIncomePerSec;
@@ -228,7 +201,8 @@ public class GameManager : MonoBehaviour
 
         double currentGrowthSpeed = EmitterAutoGrowthSpeed;
 
-        if (currentGrowthSpeed > 0 && EmitterCount < EmitterCap)
+        // La crescita parte SOLO se abbiamo almeno 1 Emitter.
+        if (currentGrowthSpeed > 0 && EmitterCount > 0 && EmitterCount < EmitterCap)
         {
             _emitterAccumulator += currentGrowthSpeed * Time.deltaTime;
             if (_emitterAccumulator >= 1.0)
@@ -236,7 +210,7 @@ public class GameManager : MonoBehaviour
                 int toAdd = (int)_emitterAccumulator; 
                 int spaceLeft = EmitterCap - EmitterCount;
                 int actualAdd = Mathf.Min(toAdd, spaceLeft);
-                _emitterAccumulator -= actualAdd;                      
+                _emitterAccumulator -= actualAdd;                                       
                 if (actualAdd < toAdd) _emitterAccumulator = 0;
 
                 if (actualAdd > 0)
@@ -247,8 +221,6 @@ public class GameManager : MonoBehaviour
                 }
             }
         }
-
-        if (Input.GetKeyDown(KeyCode.N)) AddInstantEmitters(5);
     }
 
     private void UpdateEnergyButtonState()
@@ -301,7 +273,7 @@ public class GameManager : MonoBehaviour
     {
         if (LifetimeEarnings < 1000) return 0;
         BigDouble baseVal = LifetimeEarnings / 1000;
-        return BigDouble.Floor(BigDouble.Pow(baseVal, 0.5));    
+        return BigDouble.Floor(BigDouble.Pow(baseVal, 0.5));     
     }
 
     public void RecalculateCaps()
@@ -333,13 +305,11 @@ public class GameManager : MonoBehaviour
             PlanetManager.Instance.isPreparingForLaunch = false;
             PlanetManager.Instance.isTraveling = false;
             PlanetManager.Instance.launchPreparationProgress = 0;
-            // Reset anche della durata bloccata per sicurezza
             PlanetManager.Instance.currentLockedDuration = 0;
         }
 
         if (planetVisuals != null) planetVisuals.ResetVisuals();
 
-        // Reset Ricerche
         if (targetResearchManager != null)
         {
             foreach(var res in targetResearchManager.allResearches)
@@ -347,7 +317,6 @@ public class GameManager : MonoBehaviour
             targetResearchManager.RecalculateAllResearches();
         }
 
-        // Reset Navi
         if (spaceshipManager != null)
         {
             foreach(var ship in spaceshipManager.fleet)
@@ -372,21 +341,15 @@ public class GameManager : MonoBehaviour
     {
         InitializeGameState();
 
-        if (targetResearchManager == null) 
-            targetResearchManager = FindFirstObjectByType<ResearchManager>();
+        if (targetResearchManager == null) targetResearchManager = ResearchManager.Instance;
+        if (spaceshipManager == null) spaceshipManager = SpaceshipManager.Instance;
 
-        if (spaceshipManager == null)
-            spaceshipManager = FindFirstObjectByType<SpaceshipManager>();
-
-        // Reset Ricerche
         if (targetResearchManager != null)
         {
             foreach(var res in targetResearchManager.allResearches)
                 res.currentLevel = 0;
             targetResearchManager.RecalculateAllResearches();
         }
-
-        // --- Le navi sono persistenti, quindi NON le resettiamo qui ---
 
         OnEconomyUpdated?.Invoke();
     }
@@ -395,7 +358,7 @@ public class GameManager : MonoBehaviour
     {
         CurrentEnergy = 0;
         LifetimeEarnings = 0;
-        EmitterCount = 1;
+        EmitterCount = 0; // MODIFICATO: Parte da 0 per aspettare il click
         LogisticsLevel = 1; 
         ResearchMultiplier = 1;
         LogisticsResearchBonus = 0;
@@ -405,8 +368,9 @@ public class GameManager : MonoBehaviour
         EmitterSpeedResearchBonus = 0; 
         _emitterAccumulator = 0;
         
-        // Reset della posizione del sito di lancio (verrà gestita da LaunchSiteVisuals)
+        LastOfflineEmittersGained = 0; 
         StoredLaunchSitePosition = ""; 
+        StoredSunRotation = 0f; 
         
         RecalculateCaps();
     }
@@ -423,6 +387,12 @@ public class GameManager : MonoBehaviour
         data.scientificNodes = ScientificNodes.ToString();
         data.rawIridium = RawIridium.ToString();
         data.pureIridium = PureIridium.ToString();
+
+        if (PlanetSunRotator.Instance != null)
+        {
+            StoredSunRotation = PlanetSunRotator.Instance.GetCurrentYRotation();
+        }
+        data.sunRotationY = StoredSunRotation;
         
         if (PlanetManager.Instance != null)
         {
@@ -432,8 +402,6 @@ public class GameManager : MonoBehaviour
             data.lockedLaunchRequirement = PlanetManager.Instance.lockedLaunchRequirement.ToString();
             data.isTraveling = PlanetManager.Instance.isTraveling;
             data.travelStartTimeBinary = PlanetManager.Instance.travelStartTime.ToBinary().ToString();
-
-            // --- NUOVO: Salva la durata bloccata per mantenere il tempo fisso ---
             data.lockedTravelDuration = PlanetManager.Instance.currentLockedDuration;
         }
 
@@ -442,7 +410,6 @@ public class GameManager : MonoBehaviour
         
         if (dailyGiftManager != null) dailyGiftManager.Save(data);
 
-        // Salva Ricerche
         if (targetResearchManager != null)
         {
             foreach (var item in targetResearchManager.allResearches)
@@ -452,7 +419,6 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // Salva Navi
         if (spaceshipManager != null)
         {
             foreach (var item in spaceshipManager.fleet)
@@ -462,7 +428,6 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        // --- NUOVO: Salviamo la posizione del sito di lancio ---
         data.launchSitePosition = StoredLaunchSitePosition;
 
         SaveManager.Save(data);
@@ -477,21 +442,26 @@ public class GameManager : MonoBehaviour
             ScientificNodes = 0;
             RawIridium = 0; 
             PureIridium = 0; 
+            StoredSunRotation = 0f;
             if (dailyGiftManager != null) dailyGiftManager.Initialize(null);
-            StoredLaunchSitePosition = ""; // Reset
+            StoredLaunchSitePosition = ""; 
             return; 
         }
 
         if (!string.IsNullOrEmpty(data.currentEnergy)) CurrentEnergy = BigDouble.Parse(data.currentEnergy);
         if (!string.IsNullOrEmpty(data.lifetimeEarnings)) LifetimeEarnings = BigDouble.Parse(data.lifetimeEarnings);
 
-        EmitterCount = data.emitterCount > 0 ? data.emitterCount : 1;
+        // Caricamento diretto, accetta anche 0
+        EmitterCount = data.emitterCount; 
+        
         LogisticsLevel = data.logisticsLevel > 0 ? data.logisticsLevel : 1;
 
         ScientificNodes = !string.IsNullOrEmpty(data.scientificNodes) ? BigDouble.Parse(data.scientificNodes) : 0;
         RawIridium = !string.IsNullOrEmpty(data.rawIridium) ? BigDouble.Parse(data.rawIridium) : 0;
         PureIridium = !string.IsNullOrEmpty(data.pureIridium) ? BigDouble.Parse(data.pureIridium) : 0;
-            
+        
+        StoredSunRotation = data.sunRotationY;
+
         if (PlanetManager.Instance != null)
         {
             PlanetManager.Instance.currentPlanetIndex = data.currentPlanetIndex;
@@ -509,7 +479,6 @@ public class GameManager : MonoBehaviour
                 PlanetManager.Instance.travelStartTime = DateTime.FromBinary(binaryTime);
             }
 
-            // --- NUOVO: Carica la durata bloccata ---
             PlanetManager.Instance.currentLockedDuration = data.lockedTravelDuration;
 
             PlanetData savedPlanet = PlanetManager.Instance.GetCurrentPlanetData();
@@ -537,15 +506,10 @@ public class GameManager : MonoBehaviour
         
         if (dailyGiftManager != null) dailyGiftManager.Initialize(data);
 
-        // --- NUOVO: Carichiamo la posizione del sito di lancio ---
         if (!string.IsNullOrEmpty(data.launchSitePosition))
-        {
             StoredLaunchSitePosition = data.launchSitePosition;
-        }
         else
-        {
             StoredLaunchSitePosition = "";
-        }
 
         if (!string.IsNullOrEmpty(data.lastSaveTime))
             HandleOfflineProgress(data.lastSaveTime);
@@ -555,11 +519,12 @@ public class GameManager : MonoBehaviour
     
     private void HandleOfflineProgress(string lastSaveTimeStr)
     {
+        LastOfflineEmittersGained = 0;
+
         if (PlanetManager.Instance != null && PlanetManager.Instance.isTraveling)
         {
             TimeSpan timeSinceTravelStart = DateTime.UtcNow - PlanetManager.Instance.travelStartTime;
             
-            // Usiamo il metodo dinamico del PlanetManager che ora gestisce il tempo bloccato
             if (timeSinceTravelStart.TotalSeconds >= PlanetManager.Instance.GetTotalTravelDuration())
             {
                 PlanetManager.Instance.CompleteTravel();
@@ -584,6 +549,7 @@ public class GameManager : MonoBehaviour
         if (timeAway.TotalSeconds < 0) timeAway = DateTime.Now - lastSaveTime; 
 
         double secondsAway = timeAway.TotalSeconds;
+        PendingOfflineSeconds = secondsAway;
 
         if (secondsAway > 1) 
         {
@@ -598,7 +564,8 @@ public class GameManager : MonoBehaviour
             }
 
             double offlineGrowthSpeed = EmitterAutoGrowthSpeed;
-            if (offlineGrowthSpeed > 0 && EmitterCount < EmitterCap)
+            // EmitterCount > 0: La crescita offline avviene solo se il pianeta è già stato attivato.
+            if (offlineGrowthSpeed > 0 && EmitterCount > 0 && EmitterCount < EmitterCap)
             {
                 double rawGrowth = offlineGrowthSpeed * actualSeconds * offlineProductionRatio;
                 _emitterAccumulator += rawGrowth;
@@ -613,6 +580,10 @@ public class GameManager : MonoBehaviour
                     {
                         EmitterCount += actualGained;
                         RecalculateCaps(); 
+
+                        LastOfflineEmittersGained = actualGained;
+
+                        if (planetVisuals != null) planetVisuals.RefreshLights();
                     }
                     if (EmitterCount >= EmitterCap) _emitterAccumulator = 0;
                     else _emitterAccumulator -= actualGained;
@@ -636,6 +607,15 @@ public class GameManager : MonoBehaviour
         if (_energyButtonState == EnergyButtonState.Idle) {
             _energyButtonState = EnergyButtonState.RampingUp;
             _energyButtonTimer = 0.0f;
+        }
+
+        // --- NUOVO: Start Manuale Scena 1 ---
+        // Se non abbiamo emitter E non stiamo aspettando una nave (pendingLanding)
+        // (La nave ha priorità su tutto. Se c'è una nave in arrivo, il bottone non deve generare l'emitter)
+        if (EmitterCount == 0 && PlanetManager.Instance != null && !PlanetManager.Instance.pendingLanding)
+        {
+             AddInstantEmitters(1);
+             SaveGame();
         }
     }
 
@@ -682,8 +662,6 @@ public class GameManager : MonoBehaviour
         OnEconomyUpdated?.Invoke();
     }
 
-    // --- METODI GESTIONE IRIDIO ---
-    
     public void AddRawIridium(BigDouble amount)
     {
         RawIridium += amount;
@@ -720,7 +698,6 @@ public class GameManager : MonoBehaviour
             OnEconomyUpdated?.Invoke();
         }
     }
-    // ------------------------------
 
     public void PerformFullHardReset()
     {
@@ -730,22 +707,19 @@ public class GameManager : MonoBehaviour
         ScientificNodes = 0; 
         LifetimeEarnings = 0; 
         CurrentEnergy = 0;
-        
         RawIridium = 0; 
         PureIridium = 0; 
-        
-        EmitterCount = 1; 
+        EmitterCount = 0; // MODIFICATO: Anche dopo l'hard reset si parte da 0
         LogisticsLevel = 1; 
-
-        // --- NUOVO: Reset posizione launch site ---
         StoredLaunchSitePosition = "";
+        StoredSunRotation = 0f;
         
         if (PlanetManager.Instance != null)
         {
             PlanetManager.Instance.currentPlanetIndex = 0;
             PlanetManager.Instance.isPreparingForLaunch = false;
             PlanetManager.Instance.isTraveling = false;
-            PlanetManager.Instance.currentLockedDuration = 0; // Reset
+            PlanetManager.Instance.currentLockedDuration = 0; 
         }
 
         if (targetResearchManager != null) {
@@ -765,5 +739,11 @@ public class GameManager : MonoBehaviour
              SceneManager.LoadScene(PlanetManager.Instance.planets[0].sceneName);
         else
              SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    public void OverrideEmitterCount(int value)
+    {
+        EmitterCount = value;
+        RecalculateCaps();
     }
 }

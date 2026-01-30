@@ -3,6 +3,7 @@ using UnityEngine;
 
 #if UNITY_ANDROID
 using Unity.Notifications.Android;
+using UnityEngine.Android; 
 #endif
 #if UNITY_IOS
 using Unity.Notifications.iOS;
@@ -16,20 +17,30 @@ public class LocalNotificationController : MonoBehaviour
 
     private void Awake()
     {
-        if (Instance == null) 
+        // Se esiste già un'istanza (quella persistente), e io non sono lei...
+        if (Instance != null && Instance != this) 
         {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
+            // Non faccio nulla. Aspetto che il GameManager (o il padre) mi distrugga 
+            // insieme a tutto il prefab duplicato.
+            // Non devo toccare Instance, altrimenti rompo il riferimento globale!
+            return;
         }
-        else 
-        {
-            Destroy(gameObject);
-        }
+
+        // Se sono io il prescelto:
+        Instance = this;
+        
+        // RIMOSSO: DontDestroyOnLoad(gameObject); 
+        // MOTIVO: Sono figlio di Core_Systems, ci pensa lui a salvarmi.
+
+        // FONDAMENTALE: Assicura che Unity metta in pausa il gioco quando premi Home.
+        Application.runInBackground = false;
     }
 
     private void Start()
     {
-        // Se siamo nell'Editor, non inizializziamo nulla per evitare errori
+        // Se non sono l'istanza ufficiale, mi fermo qui.
+        if (Instance != this) return;
+
         if (Application.isEditor) return;
 
         try 
@@ -50,7 +61,7 @@ public class LocalNotificationController : MonoBehaviour
         {
             Id = AndroidChannelId,
             Name = "Eventi di Gioco",
-            Importance = Importance.High,
+            Importance = Importance.High, // High = Suona e Vibra
             Description = "Notifiche per viaggi e ricompense",
         };
         AndroidNotificationCenter.RegisterNotificationChannel(channel);
@@ -60,9 +71,15 @@ public class LocalNotificationController : MonoBehaviour
     public void RequestPermissions()
     {
 #if UNITY_ANDROID
-        if (!UnityEngine.Android.Permission.HasUserAuthorizedPermission("android.permission.POST_NOTIFICATIONS"))
+        if (!Permission.HasUserAuthorizedPermission("android.permission.POST_NOTIFICATIONS"))
         {
-            UnityEngine.Android.Permission.RequestUserPermission("android.permission.POST_NOTIFICATIONS");
+            Permission.RequestUserPermission("android.permission.POST_NOTIFICATIONS");
+        }
+
+        string exactAlarmPerm = "android.permission.SCHEDULE_EXACT_ALARM";
+        if (!Permission.HasUserAuthorizedPermission(exactAlarmPerm))
+        {
+            Permission.RequestUserPermission(exactAlarmPerm);
         }
 #elif UNITY_IOS
         StartCoroutine(RequestAuthorizationIOS());
@@ -81,7 +98,6 @@ public class LocalNotificationController : MonoBehaviour
 
     public void ScheduleNotification(string title, string body, DateTime deliveryTime, int id)
     {
-        // 1. Sicurezza: Se siamo nell'Editor, simuliamo e basta.
         if (Application.isEditor)
         {
             Debug.Log($"[EDITOR MOCK] Notifica '{title}' programmata per: {deliveryTime} (ID: {id})");
@@ -92,7 +108,6 @@ public class LocalNotificationController : MonoBehaviour
 
         try
         {
-            // Pulisci vecchie notifiche con lo stesso ID
             CancelNotification(id);
 
 #if UNITY_ANDROID
@@ -105,7 +120,6 @@ public class LocalNotificationController : MonoBehaviour
                 LargeIcon = "large_icon" 
             };
 
-            // Metodo Universale: Salva l'ID generato da Android
             int generatedId = AndroidNotificationCenter.SendNotification(notification, AndroidChannelId);
             SaveNotificationId(id, generatedId);
 
@@ -122,6 +136,7 @@ public class LocalNotificationController : MonoBehaviour
                 Title = title,
                 Body = body,
                 ShowInForeground = true,
+                ForegroundPresentationOption = (PresentationOption.Alert | PresentationOption.Sound),
                 CategoryIdentifier = "game_event",
                 ThreadIdentifier = "main_thread",
                 Trigger = timeTrigger
@@ -133,7 +148,6 @@ public class LocalNotificationController : MonoBehaviour
         }
         catch (Exception e)
         {
-            // QUESTO È FONDAMENTALE: Se fallisce, logga l'errore ma NON bloccare il gioco!
             Debug.LogWarning($"[Notification Error] Impossibile schedulare: {e.Message}");
         }
     }
@@ -175,7 +189,7 @@ public class LocalNotificationController : MonoBehaviour
             iOSNotificationCenter.RemoveAllDeliveredNotifications();
 #endif
         }
-        catch { /* Ignora errori in cancellazione */ }
+        catch { }
     }
 
     private void SaveNotificationId(int logicId, int androidId)
@@ -187,6 +201,10 @@ public class LocalNotificationController : MonoBehaviour
     private int GetSavedNotificationId(int logicId)
     {
         string key = $"LocalNotif_Map_{logicId}";
-        return PlayerPrefs.HasKey(key) ? PlayerPrefs.GetInt(key) : -1;
+        if (PlayerPrefs.HasKey(key))
+        {
+            return PlayerPrefs.GetInt(key);
+        }
+        return -1; 
     }
 }

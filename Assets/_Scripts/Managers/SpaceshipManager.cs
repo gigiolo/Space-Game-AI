@@ -17,19 +17,37 @@ public class SpaceshipManager : MonoBehaviour
 
     [Header("Runtime State")]
     public List<SpaceshipItem> fleet = new List<SpaceshipItem>();
+    
+    private List<SpaceshipSlotUI> _activeSlots = new List<SpaceshipSlotUI>();
 
     private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
         Instance = this;
     }
 
     private void Start()
     {
-        if (menuPanel) menuPanel.SetActive(false);
-        InitializeDatabase();
+        if (menuPanel) 
+        {
+            menuPanel.SetActive(false);
+            
+            // --- REGISTRAZIONE MENU ---
+            if (UIManager.Instance != null)
+                UIManager.Instance.RegisterMenu(menuPanel);
+        }
+        
+        if (fleet == null || fleet.Count == 0) 
+        {
+            InitializeDatabase();
+        }
+        
         InitializeUI();
 
-        // Iscriviti agli eventi del GameManager per aggiornare la UI quando cambiano i soldi
         if (GameManager.Instance)
             GameManager.Instance.OnEconomyUpdated += RefreshAllSlots;
     }
@@ -40,9 +58,6 @@ public class SpaceshipManager : MonoBehaviour
             GameManager.Instance.OnEconomyUpdated -= RefreshAllSlots;
     }
 
-    // --- LOGICA CORE ---
-
-    // Calcola la velocità TOTALE di tutte le navi possedute
     public BigDouble GetTotalSpaceshipSpeed()
     {
         BigDouble total = 0;
@@ -57,9 +72,24 @@ public class SpaceshipManager : MonoBehaviour
     {
         if (menuPanel)
         {
-            bool isActive = !menuPanel.activeSelf;
-            menuPanel.SetActive(isActive);
-            if (isActive) RefreshAllSlots();
+            bool opening = !menuPanel.activeSelf;
+            
+            if (!opening)
+            {
+                // CHIUSURA
+                UIPopupEffect effect = menuPanel.GetComponent<UIPopupEffect>();
+                if (effect != null) effect.Close();
+                else menuPanel.SetActive(false);
+            }
+            else
+            {
+                // APERTURA - Chiudi gli altri!
+                if (UIManager.Instance != null)
+                    UIManager.Instance.CloseAllMenusExcept(menuPanel);
+
+                menuPanel.SetActive(true);
+                RefreshAllSlots();
+            }
         }
     }
 
@@ -69,7 +99,6 @@ public class SpaceshipManager : MonoBehaviour
         
         foreach (var def in spaceshipDatabase)
         {
-            // Se non abbiamo già questa nave in lista, aggiungiamola
             if (!fleet.Exists(x => x.info.id == def.id))
             {
                 fleet.Add(new SpaceshipItem(def));
@@ -79,7 +108,7 @@ public class SpaceshipManager : MonoBehaviour
 
     public void LoadFleetLevels(List<ResearchSaveData> savedData)
     {
-        InitializeDatabase(); // Assicura che la lista esista
+        InitializeDatabase(); 
         foreach (var ship in fleet) ship.currentLevel = 0;
 
         if (savedData != null)
@@ -93,18 +122,19 @@ public class SpaceshipManager : MonoBehaviour
         RefreshAllSlots();
     }
 
-    // --- UI & INTERACTION ---
-
     private void InitializeUI()
     {
         if (!listContent || !slotPrefab) return;
 
         foreach (Transform child in listContent) Destroy(child.gameObject);
+        _activeSlots.Clear();
 
         foreach (var ship in fleet)
         {
             var newSlot = Instantiate(slotPrefab, listContent);
+            newSlot.transform.localScale = Vector3.one; 
             newSlot.Setup(ship, OnBuyShip);
+            _activeSlots.Add(newSlot);
         }
     }
 
@@ -117,12 +147,10 @@ public class SpaceshipManager : MonoBehaviour
 
         if (ship.info.currencyType == SpaceshipCurrency.Energy)
         {
-            // Paga con Energia
             if (GameManager.Instance.TrySpend(cost)) purchaseSuccess = true;
         }
         else
         {
-            // Paga con Iridio Puro
             if (GameManager.Instance.TrySpendPureIridium(cost)) purchaseSuccess = true;
         }
 
@@ -130,7 +158,6 @@ public class SpaceshipManager : MonoBehaviour
         {
             ship.currentLevel++;
             RefreshAllSlots();
-            // Aggiorna anche la UI principale se necessario
             GameManager.Instance.ForceUIUpdate();
         }
     }
@@ -139,10 +166,11 @@ public class SpaceshipManager : MonoBehaviour
     {
         if (!menuPanel || !menuPanel.activeSelf) return;
 
-        foreach (Transform child in listContent)
+        _activeSlots.RemoveAll(s => s == null);
+
+        for(int i = 0; i < _activeSlots.Count; i++)
         {
-            var slot = child.GetComponent<SpaceshipSlotUI>();
-            if (slot) slot.RefreshUI();
+            _activeSlots[i].RefreshUI();
         }
     }
 }

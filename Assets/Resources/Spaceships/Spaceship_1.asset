@@ -16,7 +16,7 @@ MonoBehaviour:
   title: Bagnarola
   description: "Un catorcio\t"
   icon: {fileID: 0}
-  baseSpeed: 1
+  baseSpeed: 500
   upgradeType: 0
   upgradeValue: 0.1
   currencyType: 0
