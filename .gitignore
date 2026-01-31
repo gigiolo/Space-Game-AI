@@ -40,3 +40,7 @@ Desktop.ini
 # Se salvi i prompt o i raw generati dall'AI in una cartella specifica
 # e non vuoi caricarli online, aggiungi il percorso qui sotto:
 # /Assets/AI_Raw_Generations/
+
+# --- Custom Exclusions (File Giganti) ---
+# Ignora la mappa stellare che supera i 100MB
+Assets/Resources/starmap_2020_8k.exr

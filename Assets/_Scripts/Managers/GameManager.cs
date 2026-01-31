@@ -130,8 +130,6 @@ public class GameManager : MonoBehaviour
 
     private void Awake()
     {
-        string objInfo = $"'{gameObject.name}' (ID: {gameObject.GetInstanceID()})";
-        
         if (Instance == null) 
         { 
             Instance = this; 
@@ -201,7 +199,6 @@ public class GameManager : MonoBehaviour
 
         double currentGrowthSpeed = EmitterAutoGrowthSpeed;
 
-        // La crescita parte SOLO se abbiamo almeno 1 Emitter.
         if (currentGrowthSpeed > 0 && EmitterCount > 0 && EmitterCount < EmitterCap)
         {
             _emitterAccumulator += currentGrowthSpeed * Time.deltaTime;
@@ -210,7 +207,7 @@ public class GameManager : MonoBehaviour
                 int toAdd = (int)_emitterAccumulator; 
                 int spaceLeft = EmitterCap - EmitterCount;
                 int actualAdd = Mathf.Min(toAdd, spaceLeft);
-                _emitterAccumulator -= actualAdd;                                       
+                _emitterAccumulator -= actualAdd;                                                
                 if (actualAdd < toAdd) _emitterAccumulator = 0;
 
                 if (actualAdd > 0)
@@ -273,7 +270,7 @@ public class GameManager : MonoBehaviour
     {
         if (LifetimeEarnings < 1000) return 0;
         BigDouble baseVal = LifetimeEarnings / 1000;
-        return BigDouble.Floor(BigDouble.Pow(baseVal, 0.5));     
+        return BigDouble.Floor(BigDouble.Pow(baseVal, 0.5));      
     }
 
     public void RecalculateCaps()
@@ -290,15 +287,76 @@ public class GameManager : MonoBehaviour
         OnEconomyUpdated?.Invoke(); 
     }
 
+    // =================================================================================
+    // --- RESET QUANTISTICO AVANZATO ---
+    // =================================================================================
     public void PerformQuantumReset()
     {
         BigDouble nodesToGain = CalculatePotentialNodes();
         if (nodesToGain <= 0) return;
 
+        // 1. SALVIAMO I NODI SUBITO!
         ScientificNodes += nodesToGain;
+        Debug.Log($"[GameManager] Quantum Reset. Nodes gained: {nodesToGain}. New Total: {ScientificNodes}");
+
+        // 2. Cerchiamo se c'è l'effetto Rewind nella scena (Uso il nome corretto!)
+        var rewindEffect = FindFirstObjectByType<QuantumEffectManager>();
         
+        if (rewindEffect != null)
+        {
+            rewindEffect.PlayRewindEffect(
+                onTriggerFade: () => {
+                    StartFadeSequence(); 
+                },
+                onAnimationComplete: () => {
+                    ExecuteResetAndLoad(); 
+                }
+            );
+        }
+        else
+        {
+            // Fallback
+            StartFadeSequence();
+            StartCoroutine(DelayedResetFallback(1.0f));
+        }
+    }
+
+    // Gestisce solo la dissolvenza visiva
+    private void StartFadeSequence()
+    {
+        string targetSceneName = SceneManager.GetActiveScene().name; 
+        string loadingText = "QUANTUM REBIRTH";
+        Sprite loadingIcon = null;
+
+        if (PlanetManager.Instance != null && PlanetManager.Instance.planets.Count > 0)
+        {
+            PlanetData firstPlanet = PlanetManager.Instance.planets[0];
+            targetSceneName = firstPlanet.sceneName;
+            loadingText = firstPlanet.planetName; 
+            loadingIcon = firstPlanet.planetIcon; 
+        }
+
+        if (SceneFader.Instance != null)
+        {
+            SceneFader.Instance.SetLoadingInfo(loadingText, loadingIcon);
+            // Avviamo la transizione della scena SENZA callback logica
+            // La logica verrà chiamata da ExecuteResetAndLoad
+            SceneFader.Instance.FadeAndLoadScene(targetSceneName, null); 
+        }
+        else
+        {
+            SceneManager.LoadScene(targetSceneName);
+        }
+    }
+
+    // Esegue il reset effettivo dei dati (chiamato quando lo schermo è nero)
+    private void ExecuteResetAndLoad()
+    {
+        // 1. Resetta l'economia della run (Energy, Emitters, Upgrade)
+        // NOTA: ScientificNodes NON viene toccato qui.
         InitializeGameState(); 
 
+        // 2. Reset Logiche Manager
         if (PlanetManager.Instance != null)
         {
             PlanetManager.Instance.currentPlanetIndex = 0;
@@ -306,6 +364,7 @@ public class GameManager : MonoBehaviour
             PlanetManager.Instance.isTraveling = false;
             PlanetManager.Instance.launchPreparationProgress = 0;
             PlanetManager.Instance.currentLockedDuration = 0;
+            PlanetManager.Instance.pendingLanding = false; 
         }
 
         if (planetVisuals != null) planetVisuals.ResetVisuals();
@@ -323,20 +382,19 @@ public class GameManager : MonoBehaviour
                 ship.currentLevel = 0;
         }
 
+        // 3. Salva lo stato pulito (Con i Nodi salvati al passo 1)
         SaveGame(); 
         
-        if (PlanetManager.Instance != null && PlanetManager.Instance.planets.Count > 0)
-        {
-            SceneManager.LoadScene(PlanetManager.Instance.planets[0].sceneName);
-        }
-        else
-        {
-            SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
-        }
-
         OnEconomyUpdated?.Invoke();
     }
-    
+
+    private IEnumerator DelayedResetFallback(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        ExecuteResetAndLoad();
+    }
+    // =================================================================================
+
     public void PerformPlanetChangeReset()
     {
         InitializeGameState();
@@ -356,9 +414,11 @@ public class GameManager : MonoBehaviour
 
     private void InitializeGameState()
     {
+        // --- QUESTO METODO RESETTA SOLO LA RUN CORRENTE ---
+        // NON resettare ScientificNodes qui!
         CurrentEnergy = 0;
         LifetimeEarnings = 0;
-        EmitterCount = 0; // MODIFICATO: Parte da 0 per aspettare il click
+        EmitterCount = 0; 
         LogisticsLevel = 1; 
         ResearchMultiplier = 1;
         LogisticsResearchBonus = 0;

@@ -2,6 +2,7 @@ using UnityEngine;
 using System; 
 using System.Collections.Generic;
 using BreakInfinity;
+using UnityEngine.SceneManagement; // Necessario per il caricamento diretto (fallback)
 
 public class PlanetManager : MonoBehaviour
 {
@@ -220,7 +221,9 @@ public class PlanetManager : MonoBehaviour
             return;
         }
 
-        string nextSceneName = GetCurrentPlanetData().sceneName;
+        // Recuperiamo i dati del nuovo pianeta
+        PlanetData nextPlanet = GetCurrentPlanetData();
+        string nextSceneName = nextPlanet.sceneName;
 
         // --- CORREZIONE: Reset dei dati PRIMA di caricare la scena ---
         
@@ -230,8 +233,7 @@ public class PlanetManager : MonoBehaviour
         // B. Sovrascriviamo: Il pianeta deve essere deserto finché la nave non atterra (0 emitter)
         GameManager.Instance.OverrideEmitterCount(0);
 
-        // C. FIX CRITICO: Resettiamo anche i dati visivi correnti in memoria, 
-        // così quando SaveGame viene chiamato, scriverà una lista vuota di luci.
+        // C. FIX CRITICO: Resettiamo anche i dati visivi correnti in memoria
         if (GameManager.Instance.planetVisuals != null)
         {
             GameManager.Instance.planetVisuals.ResetVisuals();
@@ -240,13 +242,16 @@ public class PlanetManager : MonoBehaviour
         // D. Salviamo questo stato "pulito" IMMEDIATAMENTE
         GameManager.Instance.SaveGame();
 
-        // E. Ora carichiamo la scena. Quando la nuova scena farà LoadGame(), troverà 0 emitter e 0 luci.
+        // E. MODIFICA VISIVA: Usiamo SceneFader se disponibile
         if (SceneFader.Instance != null)
         {
+            // Impostiamo Icona e Nome del nuovo pianeta
+            SceneFader.Instance.SetLoadingInfo(nextPlanet.planetName, nextPlanet.planetIcon);
             SceneFader.Instance.FadeAndLoadScene(nextSceneName, null);
         }
         else
         {
+            // Fallback: caricamento diretto
             UnityEngine.SceneManagement.SceneManager.LoadScene(nextSceneName);
         }
     }

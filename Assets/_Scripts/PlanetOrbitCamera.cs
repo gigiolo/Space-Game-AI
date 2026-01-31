@@ -1,6 +1,6 @@
 using UnityEngine;
 using System.Collections;
-using UnityEngine.EventSystems; // NECESSARIO PER RILEVARE I CLICK SUI BOTTONI
+using UnityEngine.EventSystems;
 
 public class PlanetOrbitCamera : MonoBehaviour
 {
@@ -80,8 +80,7 @@ public class PlanetOrbitCamera : MonoBehaviour
         // 1. Blocco Totale (da UI Blockers o Eventi)
         if (IsInputBlocked) return;
 
-        // 2. NUOVO: Controllo se stiamo toccando un bottone o un pannello UI
-        // Se il puntatore è sopra la UI, IGNORIAMO la rotazione della camera
+        // 2. Controllo se stiamo toccando un bottone o un pannello UI
         if (IsPointerOverUIObject()) return;
 
         // 3. Input Touch (Mobile)
@@ -101,23 +100,18 @@ public class PlanetOrbitCamera : MonoBehaviour
     }
 
     // --- METODO DI CONTROLLO UI ---
-    // Ritorna TRUE se stiamo cliccando/toccando un elemento della Canvas
     private bool IsPointerOverUIObject()
     {
-        // A. Controllo Touch (per Mobile)
         if (Input.touchCount > 0)
         {
             return EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId);
         }
-        
-        // B. Controllo Mouse (per Editor/PC)
         return EventSystem.current.IsPointerOverGameObject();
     }
 
     // --- METODO PUBBLICO: Avvia la rotazione cinematica ---
     public void AnimateToLookAt(Vector3 worldPoint, float angleOffset, float duration, System.Action onComplete)
     {
-        // Interrompiamo eventuali coroutine precedenti per evitare conflitti
         StopAllCoroutines();
         StartCoroutine(AnimateRotationRoutine(worldPoint, angleOffset, duration, onComplete));
     }
@@ -125,19 +119,13 @@ public class PlanetOrbitCamera : MonoBehaviour
     private IEnumerator AnimateRotationRoutine(Vector3 worldPoint, float offset, float duration, System.Action onComplete)
     {
         _isAnimating = true;
-        IsInputBlocked = true; // Blocchiamo l'input utente durante l'animazione
+        IsInputBlocked = true; 
 
-        // 1. Calcoliamo la direzione dal Centro del Pianeta al Sito di Lancio
         Vector3 directionFromCenter = (worldPoint - planetTarget.position).normalized;
-
-        // 2. Calcoliamo la rotazione necessaria.
         Quaternion targetLookRotation = Quaternion.LookRotation(-directionFromCenter);
         float targetBaseAngle = targetLookRotation.eulerAngles.y;
-
-        // 3. Aggiungiamo l'offset desiderato
         float finalAngle = targetBaseAngle + offset;
 
-        // 4. Calcolo del percorso più breve (Shortest Path)
         float startRotation = currentAngleH;
         float deltaAngle = Mathf.DeltaAngle(startRotation, finalAngle);
         
@@ -147,25 +135,18 @@ public class PlanetOrbitCamera : MonoBehaviour
         {
             timer += Time.deltaTime;
             float t = timer / duration;
-            
-            // SmoothStep per un movimento morbido
             t = t * t * (3f - 2f * t); 
 
-            // Interpoliamo l'angolo target
             targetAngleH = startRotation + (deltaAngle * t);
-            
-            // Forziamo anche currentAngleH per controllo totale durante la cinematica
             currentAngleH = targetAngleH; 
 
             yield return null;
         }
 
-        // 5. Fine sicura
         targetAngleH = startRotation + deltaAngle;
         currentAngleH = targetAngleH;
         
         _isAnimating = false;
-        
         onComplete?.Invoke();
     }
 }

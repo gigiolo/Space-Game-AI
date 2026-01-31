@@ -4073,6 +4073,7 @@ GameObject:
   - component: {fileID: 8234648128034643185}
   - component: {fileID: 8290179937385808995}
   - component: {fileID: 1998189941801834552}
+  - component: {fileID: 4954893186701575855}
   m_Layer: 5
   m_Name: Quantic_Reset_BTN
   m_TagString: Untagged
@@ -4183,7 +4184,34 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 8290179937385808995}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls: []
+      m_Calls:
+      - m_Target: {fileID: 7085857523569189706}
+        m_TargetAssemblyTypeName: GameManager, Assembly-CSharp
+        m_MethodName: PerformQuantumReset
+        m_Mode: 1
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: 
+          m_BoolArgument: 0
+        m_CallState: 2
+--- !u!114 &4954893186701575855
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2948255020879325631}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3921eb924a7511543beaa907a23145e8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ColorInvertEffect
+  backgroundFill: {fileID: 142320466170464426}
+  iconGraphic: {fileID: 8913445919896934845}
+  duration: 0.1
 --- !u!1 &2971037330968336939
 GameObject:
   m_ObjectHideFlags: 0
@@ -4915,6 +4943,7 @@ GameObject:
   - component: {fileID: 5746162749711636217}
   - component: {fileID: 3989746523927214520}
   - component: {fileID: 1351473632475015588}
+  - component: {fileID: 2163149496292037950}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -5058,6 +5087,18 @@ MonoBehaviour:
   optionsMenuController: {fileID: 2600731179475419977}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   warningColor: {r: 1, g: 0.3, b: 0.3, a: 1}
+--- !u!225 &2163149496292037950
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3325860540342167340}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &3441852939555343798
 GameObject:
   m_ObjectHideFlags: 0
@@ -9606,8 +9647,8 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6194994692625933921}
-  - {fileID: 2362176875388160710}
   - {fileID: 1008118651244075199}
+  - {fileID: 2362176875388160710}
   m_Father: {fileID: 4285967252644490477}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5800006882149485281
@@ -14750,6 +14791,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: SceneFader
       objectReference: {fileID: 0}
+    - target: {fileID: 7943725928405530175, guid: 5aaea6db6f518284589b5f9a0200dbec, type: 3}
+      propertyPath: loadingText
+      value: 
+      objectReference: {fileID: 9130978925961288328}
+    - target: {fileID: 7943725928405530175, guid: 5aaea6db6f518284589b5f9a0200dbec, type: 3}
+      propertyPath: loadingIconImage
+      value: 
+      objectReference: {fileID: 5246158996813054990}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -14760,6 +14809,28 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 3960495800980303054, guid: 5aaea6db6f518284589b5f9a0200dbec, type: 3}
   m_PrefabInstance: {fileID: 4305273178854439620}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &5246158996813054990 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8318569533017276106, guid: 5aaea6db6f518284589b5f9a0200dbec, type: 3}
+  m_PrefabInstance: {fileID: 4305273178854439620}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
+--- !u!114 &9130978925961288328 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4974410308062978124, guid: 5aaea6db6f518284589b5f9a0200dbec, type: 3}
+  m_PrefabInstance: {fileID: 4305273178854439620}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
 --- !u!1001 &5811926332939818764
 PrefabInstance:
   m_ObjectHideFlags: 0

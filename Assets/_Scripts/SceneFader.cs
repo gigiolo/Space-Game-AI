@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using TMPro; // NECESSARIO PER I TESTI
 using System.Collections;
 
 public class SceneFader : MonoBehaviour
@@ -24,15 +25,17 @@ public class SceneFader : MonoBehaviour
     [Tooltip("Il CanvasGroup dell'oggetto LOADINGCONTENT (Icona + Testo)")]
     public CanvasGroup contentCanvasGroup;
 
+    [Header("Contenuto Dinamico")] // <--- NUOVO
+    public Image loadingIconImage;
+    public TextMeshProUGUI loadingText;
+
     private void Awake()
     {
         if (Instance == null)
         {
             Instance = this;
 
-            // --- FIX ERRORE ROOT ---
             // Se questo oggetto non ha genitori (è root), lo rendiamo persistente.
-            // Se ha un genitore (es. Core_Systems), sarà il genitore a gestire la persistenza.
             if (transform.parent == null)
             {
                 DontDestroyOnLoad(gameObject);
@@ -57,6 +60,18 @@ public class SceneFader : MonoBehaviour
         }
     }
 
+    // --- NUOVO METODO PER IMPOSTARE GRAFICA ---
+    public void SetLoadingInfo(string text, Sprite icon)
+    {
+        if (loadingText != null) loadingText.text = text;
+        
+        if (loadingIconImage != null)
+        {
+            loadingIconImage.sprite = icon;
+            loadingIconImage.gameObject.SetActive(icon != null);
+        }
+    }
+
     public void FadeAndLoadScene(string sceneName, System.Action onSceneLoaded = null)
     {
         StartCoroutine(SequenceRoutine(sceneName, onSceneLoaded));
@@ -67,24 +82,17 @@ public class SceneFader : MonoBehaviour
         // Blocchiamo i click subito
         if (backgroundCanvasGroup) backgroundCanvasGroup.blocksRaycasts = true;
 
-        // --------------------------------------------------------
         // FASE 1: Dissolvenza SFONDO (0 -> 1)
-        // --------------------------------------------------------
         yield return StartCoroutine(FadeCanvasGroup(backgroundCanvasGroup, 0f, 1f, backgroundFadeDuration));
 
-        // --------------------------------------------------------
         // FASE 2: Dissolvenza CONTENUTO (0 -> 1)
-        // --------------------------------------------------------
         // Iniziamo a caricare la scena in background MENTRE appare il logo
         AsyncOperation op = SceneManager.LoadSceneAsync(sceneName);
         op.allowSceneActivation = false; // Blocchiamo l'attivazione finché non siamo pronti
 
         yield return StartCoroutine(FadeCanvasGroup(contentCanvasGroup, 0f, 1f, contentFadeDuration));
 
-        // --------------------------------------------------------
         // FASE 3: Attesa (Stay Duration)
-        // --------------------------------------------------------
-        // Aspettiamo i secondi richiesti (es. 2.0s) per far leggere il testo/vedere il logo
         yield return new WaitForSecondsRealtime(contentStayDuration);
 
         // Nel frattempo, assicuriamoci che la scena abbia finito di caricare in memoria (90%)
@@ -93,9 +101,7 @@ public class SceneFader : MonoBehaviour
             yield return null;
         }
 
-        // --------------------------------------------------------
         // FASE 4: Attivazione Scena & Logica
-        // --------------------------------------------------------
         op.allowSceneActivation = true;
         
         // Aspettiamo che la nuova scena sia effettivamente attiva
@@ -104,24 +110,20 @@ public class SceneFader : MonoBehaviour
             yield return null;
         }
 
-        // Eseguiamo la callback (es. Reset Emitter a 0) ORA che la scena è caricata ma lo schermo è ancora coperto
+        // --- PUNTO CRITICO: Eseguiamo la logica di Reset (callback) ORA ---
+        // Lo schermo è nero e coperto dall'icona, quindi il giocatore non vede gli scatti
         onSceneLoaded?.Invoke();
 
-        // --------------------------------------------------------
         // FASE 5: Dissolvenza Inversa CONTENUTO (1 -> 0)
-        // --------------------------------------------------------
         yield return StartCoroutine(FadeCanvasGroup(contentCanvasGroup, 1f, 0f, contentFadeDuration));
 
-        // --------------------------------------------------------
         // FASE 6: Dissolvenza Inversa SFONDO (1 -> 0)
-        // --------------------------------------------------------
         yield return StartCoroutine(FadeCanvasGroup(backgroundCanvasGroup, 1f, 0f, backgroundFadeDuration));
 
         // Sblocchiamo i click alla fine
         if (backgroundCanvasGroup) backgroundCanvasGroup.blocksRaycasts = false;
     }
 
-    // Helper generico per fare fade di qualsiasi CanvasGroup
     private IEnumerator FadeCanvasGroup(CanvasGroup cg, float start, float end, float duration)
     {
         if (cg == null) yield break;

@@ -8,6 +8,9 @@ public class PlanetData : ScriptableObject
     [Tooltip("The name of the planet.")]
     public string planetName;
 
+    [Tooltip("L'icona da mostrare nella schermata di caricamento.")]
+    public Sprite planetIcon; // <--- NUOVO CAMPO
+
     [Tooltip("The name of the scene to load for this planet.")]
     public string sceneName;
 
