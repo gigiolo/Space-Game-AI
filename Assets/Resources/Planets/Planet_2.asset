@@ -12,13 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 66016a23d69cd6244b5518a58af1aeb9, type: 3}
   m_Name: Planet_2
   m_EditorClassIdentifier: Assembly-CSharp::PlanetData
-  planetName: Planet_2
+  planetName: Kyrion - 223
+  planetIcon: {fileID: 0}
   sceneName: Scene_planet2
+  visualData: {fileID: 0}
   travelDistance:
-    mantissa: 1
+    mantissa: 9
     exponent: 3
   requiredPlanetValue:
-    mantissa: 1.099
+    mantissa: 1
     exponent: 3
   productionMultiplier:
     mantissa: 9

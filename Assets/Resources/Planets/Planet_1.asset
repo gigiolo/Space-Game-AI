@@ -12,18 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 66016a23d69cd6244b5518a58af1aeb9, type: 3}
   m_Name: Planet_1
   m_EditorClassIdentifier: Assembly-CSharp::PlanetData
-  planetName: Planet_1
-  planetIcon: {fileID: 21300000, guid: 5539ac42be341a6449d04fd2e146b37a, type: 3}
+  planetName: Mars - 623
+  planetIcon: {fileID: 0}
   sceneName: Scene_planet1
+  visualData: {fileID: 11400000, guid: 74ff73ea8d8b3724990ab4d3a369709c, type: 2}
   travelDistance:
     mantissa: 0
     exponent: 0
   requiredPlanetValue:
-    mantissa: 9
-    exponent: 2
+    mantissa: 1
+    exponent: 3
   productionMultiplier:
     mantissa: 1
-    exponent: 1
+    exponent: 2
   balanceFactor:
     mantissa: 1
-    exponent: 1
+    exponent: 0

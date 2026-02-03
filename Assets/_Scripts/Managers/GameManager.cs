@@ -10,6 +10,11 @@ public class GameManager : MonoBehaviour
     // --- SINGLETON ---
     public static GameManager Instance { get; private set; }
 
+    // --- EVENTI ---
+    public event Action OnEconomyUpdated;
+    public event Action OnOfflineProductionCalculated;
+    public event Action OnFirstInput; 
+
     [Header("--- COLLEGAMENTI ---")]
     public ResearchManager targetResearchManager; 
     public SpaceshipManager spaceshipManager; 
@@ -77,8 +82,7 @@ public class GameManager : MonoBehaviour
     public int LastOfflineEmittersGained { get; private set; } = 0; 
     
     public TimeSpan LastOfflineTimeSpan { get; private set; }
-    public event Action OnEconomyUpdated;
-    public event Action OnOfflineProductionCalculated;
+
     private float _uiRefreshTimer = 0f;
     private float _uiRefreshRate = 0.05f;
 
@@ -98,6 +102,9 @@ public class GameManager : MonoBehaviour
     // --- ROTAZIONE SOLE E TEMPO OFFLINE ---
     public float StoredSunRotation { get; set; } = 0f;
     public double PendingOfflineSeconds { get; set; } = 0f;
+
+    // --- INTRO STATE ---
+    public bool IsFirstSession { get; set; } = true; // <--- NUOVO
 
     // FORMULE
     public BigDouble RawProductionRate 
@@ -207,7 +214,7 @@ public class GameManager : MonoBehaviour
                 int toAdd = (int)_emitterAccumulator; 
                 int spaceLeft = EmitterCap - EmitterCount;
                 int actualAdd = Mathf.Min(toAdd, spaceLeft);
-                _emitterAccumulator -= actualAdd;                                                
+                _emitterAccumulator -= actualAdd;                                                 
                 if (actualAdd < toAdd) _emitterAccumulator = 0;
 
                 if (actualAdd > 0)
@@ -270,7 +277,7 @@ public class GameManager : MonoBehaviour
     {
         if (LifetimeEarnings < 1000) return 0;
         BigDouble baseVal = LifetimeEarnings / 1000;
-        return BigDouble.Floor(BigDouble.Pow(baseVal, 0.5));      
+        return BigDouble.Floor(BigDouble.Pow(baseVal, 0.5));        
     }
 
     public void RecalculateCaps()
@@ -278,7 +285,8 @@ public class GameManager : MonoBehaviour
         LogisticsCap = 5000 + (LogisticsLevel * 50) + LogisticsResearchBonus; 
         double bonusSeconds = StorageResearchBonus.ToDouble() * 1800;
         MaxOfflineSeconds = 7200 + bonusSeconds;
-        EmitterCap = 5 + EmitterCapResearchBonus;
+        // MODIFICA: Il limite base passa da 5 a 1
+        EmitterCap = 1 + EmitterCapResearchBonus;
     }
 
     public void UpdateCapsFromResearch() 
@@ -438,6 +446,7 @@ public class GameManager : MonoBehaviour
     public void SaveGame()
     {
         SaveData data = new SaveData();
+        data.isFirstSession = IsFirstSession; // <--- NUOVO
         data.currentEnergy = CurrentEnergy.ToString();
         data.lifetimeEarnings = LifetimeEarnings.ToString();
         data.emitterCount = EmitterCount;
@@ -505,8 +514,11 @@ public class GameManager : MonoBehaviour
             StoredSunRotation = 0f;
             if (dailyGiftManager != null) dailyGiftManager.Initialize(null);
             StoredLaunchSitePosition = ""; 
+            IsFirstSession = true; // Default
             return; 
         }
+
+        IsFirstSession = data.isFirstSession; // <--- NUOVO
 
         if (!string.IsNullOrEmpty(data.currentEnergy)) CurrentEnergy = BigDouble.Parse(data.currentEnergy);
         if (!string.IsNullOrEmpty(data.lifetimeEarnings)) LifetimeEarnings = BigDouble.Parse(data.lifetimeEarnings);
@@ -571,7 +583,8 @@ public class GameManager : MonoBehaviour
         else
             StoredLaunchSitePosition = "";
 
-        if (!string.IsNullOrEmpty(data.lastSaveTime))
+        // Se è la prima sessione, NON calcolare l'offline progress
+        if (!IsFirstSession && !string.IsNullOrEmpty(data.lastSaveTime))
             HandleOfflineProgress(data.lastSaveTime);
 
         OnEconomyUpdated?.Invoke();
@@ -669,9 +682,16 @@ public class GameManager : MonoBehaviour
             _energyButtonTimer = 0.0f;
         }
 
-        // --- NUOVO: Start Manuale Scena 1 ---
+        // --- NUOVO: Trigger Evento Intro ---
+        // Se è la prima sessione e non l'abbiamo ancora marcata come completata
+        if (IsFirstSession)
+        {
+            OnFirstInput?.Invoke();
+        }
+        // -----------------------------------
+
+        // Start Manuale Scena 1
         // Se non abbiamo emitter E non stiamo aspettando una nave (pendingLanding)
-        // (La nave ha priorità su tutto. Se c'è una nave in arrivo, il bottone non deve generare l'emitter)
         if (EmitterCount == 0 && PlanetManager.Instance != null && !PlanetManager.Instance.pendingLanding)
         {
              AddInstantEmitters(1);
@@ -769,10 +789,11 @@ public class GameManager : MonoBehaviour
         CurrentEnergy = 0;
         RawIridium = 0; 
         PureIridium = 0; 
-        EmitterCount = 0; // MODIFICATO: Anche dopo l'hard reset si parte da 0
+        EmitterCount = 0; 
         LogisticsLevel = 1; 
         StoredLaunchSitePosition = "";
         StoredSunRotation = 0f;
+        IsFirstSession = true; // Reset Intro
         
         if (PlanetManager.Instance != null)
         {

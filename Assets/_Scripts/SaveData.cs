@@ -6,6 +6,9 @@ public class SaveData
 {
     public string lastSaveTime;
 
+    // --- PRIMA SESSIONE ---
+    public bool isFirstSession = true; // <--- NUOVO: Default a true
+
     // --- ECONOMIA BASE ---
     public string currentEnergy;
     public string lifetimeEarnings;
@@ -13,7 +16,7 @@ public class SaveData
     public int logisticsLevel;
     
     // --- NUOVO: Rotazione Sole/Pianeta ---
-    public float sunRotationY; // <--- AGGIUNTO QUI
+    public float sunRotationY;
 
     // --- RICERCHE & NAVI ---
     public List<ResearchSaveData> researches = new List<ResearchSaveData>();

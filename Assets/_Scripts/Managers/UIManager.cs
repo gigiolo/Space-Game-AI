@@ -5,11 +5,15 @@ using TMPro;
 using BreakInfinity; 
 using System; 
 using System.Collections; 
-using System.Collections.Generic; // Necessario per le Liste
+using System.Collections.Generic; 
 
 public class UIManager : MonoBehaviour
 {
     public static UIManager Instance { get; private set; }
+
+    [Header("--- INTRO & VISIBILITY ---")]
+    [Tooltip("Trascina qui l'oggetto 'MainHUD' che raggruppa TopDeck, SideButtons, BottomDeck (tranne EnergyButton)")]
+    public CanvasGroup mainHUDGroup; // <--- NUOVO: Riferimento al gruppo HUD
 
     [Header("Top HUD - Standard")]
     public TextMeshProUGUI scoreText;                 
@@ -77,9 +81,6 @@ public class UIManager : MonoBehaviour
             return;
         }
         Instance = this;
-        
-        // RIMOSSO: DontDestroyOnLoad(transform.root.gameObject);
-        // Ci pensa il GameManager (che è nello stesso prefab root) a mantenere vivo tutto.
     }
 
     void Start()
@@ -114,9 +115,34 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    // --- NUOVI METODI PER GESTIONE MENU ---
-    
-    // I Manager chiameranno questo metodo in Start() per farsi conoscere
+    // --- NUOVO: METODO PER NASCONDERE/MOSTRARE HUD PER INTRO ---
+    public void SetHUDVisibility(bool visible, float duration = 0.5f)
+    {
+        if (mainHUDGroup == null) return;
+        StartCoroutine(FadeCanvasGroup(mainHUDGroup, visible ? 1f : 0f, duration));
+    }
+
+    private IEnumerator FadeCanvasGroup(CanvasGroup cg, float targetAlpha, float duration)
+    {
+        float startAlpha = cg.alpha;
+        float timer = 0f;
+
+        // Se dobbiamo nascondere, disabilitiamo subito i click
+        if (targetAlpha == 0f) cg.blocksRaycasts = false;
+
+        while (timer < duration)
+        {
+            timer += Time.deltaTime;
+            cg.alpha = Mathf.Lerp(startAlpha, targetAlpha, timer / duration);
+            yield return null;
+        }
+        cg.alpha = targetAlpha;
+
+        // Se dobbiamo mostrare, abilitiamo i click alla fine
+        if (targetAlpha == 1f) cg.blocksRaycasts = true;
+    }
+    // -----------------------------------------------------------
+
     public void RegisterMenu(GameObject menuPanel)
     {
         if (menuPanel != null && !_registeredMenus.Contains(menuPanel))
@@ -125,36 +151,22 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    // I Manager chiameranno questo metodo PRIMA di aprirsi
     public void CloseAllMenusExcept(GameObject menuToKeepOpen)
     {
-        // Rimuoviamo eventuali riferimenti nulli (in caso di cambi scena/distruzioni)
         _registeredMenus.RemoveAll(x => x == null);
 
         foreach (var menu in _registeredMenus)
         {
-            // Saltiamo quello che vogliamo aprire
             if (menu == menuToKeepOpen) continue;
 
-            // Se il menu è attivo, chiudiamolo
             if (menu.activeSelf)
             {
-                // Proviamo a chiudere elegantemente con l'effetto
                 UIPopupEffect effect = menu.GetComponent<UIPopupEffect>();
-                if (effect != null)
-                {
-                    effect.Close();
-                }
-                else
-                {
-                    // Chiusura brutale se non c'è l'effetto
-                    menu.SetActive(false);
-                }
+                if (effect != null) effect.Close();
+                else menu.SetActive(false);
             }
         }
     }
-
-    // --------------------------------------
 
     private void SetupPlanetButtons()
     {
@@ -209,8 +221,6 @@ public class UIManager : MonoBehaviour
         gm = GameManager.Instance;
         pm = PlanetManager.Instance;
         
-        // Puliamo la lista menu quando cambiamo scena per evitare riferimenti a oggetti distrutti
-        // (Nota: I manager persistenti si ri-registreranno da soli, quelli di scena verranno distrutti)
         _registeredMenus.RemoveAll(x => x == null);
 
         RefreshUI();

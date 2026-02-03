@@ -9,10 +9,16 @@ public class PlanetData : ScriptableObject
     public string planetName;
 
     [Tooltip("L'icona da mostrare nella schermata di caricamento.")]
-    public Sprite planetIcon; // <--- NUOVO CAMPO
+    public Sprite planetIcon;
 
     [Tooltip("The name of the scene to load for this planet.")]
     public string sceneName;
+
+    // --- NUOVA SEZIONE PER GRAFICA PROCEDURALE ---
+    [Header("Procedural Generation")]
+    [Tooltip("Se assegnato, il pianeta verrà generato via codice usando questi dati visivi (mesh, colori, atmosfera) invece di usare la mesh statica.")]
+    public PlanetVisualData visualData;
+    // ---------------------------------------------
 
     [Header("Travel Mechanics")]
     [Tooltip("Distanza dal pianeta precedente. Usata per calcolare il tempo di viaggio (Distanza / Velocità Nave). Imposta a 0 per il primo pianeta.")]
