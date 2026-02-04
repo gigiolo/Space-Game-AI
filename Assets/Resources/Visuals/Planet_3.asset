@@ -10,18 +10,18 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e86d9f3d2c21a5044b5dce41aa9aa483, type: 3}
-  m_Name: Planet_2
+  m_Name: Planet_3
   m_EditorClassIdentifier: Assembly-CSharp::PlanetVisualData
   resolution: 4
   radius: 1
-  albedoMap: {fileID: 2800000, guid: cce2301743d2141678f7423df467472c, type: 3}
+  albedoMap: {fileID: 2800000, guid: d5c9344e016b14b5f9fae5f0d703b15c, type: 3}
   normalMap: {fileID: 0}
   emissionMap: {fileID: 0}
   tintColor: {r: 1, g: 1, b: 1, a: 1}
   hasAtmosphere: 1
-  atmosphereColor: {r: 0.7725491, g: 0.6156863, b: 0.40784317, a: 1}
+  atmosphereColor: {r: 0.8588236, g: 0.5803922, b: 0.21960786, a: 1}
   atmosphereHeight: 1
-  fresnelPower: 8
+  fresnelPower: 10
   hasClouds: 0
   cloudTexture: {fileID: 0}
   cloudColor: {r: 1, g: 1, b: 1, a: 0.9}

@@ -37,6 +37,11 @@ public class GameManager : MonoBehaviour
     [SerializeField] private float energyButton_RampDownDuration = 7.0f;
     [SerializeField] private float energyButton_CooldownMultiplier = 1.0f;
 
+    // --- NUOVO: AUDIO SEZIONE ---
+    [Header("--- AUDIO ---")]
+    [Tooltip("Il suono riprodotto quando premi il pulsante energia.")]
+    [SerializeField] private AudioClip energyClickSound;
+
     [Header("--- SALVATAGGIO ---")]
     public float autoSaveInterval = 30f; 
 
@@ -214,7 +219,7 @@ public class GameManager : MonoBehaviour
                 int toAdd = (int)_emitterAccumulator; 
                 int spaceLeft = EmitterCap - EmitterCount;
                 int actualAdd = Mathf.Min(toAdd, spaceLeft);
-                _emitterAccumulator -= actualAdd;                                                 
+                _emitterAccumulator -= actualAdd;                                                                
                 if (actualAdd < toAdd) _emitterAccumulator = 0;
 
                 if (actualAdd > 0)
@@ -681,6 +686,15 @@ public class GameManager : MonoBehaviour
             _energyButtonState = EnergyButtonState.RampingUp;
             _energyButtonTimer = 0.0f;
         }
+
+        // --- NUOVO: INTEGRAZIONE AUDIO ---
+        // Riproduce il suono del click se l'AudioManager e il clip sono presenti
+        if (AudioManager.Instance != null && energyClickSound != null)
+        {
+            // Usiamo una leggera variazione di pitch per un effetto più organico
+            AudioManager.Instance.PlaySFX(energyClickSound, 1.0f, 0.05f);
+        }
+        // --------------------------------
 
         // --- NUOVO: Trigger Evento Intro ---
         // Se è la prima sessione e non l'abbiamo ancora marcata come completata

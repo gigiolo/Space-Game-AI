@@ -7,7 +7,7 @@ public class BaseIndicatorController : MonoBehaviour
     [Header("Riferimenti")]
     public GameObject uiLabelPrefab;
     public Transform ringTransform;
-    public Transform dotTransform;       
+    public Transform dotTransform;        
     public LineRenderer connectorLine;
 
     [Header("Configurazione")]
@@ -20,7 +20,7 @@ public class BaseIndicatorController : MonoBehaviour
     public Gradient lineColorGradient = new Gradient();
     [Range(0.001f, 0.05f)] public float lineWidth = 0.005f;
     public float lineGapFromRing = 0.05f;
-    public float textGap = 0.1f;         
+    public float textGap = 0.1f;          
 
     [Header("Stile Pallino (Dot)")]
     [Tooltip("Dimensione del cerchietto pieno.")]
@@ -166,7 +166,6 @@ public class BaseIndicatorController : MonoBehaviour
         if (connectorLine && ringTransform && _spawnedRect)
         {
             // A. Punto Inizio (Lato Testo) + Gap
-            // Usiamo Camera.right per spostarci orizzontalmente rispetto alla vista
             Vector3 cameraRight = _cam.transform.right;
             Vector3 lineStartPos = textAttachPoint3D + (cameraRight * textGap);
 

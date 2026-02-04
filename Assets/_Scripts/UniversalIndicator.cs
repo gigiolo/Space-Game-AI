@@ -5,8 +5,8 @@ public class UniversalIndicator : MonoBehaviour
 {
     [Header("Riferimenti")]
     public GameObject uiLabelPrefab;
-    public Transform ringTransform;      
-    public Transform dotTransform;       
+    public Transform ringTransform;       
+    public Transform dotTransform;        
     public LineRenderer connectorLine;
 
     [Header("Configurazione")]
@@ -17,10 +17,10 @@ public class UniversalIndicator : MonoBehaviour
     public Gradient lineColorGradient = new Gradient();
     [Range(0.001f, 0.05f)] public float lineWidth = 0.005f;
     public float lineGapFromRing = 0.05f;
-    public float textGap = 0.1f;         
+    public float textGap = 0.1f;          
 
     [Header("Stile Pallino (Dot)")]
-    public float dotScale = 0.05f;       
+    public float dotScale = 0.05f;        
 
     [Header("Stile UI")]
     public bool lockUiToScreen = true;

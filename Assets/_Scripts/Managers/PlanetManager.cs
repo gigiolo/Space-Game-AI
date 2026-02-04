@@ -2,7 +2,7 @@ using UnityEngine;
 using System; 
 using System.Collections.Generic;
 using BreakInfinity;
-using UnityEngine.SceneManagement; // Necessario per il caricamento diretto (fallback)
+using UnityEngine.SceneManagement; 
 
 public class PlanetManager : MonoBehaviour
 {
@@ -32,7 +32,7 @@ public class PlanetManager : MonoBehaviour
     // Durata fissata al momento della partenza
     [HideInInspector] public double currentLockedDuration = 0f;
 
-    // --- NUOVO: Flag per indicare alla prossima scena di suonare l'animazione di atterraggio ---
+    // Flag per indicare alla prossima scena di suonare l'animazione di atterraggio
     [HideInInspector] public bool pendingLanding = false; 
 
     private void Awake()
@@ -44,10 +44,26 @@ public class PlanetManager : MonoBehaviour
         else
         {
             Instance = this;
-            // RIMOSSO: DontDestroyOnLoad(transform.root.gameObject);
-            // Essendo parte del prefab Core_Systems, non serve.
         }
     }
+
+    // --- NUOVO: Gestione Musica ---
+    private void Start()
+    {
+        // Avvia la musica del pianeta corrente all'inizio del gioco
+        UpdatePlanetMusic();
+    }
+
+    private void UpdatePlanetMusic()
+    {
+        var currentData = GetCurrentPlanetData();
+        if (currentData != null && AudioManager.Instance != null && currentData.planetThemeMusic != null)
+        {
+            // Usa il crossfade per un passaggio fluido
+            AudioManager.Instance.PlayMusic(currentData.planetThemeMusic);
+        }
+    }
+    // ----------------------------
 
     private void Update()
     {
@@ -204,7 +220,7 @@ public class PlanetManager : MonoBehaviour
         isTraveling = false;
         currentLockedDuration = 0; 
         
-        // 2. Reset stato Preparazione per il prossimo pianeta
+        // 2. Reset stato Preparazione
         isPreparingForLaunch = false;
         launchPreparationProgress = 0;
         lockedLaunchRequirement = 0;
@@ -212,7 +228,10 @@ public class PlanetManager : MonoBehaviour
         // 3. Incremento Indice Pianeta
         currentPlanetIndex++;
 
-        // Segnaliamo che dobbiamo atterrare
+        // --- NUOVO: Aggiorna musica per il nuovo pianeta ---
+        UpdatePlanetMusic();
+        // ---------------------------------------------------
+
         pendingLanding = true;
 
         if (planets == null || currentPlanetIndex >= planets.Count)
@@ -221,37 +240,27 @@ public class PlanetManager : MonoBehaviour
             return;
         }
 
-        // Recuperiamo i dati del nuovo pianeta
         PlanetData nextPlanet = GetCurrentPlanetData();
         string nextSceneName = nextPlanet.sceneName;
 
-        // --- CORREZIONE: Reset dei dati PRIMA di caricare la scena ---
-        
-        // A. Reset standard (mette EmitterCount = 1 di default)
+        // Reset dati
         GameManager.Instance.PerformPlanetChangeReset();
-        
-        // B. Sovrascriviamo: Il pianeta deve essere deserto finché la nave non atterra (0 emitter)
         GameManager.Instance.OverrideEmitterCount(0);
 
-        // C. FIX CRITICO: Resettiamo anche i dati visivi correnti in memoria
         if (GameManager.Instance.planetVisuals != null)
         {
             GameManager.Instance.planetVisuals.ResetVisuals();
         }
         
-        // D. Salviamo questo stato "pulito" IMMEDIATAMENTE
         GameManager.Instance.SaveGame();
 
-        // E. MODIFICA VISIVA: Usiamo SceneFader se disponibile
         if (SceneFader.Instance != null)
         {
-            // Impostiamo Icona e Nome del nuovo pianeta
             SceneFader.Instance.SetLoadingInfo(nextPlanet.planetName, nextPlanet.planetIcon);
             SceneFader.Instance.FadeAndLoadScene(nextSceneName, null);
         }
         else
         {
-            // Fallback: caricamento diretto
             UnityEngine.SceneManagement.SceneManager.LoadScene(nextSceneName);
         }
     }

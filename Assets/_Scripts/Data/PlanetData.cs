@@ -14,14 +14,18 @@ public class PlanetData : ScriptableObject
     [Tooltip("The name of the scene to load for this planet.")]
     public string sceneName;
 
+    [Header("Audio")] // <--- NUOVO
+    [Tooltip("La musica di sottofondo per questo pianeta.")]
+    public AudioClip planetThemeMusic;
+
     // --- NUOVA SEZIONE PER GRAFICA PROCEDURALE ---
     [Header("Procedural Generation")]
-    [Tooltip("Se assegnato, il pianeta verrà generato via codice usando questi dati visivi (mesh, colori, atmosfera) invece di usare la mesh statica.")]
+    [Tooltip("Se assegnato, il pianeta verrà generato via codice usando questi dati visivi.")]
     public PlanetVisualData visualData;
     // ---------------------------------------------
 
     [Header("Travel Mechanics")]
-    [Tooltip("Distanza dal pianeta precedente. Usata per calcolare il tempo di viaggio (Distanza / Velocità Nave). Imposta a 0 per il primo pianeta.")]
+    [Tooltip("Distanza dal pianeta precedente.")]
     public BigDouble travelDistance;
 
     [Header("Progression")]

@@ -26850,7 +26850,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: skyMaxSpeed
-      value: 200
+      value: 1000
       objectReference: {fileID: 0}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: skyRenderer
@@ -26858,11 +26858,11 @@ PrefabInstance:
       objectReference: {fileID: 5670378979914487573}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: lightExponent
-      value: 10
+      value: 8
       objectReference: {fileID: 0}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: lightMaxSpeed
-      value: 30000
+      value: 40000
       objectReference: {fileID: 0}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: planetExponent
@@ -26870,11 +26870,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: planetMaxSpeed
-      value: 60000
+      value: 700000
       objectReference: {fileID: 0}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: skyRotationAxis.x
-      value: 0.3
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: skyRotationAxis.y
@@ -26886,7 +26886,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: maxEmissionIntensity
-      value: 10
+      value: 5
       objectReference: {fileID: 0}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: colorShiftSequence.key0.b

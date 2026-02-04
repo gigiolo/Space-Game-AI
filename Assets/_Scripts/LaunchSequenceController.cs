@@ -6,11 +6,15 @@ public class LaunchSequenceController : MonoBehaviour
 {
     [Header("References (Auto-Found if null)")]
     public PlanetOrbitCamera orbitCamera;
-    public PlanetStatusPopup statusPopup; // Questo è UI, quindi sta in Core_Systems
+    public PlanetStatusPopup statusPopup; 
     
     [Header("Spaceship Assets")]
     public SpaceshipFlight spaceshipPrefab; 
     public ParticleSystem launchVFX; 
+
+    [Header("Audio")] // <--- NUOVO
+    [Tooltip("Effetto sonoro del decollo")]
+    public AudioClip launchSFX;
 
     [Header("Camera Animation Settings")]
     [Tooltip("Angolo offset per inquadrare la nave (45° = vista 3/4)")]
@@ -23,18 +27,11 @@ public class LaunchSequenceController : MonoBehaviour
 
     private void Start()
     {
-        // --- AUTO-COLLEGAMENTO INTELLIGENTE ---
-        // Se i campi sono vuoti nell'inspector, li cerchiamo automaticamente.
-        
-        // 1. Cerca la Camera (che dovrebbe essere nella Scena)
         if (orbitCamera == null) 
             orbitCamera = FindFirstObjectByType<PlanetOrbitCamera>();
 
-        // 2. Cerca il Popup (che è dentro Core_Systems)
         if (statusPopup == null) 
             statusPopup = FindFirstObjectByType<PlanetStatusPopup>();
-
-        // --------------------------------------
 
         if (PlanetManager.Instance != null)
         {
@@ -61,10 +58,8 @@ public class LaunchSequenceController : MonoBehaviour
 
     public void StartSequence()
     {
-        // 1. Chiudi UI (Usa il riferimento trovato automaticamente)
         if (statusPopup != null) statusPopup.ClosePopup();
 
-        // 2. Trova posizione LaunchSite
         Vector3 launchPos = Vector3.zero;
         
         var visualScript = FindFirstObjectByType<LaunchSiteVisuals>();
@@ -96,7 +91,6 @@ public class LaunchSequenceController : MonoBehaviour
                 launchPos = new Vector3(0, 0, -1.6f);
         }
 
-        // 3. Ruota la camera e lancia
         if (orbitCamera != null)
         {
             orbitCamera.AnimateToLookAt(launchPos, viewAngleOffset, cameraRotationDuration, () => 
@@ -107,7 +101,6 @@ public class LaunchSequenceController : MonoBehaviour
         }
         else
         {
-            // Se non c'è lo script camera, lancia subito
             SpawnSpaceship(launchPos);
             PlanetOrbitCamera.IsInputBlocked = false;
         }
@@ -128,6 +121,13 @@ public class LaunchSequenceController : MonoBehaviour
             Vector3 surfaceNormal = (pos - planetCenter).normalized;
             ship.Launch(pos, surfaceNormal);
         }
+
+        // --- NUOVO: Play Audio ---
+        if (launchSFX != null && AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlaySFX(launchSFX, 1.0f, 0.1f);
+        }
+        // -------------------------
 
         if (launchVFX != null)
         {
