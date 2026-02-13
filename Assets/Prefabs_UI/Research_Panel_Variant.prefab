@@ -88,12 +88,76 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1213254854913591476, guid: 05a6e5f3e44daf84c90a7ac7390384a8, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1527809256027820188, guid: 05a6e5f3e44daf84c90a7ac7390384a8, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1527809256027820188, guid: 05a6e5f3e44daf84c90a7ac7390384a8, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1527809256027820188, guid: 05a6e5f3e44daf84c90a7ac7390384a8, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1527809256027820188, guid: 05a6e5f3e44daf84c90a7ac7390384a8, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1527809256027820188, guid: 05a6e5f3e44daf84c90a7ac7390384a8, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3354021569854977648, guid: 05a6e5f3e44daf84c90a7ac7390384a8, type: 3}
       propertyPath: m_Name
-      value: UI_Window_Master
+      value: Research_Panel_Variant
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 693645091780184183, guid: 05a6e5f3e44daf84c90a7ac7390384a8, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2106794486539618753}
+    - targetCorrespondingSourceObject: {fileID: 693645091780184183, guid: 05a6e5f3e44daf84c90a7ac7390384a8, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6118029307608336457}
   m_SourcePrefab: {fileID: 100100000, guid: 05a6e5f3e44daf84c90a7ac7390384a8, type: 3}
+--- !u!1 &5801539894719685250 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 693645091780184183, guid: 05a6e5f3e44daf84c90a7ac7390384a8, type: 3}
+  m_PrefabInstance: {fileID: 6423091030765497077}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2106794486539618753
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5801539894719685250}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0b148fe25e99eb48b9724523833bab1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.EventSystems.EventTrigger
+  m_Delegates: []
+--- !u!114 &6118029307608336457
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5801539894719685250}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4518f5f0c1fb4e4d99f2d2251cd3bfb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UISoundController
+  clickSound: {fileID: 8300000, guid: 42bda9e2fddd8d744b3e3b463048874c, type: 3}
+  hoverSound: {fileID: 0}
+  volume: 1
+  pitchRandom: 0.05

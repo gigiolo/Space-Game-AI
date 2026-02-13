@@ -2,107 +2,112 @@ using UnityEngine;
 using TMPro;
 using BreakInfinity;
 using System;
+using UnityEngine.UI; 
 
 public class OfflinePopup : MonoBehaviour
 {
     [Header("UI References")]
     public GameObject popupPanel;
-    public TextMeshProUGUI titleText;
     public TextMeshProUGUI timeText;
     public TextMeshProUGUI earningsText;
-    public TextMeshProUGUI capWarningText; 
-    
-    [Tooltip("Collega qui il testo per mostrare i nuovi Emitter guadagnati")]
-    public TextMeshProUGUI emittersText; // <--- NUOVO RIFERIMENTO
+    public TextMeshProUGUI emittersText;
+    public TextMeshProUGUI capWarningText;
 
     private void Start()
     {
+        if (popupPanel != null) popupPanel.SetActive(false);
+
         if (GameManager.Instance != null)
         {
-            GameManager.Instance.OnOfflineProductionCalculated += ShowPopup;
-
-            if (GameManager.Instance.LastOfflineEarnings > 0 && !popupPanel.activeSelf)
+            GameManager.Instance.OnOfflineProductionCalculated += UpdateUI;
+            if (GameManager.Instance.LastOfflineEarnings > 0)
             {
-                ShowPopup();
+                UpdateUI();
             }
         }
     }
 
-    void OnDestroy()
+    private void OnDestroy()
     {
         if (GameManager.Instance != null)
-        {
-            GameManager.Instance.OnOfflineProductionCalculated -= ShowPopup;
-        }
+            GameManager.Instance.OnOfflineProductionCalculated -= UpdateUI;
     }
 
-    private void ShowPopup()
+    public void UpdateUI()
     {
-        BigDouble earnings = GameManager.Instance.LastOfflineEarnings;
-        
-        if (earnings <= 0) return;
+        if (GameManager.Instance == null) return;
 
+        BigDouble earnings = GameManager.Instance.LastOfflineEarnings;
         TimeSpan timeAway = GameManager.Instance.LastOfflineTimeSpan;
-        double maxTimeSeconds = GameManager.Instance.MaxOfflineSeconds;
 
         string timeStr = "";
         if (timeAway.Days > 0) timeStr += $"{timeAway.Days}d ";
         if (timeAway.Hours > 0) timeStr += $"{timeAway.Hours}h ";
-        timeStr += $"{timeAway.Minutes}m {timeAway.Seconds}s"; 
+        timeStr += $"{timeAway.Minutes}m {timeAway.Seconds}s";
 
         string earnStr = FormatNumber(earnings);
 
-        if(timeText) timeText.text = $"Time Away: <color=yellow>{timeStr}</color>";
-        if(earningsText) earningsText.text = $"Offline Production ({GameManager.Instance.offlineProductionRatio * 100}%):\n<size=150%><color=#00FFFF>+{earnStr}</color></size>";
-        
-        // --- NUOVO: MOSTRA EMITTERS GUADAGNATI ---
+        if (timeText != null)
+        {
+            timeText.text = $"Tempo Offline: <color=yellow>{timeStr}</color>";
+            timeText.SetAllDirty(); 
+        }
+
+        if (earningsText != null)
+        {
+            earningsText.text = $"Guadagno:\n<size=120%><color=#00FFFF>+{earnStr}</color></size>";
+            earningsText.SetAllDirty();
+        }
+
         if (emittersText != null)
         {
-            int gainedEmitters = GameManager.Instance.LastOfflineEmittersGained;
-            if (gainedEmitters > 0)
+            int gained = GameManager.Instance.LastOfflineEmittersGained;
+            if (gained > 0)
             {
                 emittersText.gameObject.SetActive(true);
-                emittersText.text = $"New Emitters: <color=#00FF00>+{gainedEmitters}</color>";
+                emittersText.text = $"Nuovi Emitter: <color=#00FF00>+{gained}</color>";
+                emittersText.SetAllDirty();
             }
             else
             {
-                // Se non ne abbiamo guadagnati (perché cap raggiunto o tempo troppo breve), nascondiamo il testo
                 emittersText.gameObject.SetActive(false);
             }
         }
-        // ----------------------------------------
 
-        if (capWarningText)
+        if (capWarningText != null)
         {
-            bool batteriesDied = timeAway.TotalSeconds > maxTimeSeconds;
-            
-            capWarningText.gameObject.SetActive(batteriesDied);
-            
-            if (batteriesDied) 
-            {
-                TimeSpan maxTs = TimeSpan.FromSeconds(maxTimeSeconds);
-                string maxStr = $"{maxTs.Hours}h {maxTs.Minutes}m";
-                capWarningText.text = $"<color=red>Batteries died after {maxStr}!</color>\nUpgrade storage to last longer.";
-            }
+            bool died = timeAway.TotalSeconds >= GameManager.Instance.MaxOfflineSeconds;
+            capWarningText.gameObject.SetActive(died);
+            if (died) capWarningText.SetAllDirty();
         }
 
-        popupPanel.SetActive(true);
-        PlanetOrbitCamera.IsInputBlocked = true;
+        if (popupPanel != null)
+        {
+            popupPanel.SetActive(true);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(popupPanel.GetComponent<RectTransform>());
+            PlanetOrbitCamera.IsInputBlocked = true;
+        }
     }
 
     public void ClosePopup()
     {
-        if(popupPanel) popupPanel.SetActive(false);
+        if (popupPanel) popupPanel.SetActive(false);
         PlanetOrbitCamera.IsInputBlocked = false;
     }
 
+    // --- METODO CORRETTO ---
     private string FormatNumber(BigDouble number)
     {
+        if (number < 10) return number.ToString("F2");
         if (number < 1000) return number.ToString("F0");
+
         long exponent = (long)BigDouble.Log10(number);
         if (exponent < 6) return (number / 1000).ToString("F2") + "k";
         if (exponent < 9) return (number / 1e6).ToString("F2") + "M";
         if (exponent < 12) return (number / 1e9).ToString("F2") + "B";
-        return number.ToString("e2");
+        if (exponent < 15) return (number / 1e12).ToString("F2") + "T";
+        
+        // CORREZIONE QUI
+        return $"{number.Mantissa:F2}e{number.Exponent}";
     }
 }

@@ -56,8 +56,10 @@ public class ResearchItem
             levelsBeyondManual = currentLevel;
         }
 
-        // Applica la crescita
-        if (info.costType == CostCurve.Exponential)
+        // --- FIX ERRORE CS0019 ---
+        // Prima controllavi "info.costType" (che è CurrencyType) contro CostCurve.
+        // Ora controlliamo la nuova variabile "info.costCurve".
+        if (info.costCurve == CostCurve.Exponential)
         {
             // Formula Esponenziale: UltimoPrezzo * Fattore ^ LivelliExtra
             return startValue * BigDouble.Pow(info.costFactor, levelsBeyondManual);

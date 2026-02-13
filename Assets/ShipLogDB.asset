@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d3486cb90c9fc7459b58168cab83150, type: 3}
+  m_Name: ShipLogDB
+  m_EditorClassIdentifier: Assembly-CSharp::LoreDatabase
+  philosophicalLogs:
+  - Siamo solo fantasmi che guidano macchine di carne su una roccia bagnata.
+  - "L'atomo \xE8 composto al 99.9% di vuoto. Anche noi."
+  - Guardare lontano significa guardare nel passato.
+  - Il silenzio eterno di questi spazi infiniti mi spaventa.
+  - "La materia \xE8 solo energia che ha deciso di rallentare."
+  techLogs:
+  - 'Analisi spettrografica completata: Tracce di carbonio rilevate.'
+  - Ricalibrazione sensori a lungo raggio...
+  - Intercettata onda gravitazionale da una collisione di buchi neri.
+  - 'Temperatura esterna: -270.45 gradi Celsius.'
+  - 'Sistemi di supporto vitale: Stabili. Umore equipaggio: Malinconico.'
+  quantumResetLog: Inizializzazione protocollo Big Crunch. Riavvolgimento temporale...
+  travelLog: "Motori a curvatura attivi. La relativit\xE0 \xE8 in effetto."
+  adFinishedLog: "Segnale commerciale terminato. Il silenzio \xE8 tornato."

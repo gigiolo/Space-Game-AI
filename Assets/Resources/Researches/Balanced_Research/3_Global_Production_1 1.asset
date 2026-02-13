@@ -10,21 +10,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dac902865c54b7e479540201146bfee3, type: 3}
-  m_Name: x_xEmitter_Max_Cap_2
+  m_Name: 3_Global_Production_1 1
   m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
-  id: x_xEmitter_Max_Cap_1
-  title: Expansion Program 2
-  description: Emitter Max Cap + 500
-  icon: {fileID: 21300000, guid: f627f1dc580600745bf33ceb68b0f43c, type: 3}
-  type: 1
-  target: 6
-  bonusValue: 500
+  id: 1.2_Global_Production_2
+  title: Gravity inducer
+  description: Energy production rate +10%
+  icon: {fileID: 21300000, guid: 430845830b171904eb91dbfcd73d9628, type: 3}
+  type: 0
+  target: 0
+  bonusValue: 0.25
   manualCosts:
-  - 466
-  - 802
-  - 1256
-  - 1862
+  - 4.1
+  - 12.6
+  - 24
+  - 39.84
+  - 62.85
+  - 93.79
   costType: 0
-  baseCost: 10
-  costFactor: 1.5
-  maxLevel: 4
+  baseCost: 93.79
+  costFactor: 1.37
+  maxLevel: 30

@@ -15,10 +15,11 @@ MonoBehaviour:
   planetName: Kyrion - 223
   planetIcon: {fileID: 0}
   sceneName: Scene_planet2
+  planetThemeMusic: {fileID: 8300000, guid: b12b4a8eca7737542aa8c58dacb13298, type: 3}
   visualData: {fileID: 11400000, guid: 9386949bedd5c0146824798b9ac4aa0d, type: 2}
   travelDistance:
-    mantissa: 9
-    exponent: 3
+    mantissa: 1
+    exponent: 4
   requiredPlanetValue:
     mantissa: 1
     exponent: 6

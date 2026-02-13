@@ -219,7 +219,7 @@ public class GameManager : MonoBehaviour
                 int toAdd = (int)_emitterAccumulator; 
                 int spaceLeft = EmitterCap - EmitterCount;
                 int actualAdd = Mathf.Min(toAdd, spaceLeft);
-                _emitterAccumulator -= actualAdd;                                                                
+                _emitterAccumulator -= actualAdd;                                                                        
                 if (actualAdd < toAdd) _emitterAccumulator = 0;
 
                 if (actualAdd > 0)
@@ -311,6 +311,13 @@ public class GameManager : MonoBehaviour
         // 1. SALVIAMO I NODI SUBITO!
         ScientificNodes += nodesToGain;
         Debug.Log($"[GameManager] Quantum Reset. Nodes gained: {nodesToGain}. New Total: {ScientificNodes}");
+
+        // --- NUOVO: Trigger messaggio terminale prima del reset ---
+        if (ShipTerminalController.Instance != null)
+        {
+            ShipTerminalController.Instance.ShowSystemMessage("ANOMALIA CRONALE RILEVATA. INIZIO SEQUENZA DI RIAVVOLGIMENTO.");
+        }
+        // ---------------------------------------------------------
 
         // 2. Cerchiamo se c'è l'effetto Rewind nella scena (Uso il nome corretto!)
         var rewindEffect = FindFirstObjectByType<QuantumEffectManager>();
@@ -523,13 +530,27 @@ public class GameManager : MonoBehaviour
             return; 
         }
 
-        IsFirstSession = data.isFirstSession; // <--- NUOVO
+        IsFirstSession = data.isFirstSession; 
 
         if (!string.IsNullOrEmpty(data.currentEnergy)) CurrentEnergy = BigDouble.Parse(data.currentEnergy);
         if (!string.IsNullOrEmpty(data.lifetimeEarnings)) LifetimeEarnings = BigDouble.Parse(data.lifetimeEarnings);
 
         // Caricamento diretto, accetta anche 0
         EmitterCount = data.emitterCount; 
+        
+        // --- AUTO-FIX LOGICA PER ISFIRSTSESSION (AGGIORNATA) ---
+        // Se il salvataggio dice che è la prima sessione, ma abbiamo già risorse, 
+        // significa che c'è stato un errore nel salvataggio del flag. 
+        // Usiamo > 0 per LifetimeEarnings per coprire anche guadagni minimi.
+        if (IsFirstSession)
+        {
+            if (EmitterCount > 0 || LifetimeEarnings > 0)
+            {
+                Debug.LogWarning("[GameManager] Rilevata incongruenza: IsFirstSession era TRUE ma ci sono risorse (Earnings > 0 o Emitters > 0). Forzo a FALSE per abilitare l'offline.");
+                IsFirstSession = false;
+            }
+        }
+        // ------------------------------------------
         
         LogisticsLevel = data.logisticsLevel > 0 ? data.logisticsLevel : 1;
 
@@ -588,7 +609,8 @@ public class GameManager : MonoBehaviour
         else
             StoredLaunchSitePosition = "";
 
-        // Se è la prima sessione, NON calcolare l'offline progress
+        // Se è la prima sessione, NON calcolare l'offline progress.
+        // Grazie al fix sopra, se hai risorse IsFirstSession sarà false e questo calcolo partirà.
         if (!IsFirstSession && !string.IsNullOrEmpty(data.lastSaveTime))
             HandleOfflineProgress(data.lastSaveTime);
 
@@ -800,7 +822,7 @@ public class GameManager : MonoBehaviour
         
         ScientificNodes = 0; 
         LifetimeEarnings = 0; 
-        CurrentEnergy = 0;
+        CurrentEnergy = 0; 
         RawIridium = 0; 
         PureIridium = 0; 
         EmitterCount = 0; 
@@ -840,5 +862,16 @@ public class GameManager : MonoBehaviour
     {
         EmitterCount = value;
         RecalculateCaps();
+    }
+
+    // --- NUOVO METODO PER LA UI ---
+    // Restituisce un valore tra 0.0 (vuoto) e 1.0 (pieno)
+    public float GetEmitterGrowthProgress()
+    {
+        // Se siamo al massimo, restituiamo 0 (o 1, a seconda di come vuoi che appaia visivamente quando è fermo)
+        if (EmitterCount >= EmitterCap) return 0f;
+        
+        // _emitterAccumulator è double, lo convertiamo in float per la UI
+        return (float)_emitterAccumulator; 
     }
 }

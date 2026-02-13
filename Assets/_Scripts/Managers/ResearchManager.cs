@@ -18,7 +18,6 @@ public class ResearchManager : MonoBehaviour
     [Header("Stato Runtime")]
     public List<ResearchItem> allResearches;
     
-    // CACHE DEGLI SLOT
     private List<ResearchSlotUI> _activeSlots = new List<ResearchSlotUI>();
 
     private void Awake() 
@@ -36,12 +35,11 @@ public class ResearchManager : MonoBehaviour
         if(menuPanel) 
         {
             menuPanel.SetActive(false);
-            
-            // --- REGISTRAZIONE MENU AL UIMANAGER ---
             if (UIManager.Instance != null)
                 UIManager.Instance.RegisterMenu(menuPanel);
         }
         
+        // Inizializzazione sicura
         if (allResearches == null || allResearches.Count == 0) 
         {
             InitializeDatabase();
@@ -66,14 +64,12 @@ public class ResearchManager : MonoBehaviour
 
         if (!opening)
         {
-            // CHIUSURA
             UIPopupEffect effect = menuPanel.GetComponent<UIPopupEffect>();
             if (effect != null) effect.Close();
             else menuPanel.SetActive(false);
         }
         else
         {
-            // APERTURA - Chiudi prima gli altri!
             if (UIManager.Instance != null)
                 UIManager.Instance.CloseAllMenusExcept(menuPanel);
 
@@ -82,21 +78,38 @@ public class ResearchManager : MonoBehaviour
         }
     }
 
+    // --- METODO CORRETTO CON SAFETY CHECK ---
     public void InitializeDatabase()
     {
         if (allResearches == null) allResearches = new List<ResearchItem>();
         
+        // Pulizia preliminare di eventuali elementi nulli nella lista runtime
+        allResearches.RemoveAll(x => x == null || x.info == null);
+
+        if (researchDatabase == null) return;
+
         foreach (var def in researchDatabase)
         {
+            // FIX CRASH: Se uno slot nell'inspector è vuoto, lo saltiamo
+            if (def == null) continue;
+
+            // Ora siamo sicuri che def esiste, possiamo accedere a def.id
             if (!allResearches.Exists(r => r.id == def.id))
+            {
                 allResearches.Add(new ResearchItem(def));
+            }
         }
     }
 
     public void LoadResearchLevels(List<ResearchSaveData> savedData)
     {
         InitializeDatabase(); 
-        foreach(var res in allResearches) res.currentLevel = 0;
+        
+        foreach(var res in allResearches) 
+        {
+            if (res != null) res.currentLevel = 0;
+        }
+
         if (savedData != null)
         {
             foreach (var saved in savedData)
@@ -115,6 +128,8 @@ public class ResearchManager : MonoBehaviour
 
         foreach (var research in allResearches)
         {
+            if (research == null || research.info == null) continue;
+
             ResearchSlotUI newSlot = Instantiate(slotPrefab, listContent);
             newSlot.transform.localScale = Vector3.one; 
             newSlot.Setup(research, OnBuyResearch);
@@ -148,6 +163,7 @@ public class ResearchManager : MonoBehaviour
     {
         if (GameManager.Instance == null) return;
 
+        // Reset dei moltiplicatori prima del ricalcolo
         GameManager.Instance.ResearchMultiplier = 1;
         GameManager.Instance.LogisticsResearchBonus = 0;
         GameManager.Instance.StorageResearchBonus = 0;
@@ -155,9 +171,10 @@ public class ResearchManager : MonoBehaviour
         GameManager.Instance.ClickPowerResearchBonus = 0; 
         GameManager.Instance.EmitterSpeedResearchBonus = 0;
         
-        foreach (var item in allResearches)
+        for (int i = 0; i < allResearches.Count; i++)
         {
-            if (item.currentLevel > 0) ApplyEffectBasedOnTotalLevel(item);
+            ResearchItem item = allResearches[i];
+            if (item != null && item.currentLevel > 0) ApplyEffectBasedOnTotalLevel(item);
         }
         
         GameManager.Instance.UpdateCapsFromResearch();
@@ -168,8 +185,23 @@ public class ResearchManager : MonoBehaviour
     {
         if (item.target == ResearchTarget.GlobalProduction && item.type == ResearchType.Multiplier)
         {
-            BigDouble totalMult = BigDouble.Pow(1 + item.bonusValue, item.currentLevel);
-            GameManager.Instance.ResearchMultiplier *= totalMult;
+            BigDouble multiplierFromThisResearch;
+
+            // Controlliamo il nuovo flag nello ScriptableObject
+            if (item.info.isExponentialBonus)
+            {
+                // FORMULA ESPONENZIALE (Potente)
+                multiplierFromThisResearch = BigDouble.Pow(item.bonusValue, item.currentLevel);
+            }
+            else
+            {
+                // FORMULA LINEARE COMPOSTA (Standard Egg Inc.)
+                BigDouble totalBonusPercent = item.bonusValue * item.currentLevel;
+                multiplierFromThisResearch = 1 + totalBonusPercent;
+            }
+
+            // Applichiamo il risultato al moltiplicatore globale
+            GameManager.Instance.ResearchMultiplier *= multiplierFromThisResearch;
         }
         else if (item.type == ResearchType.Additive)
         {

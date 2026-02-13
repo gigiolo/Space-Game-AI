@@ -913,8 +913,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4278255397
-  m_fontColor: {r: 0.1469543, g: 1, b: 0, a: 1}
+    rgba: 4278255374
+  m_fontColor: {r: 0.054901965, g: 1, b: 0, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -1273,6 +1273,8 @@ GameObject:
   - component: {fileID: 4059479955159158005}
   - component: {fileID: 2245483709076281914}
   - component: {fileID: 8812822985502337955}
+  - component: {fileID: 4742181881022219587}
+  - component: {fileID: 7238305504506700401}
   m_Layer: 5
   m_Name: Buy_Button
   m_TagString: Untagged
@@ -1415,6 +1417,35 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ThemedUIElement
   type: 2
+--- !u!114 &4742181881022219587
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8635690491961014668}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0b148fe25e99eb48b9724523833bab1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.EventSystems.EventTrigger
+  m_Delegates: []
+--- !u!114 &7238305504506700401
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8635690491961014668}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4518f5f0c1fb4e4d99f2d2251cd3bfb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UISoundController
+  clickSound: {fileID: 8300000, guid: 42bda9e2fddd8d744b3e3b463048874c, type: 3}
+  hoverSound: {fileID: 0}
+  volume: 1
+  pitchRandom: 0.05
 --- !u!1 &8838437434294451747
 GameObject:
   m_ObjectHideFlags: 0

@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.EventSystems; 
-using TMPro;            
+using UnityEngine.EventSystems;
+using TMPro;                    
 using BreakInfinity; 
 using System; 
 using System.Collections; 
@@ -12,30 +12,45 @@ public class UIManager : MonoBehaviour
     public static UIManager Instance { get; private set; }
 
     [Header("--- INTRO & VISIBILITY ---")]
-    [Tooltip("Trascina qui l'oggetto 'MainHUD' che raggruppa TopDeck, SideButtons, BottomDeck (tranne EnergyButton)")]
-    public CanvasGroup mainHUDGroup; // <--- NUOVO: Riferimento al gruppo HUD
+    public CanvasGroup mainHUDGroup; 
 
     [Header("Top HUD - Standard")]
-    public TextMeshProUGUI scoreText;                 
-    public TextMeshProUGUI incomeText;                
+    public TextMeshProUGUI scoreText;                    
+    public TextMeshProUGUI incomeText;
+    [Tooltip("Trascina qui l'icona dell'Income (Produzione)")]
+    public Image incomeIcon; 
     public TextMeshProUGUI logisticsStatusText; 
     
-    [Tooltip("Collega qui il testo che mostra il moltiplicatore attivo (es. x3.0)")]
+    [Header("Multiplier UI")]
+    [Tooltip("Trascina qui l'OGGETTO PADRE 'MultiplierContainer' (NON quello della produzione)")]
+    public GameObject multiplierContainer; 
+    [Tooltip("Trascina qui il TESTO dentro al container del moltiplicatore")]
     public TextMeshProUGUI energyMultiplierText;
+    
+    [Tooltip("Scegli qui il colore del testo del moltiplicatore")]
+    public Color multiplierTextColor = new Color(0f, 1f, 1f, 1f); // Default Ciano
 
-    [Tooltip("Collega qui il testo che prima mostrava la Capacità Massima (Offline)")]
+    [Tooltip("Collega qui il testo isolato per il conteggio Emitter")]
+    public TextMeshProUGUI emitterCountText; 
+    [Tooltip("Collega qui l'IMMAGINE (Icona) accanto al conteggio Emitter")]
+    public Image emitterIcon; 
+
     public TextMeshProUGUI storageText; 
 
     [Header("Top HUD - Special Currencies")]
-    [Tooltip("Testo per visualizzare l'Iridio Puro (Premium)")]
     public TextMeshProUGUI pureIridiumText;
-
-    [Tooltip("Testo per visualizzare l'Iridio Grezzo (Accumulato)")]
+    [Tooltip("Collega qui l'IMMAGINE (Icona) del Pure Iridium")]
+    public Image pureIridiumIcon; 
+    [Tooltip("Scegli il colore dedicato per il Pure Iridium")]
+    public Color pureIridiumColor = Color.magenta; 
+    
     public TextMeshProUGUI rawIridiumText;
 
-    [Header("--- NUOVO: Nanobot Growth ---")]
-    [Tooltip("Collega qui il testo per visualizzare la velocità di crescita degli emitter")]
+    [Header("--- Nanobot Growth ---")]
     public TextMeshProUGUI emitterGrowthText;
+    
+    [Tooltip("L'immagine radiale che si riempie man mano che nasce un emitter.")]
+    public Image emitterProgressPie; 
 
     [Header("Bottom Deck")]
     public GameObject mainEnergyButtonObj; 
@@ -51,12 +66,10 @@ public class UIManager : MonoBehaviour
     public TextMeshProUGUI planetValueText;
     public Slider launchProgressBar;
     public TextMeshProUGUI travelStatusText; 
-    
-    [Tooltip("NUOVO: Testo per mostrare Velocità Nave e Stima Tempo PRIMA di partire")]
     public TextMeshProUGUI travelInfoText; 
 
     [Header("OPTIONS MENU")]
-    public Button optionsButton;                    
+    public Button optionsButton;                                       
     public OptionsMenu optionsMenuController;
 
     [Header("Visual Feedback")]
@@ -69,18 +82,55 @@ public class UIManager : MonoBehaviour
     private Coroutine _iridiumFeedbackRoutine;
     private bool _isShowingIridiumFeedback = false; 
 
-    // --- NUOVO SISTEMA MENU ESCLUSIVI ---
+    // Variabili per Animazione Multiplier
+    private CanvasGroup _multCanvasGroup;
+    private bool _isMultVisible = false;
+    private Coroutine _multAnimRoutine;
+
+    // Variabili per Animazione Pie Chart (Torta)
+    private CanvasGroup _pieCanvasGroup;
+    private bool _isPieVisible = false;
+    private Coroutine _pieAnimRoutine;
+
     private List<GameObject> _registeredMenus = new List<GameObject>();
+
+    // --- NUOVO: Riferimenti agli Animatori dei Numeri ---
+    private NumberDigitAnimator _scoreAnimator;
+    private NumberDigitAnimator _incomeAnimator;
 
     private void Awake()
     {
-        // --- MODIFICA SINGLETON ---
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject); 
             return;
         }
         Instance = this;
+
+        // --- SETUP INIZIALE MOLTIPLICATORE ---
+        if (multiplierContainer != null)
+        {
+            _multCanvasGroup = multiplierContainer.GetComponent<CanvasGroup>();
+            if (_multCanvasGroup == null) _multCanvasGroup = multiplierContainer.AddComponent<CanvasGroup>();
+
+            _multCanvasGroup.alpha = 0f;
+            _isMultVisible = false;
+            multiplierContainer.SetActive(false);
+        }
+
+        // --- SETUP INIZIALE PIE CHART ---
+        if (emitterProgressPie != null)
+        {
+            // Aggiungiamo un CanvasGroup per gestire la trasparenza (Alpha)
+            _pieCanvasGroup = emitterProgressPie.GetComponent<CanvasGroup>();
+            if (_pieCanvasGroup == null) _pieCanvasGroup = emitterProgressPie.gameObject.AddComponent<CanvasGroup>();
+
+            // Partiamo invisibili
+            _pieCanvasGroup.alpha = 0f;
+            _isPieVisible = false;
+            // Importante: lasciamo gameObject attivo per permettere il fade-in, ma con alpha 0
+            emitterProgressPie.gameObject.SetActive(true); 
+        }
     }
 
     void Start()
@@ -88,6 +138,11 @@ public class UIManager : MonoBehaviour
         gm = GameManager.Instance;
         pm = PlanetManager.Instance;
         
+        // --- NUOVO: Inizializzazione Animatori ---
+        // Cerchiamo il componente NumberDigitAnimator sugli oggetti di testo
+        if (scoreText != null) _scoreAnimator = scoreText.GetComponent<NumberDigitAnimator>();
+        if (incomeText != null) _incomeAnimator = incomeText.GetComponent<NumberDigitAnimator>();
+
         if (gm != null)
         {
             gm.OnEconomyUpdated -= RefreshUI; 
@@ -103,9 +158,7 @@ public class UIManager : MonoBehaviour
 
             if (optionsButton != null && optionsMenuController != null)
             {
-                // Registriamo il menu opzioni
                 RegisterMenu(optionsMenuController.panelVisuals);
-
                 optionsButton.onClick.RemoveAllListeners();
                 optionsButton.onClick.AddListener(optionsMenuController.ToggleMenu);
             }
@@ -115,7 +168,6 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    // --- NUOVO: METODO PER NASCONDERE/MOSTRARE HUD PER INTRO ---
     public void SetHUDVisibility(bool visible, float duration = 0.5f)
     {
         if (mainHUDGroup == null) return;
@@ -126,8 +178,6 @@ public class UIManager : MonoBehaviour
     {
         float startAlpha = cg.alpha;
         float timer = 0f;
-
-        // Se dobbiamo nascondere, disabilitiamo subito i click
         if (targetAlpha == 0f) cg.blocksRaycasts = false;
 
         while (timer < duration)
@@ -137,11 +187,8 @@ public class UIManager : MonoBehaviour
             yield return null;
         }
         cg.alpha = targetAlpha;
-
-        // Se dobbiamo mostrare, abilitiamo i click alla fine
         if (targetAlpha == 1f) cg.blocksRaycasts = true;
     }
-    // -----------------------------------------------------------
 
     public void RegisterMenu(GameObject menuPanel)
     {
@@ -154,11 +201,9 @@ public class UIManager : MonoBehaviour
     public void CloseAllMenusExcept(GameObject menuToKeepOpen)
     {
         _registeredMenus.RemoveAll(x => x == null);
-
         foreach (var menu in _registeredMenus)
         {
             if (menu == menuToKeepOpen) continue;
-
             if (menu.activeSelf)
             {
                 UIPopupEffect effect = menu.GetComponent<UIPopupEffect>();
@@ -171,13 +216,11 @@ public class UIManager : MonoBehaviour
     private void SetupPlanetButtons()
     {
         if (pm == null) return;
-        
         if (startPreparationButton) 
         {
             startPreparationButton.onClick.RemoveAllListeners();
             startPreparationButton.onClick.AddListener(pm.StartLaunchPreparation);
         }
-        
         if (startTravelButton) 
         {
             startTravelButton.onClick.RemoveAllListeners();
@@ -220,8 +263,18 @@ public class UIManager : MonoBehaviour
     {
         gm = GameManager.Instance;
         pm = PlanetManager.Instance;
-        
         _registeredMenus.RemoveAll(x => x == null);
+        
+        // Reset stato al cambio scena
+        if (multiplierContainer != null) 
+        {
+            multiplierContainer.SetActive(false);
+            _isMultVisible = false;
+        }
+        
+        // Aggiorna riferimenti animatori al cambio scena
+        if (scoreText != null) _scoreAnimator = scoreText.GetComponent<NumberDigitAnimator>();
+        if (incomeText != null) _incomeAnimator = incomeText.GetComponent<NumberDigitAnimator>();
 
         RefreshUI();
     }
@@ -229,7 +282,6 @@ public class UIManager : MonoBehaviour
     public void ShowPureIridiumFeedback(int gainAmount)
     {
         if (pureIridiumText == null) return;
-
         if (_iridiumFeedbackRoutine != null) StopCoroutine(_iridiumFeedbackRoutine);
         _iridiumFeedbackRoutine = StartCoroutine(IridiumFeedbackRoutine(gainAmount));
     }
@@ -237,12 +289,9 @@ public class UIManager : MonoBehaviour
     IEnumerator IridiumFeedbackRoutine(int gain)
     {
         _isShowingIridiumFeedback = true;
-
-        string currentTotal = FormatNumber(GameManager.Instance.PureIridium);
-        pureIridiumText.text = $"Pure Iridium: {currentTotal} <color=#FF00FF>(+{gain})</color>";
-
+        string currentTotal = FormatNumber(GameManager.Instance.PureIridium, 0);
+        pureIridiumText.text = $"{currentTotal} <color=#FF00FF>(+{gain})</color>";
         yield return new WaitForSeconds(2.0f);
-
         _isShowingIridiumFeedback = false;
         RefreshUI();
     }
@@ -251,8 +300,17 @@ public class UIManager : MonoBehaviour
     {
         if (gm == null) return;
 
-        if (scoreText != null) scoreText.text = $"{FormatNumber(gm.CurrentEnergy)} Energy";
+        // 1. Current Energy (MODIFICATO PER ANIMAZIONE)
+        if (scoreText != null) 
+        {
+            string val = FormatNumber(gm.CurrentEnergy);
+            
+            // Se c'è l'animatore, usiamo quello, altrimenti metodo classico
+            if (_scoreAnimator != null) _scoreAnimator.SetText(val);
+            else scoreText.text = val;
+        }
         
+        // 2. Offline Storage
         if (storageText != null) 
         {
             TimeSpan ts = TimeSpan.FromSeconds(gm.MaxOfflineSeconds);
@@ -260,19 +318,77 @@ public class UIManager : MonoBehaviour
             storageText.text = $"Offline: {formattedTime}";
         }
 
-        if (incomeText != null) incomeText.text = $"+{FormatNumber(gm.EffectiveIncomePerSec)}/s";
+        // 3. Income per sec (MODIFICATO PER ANIMAZIONE)
+        if (incomeText != null) 
+        {
+            string val = $"{FormatNumber(gm.EffectiveIncomePerSec)}/sec";
 
+            if (_incomeAnimator != null) _incomeAnimator.SetText(val);
+            else incomeText.text = val;
+        }
+
+        // 4. Pure Iridium & Icon
         if (pureIridiumText != null)
         {
-            if (!_isShowingIridiumFeedback)
+            if (!_isShowingIridiumFeedback) 
             {
-                pureIridiumText.text = $"Pure Iridium: {FormatNumber(gm.PureIridium)}"; 
+                pureIridiumText.text = FormatNumber(gm.PureIridium, 0); 
+            }
+
+            if (pureIridiumText.color != pureIridiumColor) 
+                pureIridiumText.color = pureIridiumColor;
+            
+            if (pureIridiumIcon != null && pureIridiumIcon.color != pureIridiumColor)
+            {
+                pureIridiumIcon.color = pureIridiumColor;
             }
         }
 
-        if (rawIridiumText != null)
+        // 5. Raw Iridium
+        if (rawIridiumText != null) rawIridiumText.text = $"Raw Iridium: {FormatNumber(gm.RawIridium)}";
+
+        // 6. Emitter Count & Icon
+        if (emitterCountText != null)
         {
-            rawIridiumText.text = $"Raw Iridium: {FormatNumber(gm.RawIridium)}";
+            string currentStr = (gm.EmitterCount < 1000) 
+                ? gm.EmitterCount.ToString("F0") 
+                : FormatNumber(gm.EmitterCount);
+
+            string capStr = (gm.EmitterCap < 1000) 
+                ? gm.EmitterCap.ToString("F0") 
+                : FormatNumber(gm.EmitterCap);
+            
+            emitterCountText.text = $"{currentStr} / {capStr}";
+
+            bool isMaxed = gm.EmitterCount >= gm.EmitterCap;
+            
+            Color baseColor = normalColor;
+            if (gm.activeTheme != null) baseColor = gm.activeTheme.textHighlight; 
+            
+            Color finalColor = isMaxed ? warningColor : baseColor;
+
+            if (emitterCountText.color != finalColor) emitterCountText.color = finalColor;
+            if (emitterIcon != null && emitterIcon.color != finalColor) emitterIcon.color = finalColor;
+        }
+
+        // --- GESTIONE MULTIPLIER (Visibile solo se attivo) ---
+        if (multiplierContainer != null && energyMultiplierText != null)
+        {
+            float currentMult = gm.CurrentEnergyMultiplier;
+            // Compare se maggiore di 1.01 (quindi se diverso da 0/1)
+            bool shouldBeVisible = currentMult > 1.01f; 
+
+            energyMultiplierText.text = $"< {currentMult:F2} x";
+            
+            if (energyMultiplierText.color != multiplierTextColor)
+                energyMultiplierText.color = multiplierTextColor;
+
+            if (shouldBeVisible != _isMultVisible)
+            {
+                _isMultVisible = shouldBeVisible;
+                if (_multAnimRoutine != null) StopCoroutine(_multAnimRoutine);
+                _multAnimRoutine = StartCoroutine(ToggleMultiplierRoutine(shouldBeVisible));
+            }
         }
 
         if (logisticsStatusText != null)
@@ -282,6 +398,7 @@ public class UIManager : MonoBehaviour
             logisticsStatusText.text = $"{emitterString}\nProd: {FormatNumber(gm.RawProductionRate)} | Log Cap: {FormatNumber(gm.LogisticsCap)}";
         }
 
+        // --- NANOBOT GROWTH ---
         if (emitterGrowthText != null)
         {
             if (gm.EmitterCount >= gm.EmitterCap)
@@ -293,19 +410,26 @@ public class UIManager : MonoBehaviour
             }
         }
 
-        if (energyMultiplierText != null)
+        // --- NUOVO: LOGICA PIE CHART CON DISSOLVENZA ---
+        if (emitterProgressPie != null && _pieCanvasGroup != null)
         {
-            float currentMult = gm.CurrentEnergyMultiplier;
-            if (currentMult > 1.01f) 
+            bool shouldShowPie = gm.EmitterCount < gm.EmitterCap;
+
+            // Se lo stato desiderato è diverso da quello attuale, avvia l'animazione
+            if (shouldShowPie != _isPieVisible)
             {
-                if (!energyMultiplierText.gameObject.activeSelf) energyMultiplierText.gameObject.SetActive(true);
-                energyMultiplierText.text = $"x {currentMult:F2}";
+                _isPieVisible = shouldShowPie;
+                if (_pieAnimRoutine != null) StopCoroutine(_pieAnimRoutine);
+                _pieAnimRoutine = StartCoroutine(TogglePieRoutine(shouldShowPie));
             }
-            else
+
+            // Aggiorna il riempimento solo se è (o sta diventando) visibile
+            if (_isPieVisible || _pieCanvasGroup.alpha > 0.01f)
             {
-                if (energyMultiplierText.gameObject.activeSelf) energyMultiplierText.gameObject.SetActive(false);
+                emitterProgressPie.fillAmount = gm.GetEmitterGrowthProgress();
             }
         }
+        // -----------------------------------------------
 
         if (prestigeInfoText != null)
         {
@@ -316,6 +440,59 @@ public class UIManager : MonoBehaviour
 
         CheckBottleneck();
         RefreshPlanetUI();
+    }
+
+    // --- ANIMAZIONE MULTIPLIER (Fade) ---
+    private IEnumerator ToggleMultiplierRoutine(bool show)
+    {
+        float timer = 0f;
+        float duration = 0.4f;
+
+        if (show)
+        {
+            multiplierContainer.SetActive(true);
+            _multCanvasGroup.alpha = 0f;
+            while (timer < duration)
+            {
+                timer += Time.deltaTime;
+                float t = timer / duration;
+                _multCanvasGroup.alpha = Mathf.Lerp(0f, 1f, t);
+                yield return null;
+            }
+            _multCanvasGroup.alpha = 1f;
+        }
+        else
+        {
+            float startAlpha = _multCanvasGroup.alpha;
+            while (timer < duration)
+            {
+                timer += Time.deltaTime;
+                float t = timer / duration;
+                _multCanvasGroup.alpha = Mathf.Lerp(startAlpha, 0f, t);
+                yield return null;
+            }
+            _multCanvasGroup.alpha = 0f;
+            multiplierContainer.SetActive(false); 
+        }
+    }
+
+    // --- NUOVO: ANIMAZIONE PIE CHART (Fade) ---
+    private IEnumerator TogglePieRoutine(bool show)
+    {
+        float timer = 0f;
+        float duration = 0.5f; // Durata dissolvenza
+
+        float startAlpha = _pieCanvasGroup.alpha;
+        float targetAlpha = show ? 1f : 0f;
+
+        while (timer < duration)
+        {
+            timer += Time.deltaTime;
+            float t = timer / duration;
+            _pieCanvasGroup.alpha = Mathf.Lerp(startAlpha, targetAlpha, t);
+            yield return null;
+        }
+        _pieCanvasGroup.alpha = targetAlpha;
     }
 
     void RefreshPlanetUI()
@@ -331,7 +508,6 @@ public class UIManager : MonoBehaviour
 
         BigDouble currentPlanetValue = pm.CalculatePlanetValue();
         bool canShowPanel = currentPlanetValue >= currentPlanet.requiredPlanetValue || pm.isPreparingForLaunch || pm.isTraveling;
-        
         planetTravelPanel.SetActive(canShowPanel);
         if (!canShowPanel) return;
 
@@ -340,7 +516,6 @@ public class UIManager : MonoBehaviour
         
         bool isTraveling = pm.isTraveling;
         bool isPreparing = pm.isPreparingForLaunch;
-
         double totalDuration = pm.GetTotalTravelDuration();
         BigDouble shipSpeed = (SpaceshipManager.Instance != null) ? SpaceshipManager.Instance.GetTotalSpaceshipSpeed() : 0;
         if (shipSpeed <= 0) shipSpeed = 10; 
@@ -350,19 +525,15 @@ public class UIManager : MonoBehaviour
             if(startPreparationButton) startPreparationButton.gameObject.SetActive(false);
             if(startTravelButton) startTravelButton.gameObject.SetActive(false);
             if(launchProgressBar) launchProgressBar.gameObject.SetActive(false);
-            
             if(travelStatusText)
             {
                 travelStatusText.gameObject.SetActive(true);
-                
                 TimeSpan timeRemaining = TimeSpan.FromSeconds(totalDuration) - (DateTime.UtcNow - pm.travelStartTime);
-                
                 if (timeRemaining.TotalSeconds > 0)
                     travelStatusText.text = $"Arriving in: <color=yellow>{FormatTimeSpan(timeRemaining)}</color>";
                 else
                     travelStatusText.text = "Docking...";
             }
-
             if(travelInfoText) travelInfoText.gameObject.SetActive(false);
         }
         else if (isPreparing)
@@ -370,7 +541,6 @@ public class UIManager : MonoBehaviour
             if(startPreparationButton) startPreparationButton.gameObject.SetActive(false);
             if(startTravelButton) startTravelButton.gameObject.SetActive(false);
             if(travelStatusText) travelStatusText.gameObject.SetActive(false);
-
             if(launchProgressBar)
             {
                 launchProgressBar.gameObject.SetActive(true);
@@ -378,22 +548,17 @@ public class UIManager : MonoBehaviour
                 if (energyRequirement > 0)
                     launchProgressBar.value = (float)(pm.launchPreparationProgress / energyRequirement).ToDouble();
             }
-
             UpdateTravelInfoText(shipSpeed, totalDuration);
         }
         else
         {
             BigDouble energyRequirement = pm.GetLaunchEnergyRequirement();
             bool preparationComplete = pm.launchPreparationProgress >= energyRequirement && energyRequirement > 0;
-
             if(startPreparationButton) startPreparationButton.gameObject.SetActive(!preparationComplete);
             if(startTravelButton) startTravelButton.gameObject.SetActive(preparationComplete);
             if(launchProgressBar) launchProgressBar.gameObject.SetActive(false);
             if(travelStatusText) travelStatusText.gameObject.SetActive(false);
-
-            if(startPreparationButton) 
-                startPreparationButton.interactable = currentPlanetValue >= currentPlanet.requiredPlanetValue;
-            
+            if(startPreparationButton) startPreparationButton.interactable = currentPlanetValue >= currentPlanet.requiredPlanetValue;
             UpdateTravelInfoText(shipSpeed, totalDuration);
         }
     }
@@ -410,28 +575,36 @@ public class UIManager : MonoBehaviour
 
     private string FormatTimeSpan(TimeSpan ts)
     {
-        if (ts.TotalHours >= 1)
-            return string.Format("{0:D2}:{1:D2}:{2:D2}", (int)ts.TotalHours, ts.Minutes, ts.Seconds);
-        else
-            return string.Format("{0:D2}:{1:D2}", ts.Minutes, ts.Seconds);
+        if (ts.TotalHours >= 1) return string.Format("{0:D2}:{1:D2}:{2:D2}", (int)ts.TotalHours, ts.Minutes, ts.Seconds);
+        else return string.Format("{0:D2}:{1:D2}", ts.Minutes, ts.Seconds);
     }
 
     void CheckBottleneck()
     {
         if (incomeText == null) return;
         bool isBottleneck = gm.RawProductionRate > gm.LogisticsCap;
-        Color targetColor = isBottleneck ? warningColor : normalColor;
-        incomeText.color = targetColor;
+        Color targetNormal = normalColor;
+        if (gm.activeTheme != null) targetNormal = gm.activeTheme.textHighlight; 
+        Color finalColor = isBottleneck ? warningColor : targetNormal;
+        
+        // Applica al testo
+        if (incomeText.color != finalColor) incomeText.color = finalColor;
+        
+        // Applica all'icona
+        if (incomeIcon != null && incomeIcon.color != finalColor) 
+        {
+            incomeIcon.color = finalColor;
+        }
     }
 
-    private string FormatNumber(BigDouble number)
+    private string FormatNumber(BigDouble number, int decimals = 2)
     {
-        if (number < 1000) return number.ToString("F2");
+        if (number < 1000) return number.ToString("F" + decimals);
         long exponent = (long)BigDouble.Log10(number);
-        if (exponent < 6) return (number / 1000).ToString("F2") + "k";
-        if (exponent < 9) return (number / 1e6).ToString("F2") + "M";
-        if (exponent < 12) return (number / 1e9).ToString("F2") + "B";
-        if (exponent < 15) return (number / 1e12).ToString("F2") + "T";
-        return number.ToString("e2");
+        if (exponent < 6) return (number / 1000).ToString("F" + decimals) + "k";
+        if (exponent < 9) return (number / 1e6).ToString("F" + decimals) + "M";
+        if (exponent < 12) return (number / 1e9).ToString("F" + decimals) + "B";
+        if (exponent < 15) return (number / 1e12).ToString("F" + decimals) + "T";
+        return number.ToString("e" + decimals);
     }
 }

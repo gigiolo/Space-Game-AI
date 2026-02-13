@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dac902865c54b7e479540201146bfee3, type: 3}
+  m_Name: 5_Emitter_Max_Cap_2
+  m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
+  id: 1.1_Emitter_Max_Cap_1
+  title: Base Camp
+  description: Max emitter number +1
+  icon: {fileID: 21300000, guid: f627f1dc580600745bf33ceb68b0f43c, type: 3}
+  type: 1
+  target: 6
+  bonusValue: 2
+  manualCosts: []
+  costType: 0
+  baseCost: 2.69
+  costFactor: 1.28
+  maxLevel: 14

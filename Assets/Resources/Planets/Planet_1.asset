@@ -25,7 +25,7 @@ MonoBehaviour:
     exponent: 3
   productionMultiplier:
     mantissa: 1
-    exponent: 1
+    exponent: 0
   balanceFactor:
     mantissa: 1
     exponent: 0

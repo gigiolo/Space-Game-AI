@@ -1,3 +1,4 @@
+// --- File completo aggiornato: _Scripts\LaunchSequenceController.cs ---
 using UnityEngine;
 using System.Globalization;
 using System.Collections;
@@ -12,14 +13,11 @@ public class LaunchSequenceController : MonoBehaviour
     public SpaceshipFlight spaceshipPrefab; 
     public ParticleSystem launchVFX; 
 
-    [Header("Audio")] // <--- NUOVO
-    [Tooltip("Effetto sonoro del decollo")]
+    [Header("Audio")]
     public AudioClip launchSFX;
 
     [Header("Camera Animation Settings")]
-    [Tooltip("Angolo offset per inquadrare la nave (45° = vista 3/4)")]
     public float viewAngleOffset = 45f;
-    [Tooltip("Tempo impiegato dalla camera per ruotare")]
     public float cameraRotationDuration = 2.0f;
 
     [Header("Debug")]
@@ -27,24 +25,17 @@ public class LaunchSequenceController : MonoBehaviour
 
     private void Start()
     {
-        if (orbitCamera == null) 
-            orbitCamera = FindFirstObjectByType<PlanetOrbitCamera>();
-
-        if (statusPopup == null) 
-            statusPopup = FindFirstObjectByType<PlanetStatusPopup>();
+        if (orbitCamera == null) orbitCamera = FindFirstObjectByType<PlanetOrbitCamera>();
+        if (statusPopup == null) statusPopup = FindFirstObjectByType<PlanetStatusPopup>();
 
         if (PlanetManager.Instance != null)
-        {
             PlanetManager.Instance.OnTravelStarted += StartSequence;
-        }
     }
 
     private void OnDestroy()
     {
         if (PlanetManager.Instance != null)
-        {
             PlanetManager.Instance.OnTravelStarted -= StartSequence;
-        }
     }
 
     private void Update()
@@ -60,50 +51,42 @@ public class LaunchSequenceController : MonoBehaviour
     {
         if (statusPopup != null) statusPopup.ClosePopup();
 
-        Vector3 launchPos = Vector3.zero;
-        
-        var visualScript = FindFirstObjectByType<LaunchSiteVisuals>();
-        if (visualScript != null)
-        {
-            launchPos = visualScript.GetCurrentWorldPosition();
-        }
+        // Forza lo stato di blocco prima di iniziare qualunque logica
+        PlanetOrbitCamera.IsInputBlocked = true;
 
-        if (launchPos == Vector3.zero && GameManager.Instance != null && !string.IsNullOrEmpty(GameManager.Instance.StoredLaunchSitePosition))
-        {
-            Vector3 localPos = StringToVector3(GameManager.Instance.StoredLaunchSitePosition);
-            
-            if (orbitCamera != null && orbitCamera.planetTarget != null)
-            {
-                launchPos = orbitCamera.planetTarget.TransformPoint(localPos);
-            }
-            else
-            {
-                launchPos = localPos; 
-            }
-        }
-
-        if (launchPos == Vector3.zero)
-        {
-            Debug.LogWarning("LaunchSequence: Posizione LaunchSite non trovata, uso default.");
-            if (orbitCamera != null && orbitCamera.planetTarget != null)
-                launchPos = orbitCamera.planetTarget.position + (Vector3.back * 1.6f);
-            else
-                launchPos = new Vector3(0, 0, -1.6f);
-        }
+        Vector3 launchPos = GetLaunchPosition();
 
         if (orbitCamera != null)
         {
             orbitCamera.AnimateToLookAt(launchPos, viewAngleOffset, cameraRotationDuration, () => 
             {
                 SpawnSpaceship(launchPos);
+                // Sblocca solo alla fine dell'animazione
                 PlanetOrbitCamera.IsInputBlocked = false;
             });
         }
         else
         {
+            // Se non c'è camera, eseguiamo subito e sblocchiamo
             SpawnSpaceship(launchPos);
             PlanetOrbitCamera.IsInputBlocked = false;
         }
+    }
+
+    private Vector3 GetLaunchPosition()
+    {
+        var visualScript = FindFirstObjectByType<LaunchSiteVisuals>();
+        if (visualScript != null) return visualScript.GetCurrentWorldPosition();
+
+        if (GameManager.Instance != null && !string.IsNullOrEmpty(GameManager.Instance.StoredLaunchSitePosition))
+        {
+            Vector3 localPos = StringToVector3(GameManager.Instance.StoredLaunchSitePosition);
+            if (orbitCamera != null && orbitCamera.planetTarget != null)
+                return orbitCamera.planetTarget.TransformPoint(localPos);
+            return localPos;
+        }
+
+        return new Vector3(0, 0, -1.6f); // Fallback
     }
 
     private void SpawnSpaceship(Vector3 pos)
@@ -111,23 +94,13 @@ public class LaunchSequenceController : MonoBehaviour
         if (spaceshipPrefab != null)
         {
             SpaceshipFlight ship = Instantiate(spaceshipPrefab);
-            
-            Vector3 planetCenter = Vector3.zero;
-            if (orbitCamera != null && orbitCamera.planetTarget != null)
-            {
-                planetCenter = orbitCamera.planetTarget.position;
-            }
-
+            Vector3 planetCenter = (orbitCamera != null && orbitCamera.planetTarget != null) ? orbitCamera.planetTarget.position : Vector3.zero;
             Vector3 surfaceNormal = (pos - planetCenter).normalized;
             ship.Launch(pos, surfaceNormal);
         }
 
-        // --- NUOVO: Play Audio ---
         if (launchSFX != null && AudioManager.Instance != null)
-        {
             AudioManager.Instance.PlaySFX(launchSFX, 1.0f, 0.1f);
-        }
-        // -------------------------
 
         if (launchVFX != null)
         {
@@ -142,7 +115,6 @@ public class LaunchSequenceController : MonoBehaviour
         if (string.IsNullOrEmpty(s)) return Vector3.zero;
         string[] parts = s.Split('|'); 
         if (parts.Length < 3) return Vector3.zero;
-        
         float x = float.Parse(parts[0], CultureInfo.InvariantCulture); 
         float y = float.Parse(parts[1], CultureInfo.InvariantCulture); 
         float z = float.Parse(parts[2], CultureInfo.InvariantCulture);

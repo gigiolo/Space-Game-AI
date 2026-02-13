@@ -75,8 +75,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4278255397
-  m_fontColor: {r: 0.1469543, g: 1, b: 0, a: 1}
+    rgba: 4278255374
+  m_fontColor: {r: 0.054901965, g: 1, b: 0, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -228,8 +228,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4278255397
-  m_fontColor: {r: 0.1469543, g: 1, b: 0, a: 1}
+    rgba: 4278255374
+  m_fontColor: {r: 0.054901965, g: 1, b: 0, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -379,8 +379,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4278255397
-  m_fontColor: {r: 0.1469543, g: 1, b: 0, a: 1}
+    rgba: 4278255374
+  m_fontColor: {r: 0.054901965, g: 1, b: 0, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -665,6 +665,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents:
     - {fileID: 7672364818120634117, guid: c26843823b18a3943a0e148e2f1dbef8, type: 3}
+    - {fileID: 482803629404124078, guid: c26843823b18a3943a0e148e2f1dbef8, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 3391667511448261595, guid: c26843823b18a3943a0e148e2f1dbef8, type: 3}
@@ -758,3 +759,4 @@ MonoBehaviour:
   timeText: {fileID: 853787493607064165}
   earningsText: {fileID: 667540453086082837}
   capWarningText: {fileID: 583741249448773450}
+  emittersText: {fileID: 0}

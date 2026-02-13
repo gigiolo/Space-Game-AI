@@ -17,7 +17,7 @@ public class ResearchSlotUI : MonoBehaviour
 
     private ResearchItem _myData;
     private System.Action<ResearchItem> _buyAction;
-    private Image _buttonBg; // Cache del componente per evitare GetComponent ripetuti
+    private Image _buttonBg; 
 
     private bool _isHolding = false;
     private float _nextBuyTime = 0f;
@@ -30,7 +30,6 @@ public class ResearchSlotUI : MonoBehaviour
         _buyAction = onBuyClick;
         _buttonBg = buyButton.GetComponent<Image>();
 
-        // INFO STATICHE: Le scriviamo una volta sola qui
         if (titleText) titleText.text = item.title;
         if (descText) descText.text = item.description;
         if (item.icon != null && iconImage) iconImage.sprite = item.icon;
@@ -89,7 +88,6 @@ public class ResearchSlotUI : MonoBehaviour
             _buyAction(_myData);
     }
 
-    // OTTIMIZZAZIONE: Aggiorniamo solo quello che può cambiare
     public void RefreshUI()
     {
         if (_myData == null || GameManager.Instance == null) return;
@@ -98,7 +96,6 @@ public class ResearchSlotUI : MonoBehaviour
         bool isMaxed = _myData.IsMaxed();
         bool canAfford = GameManager.Instance.CurrentEnergy >= cost;
 
-        // 1. Prezzo (Solo se non è MAX)
         if (costText != null) 
         {
             if (isMaxed) {
@@ -109,7 +106,6 @@ public class ResearchSlotUI : MonoBehaviour
             }
         }
         
-        // 2. Bottone e Feedback Visivo
         if (buyButton != null)
         {
             buyButton.interactable = !isMaxed && canAfford;
@@ -121,7 +117,6 @@ public class ResearchSlotUI : MonoBehaviour
             }
         }
 
-        // 3. Progresso e Livello (Solo se necessari)
         if (progressBar != null)
             progressBar.value = _myData.maxLevel > 0 ? (float)_myData.currentLevel / _myData.maxLevel : 0;
 
@@ -129,12 +124,19 @@ public class ResearchSlotUI : MonoBehaviour
             levelText.text = $"Level <color=white>{_myData.currentLevel}</color>/{_myData.maxLevel}";
     }
 
+    // --- METODO CORRETTO ---
     private string FormatNumber(BigDouble number)
     {
+        if (number < 10) return number.ToString("F2");
         if (number < 1000) return number.ToString("F0");
+        
         long exponent = (long)BigDouble.Log10(number);
         if (exponent < 6) return (number / 1000).ToString("F1") + "k";
         if (exponent < 9) return (number / 1e6).ToString("F2") + "M";
-        return number.ToString("e2");
+        if (exponent < 12) return (number / 1e9).ToString("F2") + "B";
+        if (exponent < 15) return (number / 1e12).ToString("F2") + "T";
+        
+        // CORREZIONE QUI: Costruzione manuale della stringa scientifica
+        return $"{number.Mantissa:F2}e{number.Exponent}";
     }
 }

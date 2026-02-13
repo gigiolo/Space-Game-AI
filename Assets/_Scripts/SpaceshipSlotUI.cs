@@ -10,7 +10,7 @@ public class SpaceshipSlotUI : MonoBehaviour
     public TextMeshProUGUI descText;
     public TextMeshProUGUI costText;
     public TextMeshProUGUI levelText;
-    public TextMeshProUGUI speedText; // Mostra quanto velocità dà questa nave
+    public TextMeshProUGUI speedText; 
     public Button buyButton;
     public Slider progressBar;
     public Image iconImage;
@@ -18,7 +18,7 @@ public class SpaceshipSlotUI : MonoBehaviour
     [Header("Currency Icons")]
     public Sprite energyIcon;
     public Sprite iridiumIcon;
-    public Image costIconImage; // Immagine piccola accanto al prezzo
+    public Image costIconImage;
 
     private SpaceshipItem _data;
     private System.Action<SpaceshipItem> _onBuy;
@@ -46,19 +46,16 @@ public class SpaceshipSlotUI : MonoBehaviour
         bool isMaxed = _data.IsMaxed();
         bool canAfford = false;
 
-        // Verifica disponibilità in base alla valuta
         if (_data.info.currencyType == SpaceshipCurrency.Energy)
             canAfford = GameManager.Instance.CurrentEnergy >= cost;
         else
             canAfford = GameManager.Instance.PureIridium >= cost;
 
-        // Imposta Icona Valuta
         if (costIconImage)
         {
             costIconImage.sprite = (_data.info.currencyType == SpaceshipCurrency.Energy) ? energyIcon : iridiumIcon;
         }
 
-        // Testo Costo
         if (costText)
         {
             if (isMaxed) costText.text = "MAX";
@@ -67,17 +64,14 @@ public class SpaceshipSlotUI : MonoBehaviour
             costText.color = canAfford ? Color.white : Color.red;
         }
 
-        // Bottone
         buyButton.interactable = !isMaxed && canAfford;
 
-        // Testo Velocità Attuale
         if (speedText)
         {
             BigDouble currentSpd = _data.GetCurrentSpeed();
             speedText.text = $"Speed: {FormatNumber(currentSpd)} Km/s";
         }
 
-        // Barra livello
         if (progressBar)
         {
             if (_data.info.maxLevel > 0)
@@ -92,19 +86,16 @@ public class SpaceshipSlotUI : MonoBehaviour
     // --- METODO CORRETTO ---
     private string FormatNumber(BigDouble number)
     {
-        // Numeri piccoli (mostra decimali)
-        if (number < 1000) return number.ToString("F2");
-        
+        if (number < 10) return number.ToString("F2");
+        if (number < 1000) return number.ToString("F0");
         long exponent = (long)BigDouble.Log10(number);
         
-        // Formattazione coerente con il resto del gioco (k, M, B, T)
         if (exponent < 6) return (number / 1000).ToString("F2") + "k";
         if (exponent < 9) return (number / 1e6).ToString("F2") + "M";
         if (exponent < 12) return (number / 1e9).ToString("F2") + "B";
         if (exponent < 15) return (number / 1e12).ToString("F2") + "T";
         
-        // Notazione scientifica per numeri enormi
-        // "e2" significa notazione scientifica con 2 decimali (es. 1.25e+20)
-        return number.ToString("e2"); 
+        // CORREZIONE QUI
+        return $"{number.Mantissa:F2}e{number.Exponent}";
     }
 }

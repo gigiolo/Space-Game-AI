@@ -20,10 +20,15 @@ public class PlanetPopulationVisuals : MonoBehaviour
     public float cityBaseSize = 0.15f; 
     [Tooltip("Colore della base cittadina (Grigio/Bluastro)")]
     public Color cityBaseColor = new Color(0.3f, 0.35f, 0.4f, 0.8f);
-    [Tooltip("Probabilità che compaia una base cittadina (0.3 = 30%). Riduce il carico GPU.")]
+    
+    [Tooltip("Probabilità standard che compaia una base cittadina (0.3 = 30%).")]
     [Range(0f, 1f)]
     public float citySpawnChance = 0.3f; 
-    [Tooltip("Quanto ingrandire le chiazze per compensare il numero ridotto (1.5 = +50%).")]
+
+    [Tooltip("Quanti dei primi emitter avranno SEMPRE una base cittadina (Chance 100%) per feedback iniziale.")]
+    public int guaranteedCityCount = 5; // <--- NUOVO PARAMETRO RICHIESTO
+
+    [Tooltip("Quanto ingrandire le chiazze per compensare il numero ridotto.")]
     public float citySizeMultiplier = 1.7f;
 
     [Header("ENERGY FEEDBACK")]
@@ -45,8 +50,8 @@ public class PlanetPopulationVisuals : MonoBehaviour
     public float clusterSpread = 0.2f; 
     [Tooltip("Probabilità di generare un nuovo punto isolato invece di espandere un cluster esistente.")]
     public float newHubChance = 0.05f;
-    [Tooltip("Numero di emitter iniziali che DEVONO essere vicini al primo (cluster forzato) prima di permettere nuovi Hub.")]
-    public int safeStartCount = 6; // <--- NUOVA VARIABILE AGGIUNTA
+    [Tooltip("Numero di emitter iniziali che DEVONO essere vicini al primo prima di permettere nuovi Hub.")]
+    public int safeStartCount = 6; 
 
     [Header("Rendering")]
     public Transform sunLight; 
@@ -86,10 +91,8 @@ public class PlanetPopulationVisuals : MonoBehaviour
     {
         if (Application.isPlaying)
         {
-            // 1. LUCI (EMITTERS)
             _ps = GetComponent<ParticleSystem>();
             _psRenderer = _ps.GetComponent<ParticleSystemRenderer>();
-            
             if (_psRenderer != null) _psRenderer.sortingOrder = 10;
 
             _particlesBuffer = new ParticleSystem.Particle[maxLights];
@@ -97,14 +100,12 @@ public class PlanetPopulationVisuals : MonoBehaviour
             var main = _ps.main; main.loop = false; main.playOnAwake = true; main.maxParticles = maxLights; main.simulationSpace = ParticleSystemSimulationSpace.Local; 
             if (!_ps.isPlaying) _ps.Play();
             
-            // 2. CONNESSIONI (LINEE)
             if (connectionPS != null)
             {
                 var connMain = connectionPS.main;
                 connMain.loop = false; connMain.playOnAwake = true; connMain.simulationSpace = ParticleSystemSimulationSpace.Local;
                 connMain.maxParticles = maxLights * maxConnectionsPerNode; 
                 _connectionRenderer = connectionPS.GetComponent<ParticleSystemRenderer>();
-                
                 if (_connectionRenderer != null) _connectionRenderer.sortingOrder = 5;
 
                 _connectionsBuffer = new ParticleSystem.Particle[connMain.maxParticles];
@@ -118,7 +119,6 @@ public class PlanetPopulationVisuals : MonoBehaviour
                 connectionPS.Stop(); connectionPS.Clear(); connectionPS.Play();
             }
 
-            // 3. CITY BASE (URBANIZZAZIONE)
             if (cityBasePS != null)
             {
                 var cityMain = cityBasePS.main;
@@ -127,9 +127,7 @@ public class PlanetPopulationVisuals : MonoBehaviour
                 cityMain.startRotation3D = true; 
 
                 _cityBaseRenderer = cityBasePS.GetComponent<ParticleSystemRenderer>();
-                
                 if (_cityBaseRenderer != null) _cityBaseRenderer.sortingOrder = 0;
-
                 _cityBaseRenderer.renderMode = ParticleSystemRenderMode.Mesh;
                 _cityBaseRenderer.mesh = Resources.GetBuiltinResource<Mesh>("Quad.fbx"); 
                 if(_cityBaseRenderer.mesh == null) _cityBaseRenderer.renderMode = ParticleSystemRenderMode.Billboard; 
@@ -156,7 +154,6 @@ public class PlanetPopulationVisuals : MonoBehaviour
     {
         if (this == null || gameObject == null) return;
 
-        // Update Shaders
         if (Application.isPlaying && sunLight != null)
         {
             Vector3 sunDir = -sunLight.forward;
@@ -170,7 +167,6 @@ public class PlanetPopulationVisuals : MonoBehaviour
             }
         }
 
-        // Feedback Colore Tasto
         Color currentTargetColor = idleColor * idleIntensity;
         if (Application.isPlaying && GameManager.Instance != null) {
             float t = 0f;
@@ -179,7 +175,6 @@ public class PlanetPopulationVisuals : MonoBehaviour
             currentTargetColor = Color.Lerp(idleColor, maxPowerColor, t) * Mathf.Lerp(idleIntensity, maxPowerIntensity, t);
         }
 
-        // Animazione Fade e Colore
         if (Application.isPlaying) 
         {
             AnimateSystem(_ps, _particlesBuffer, true, currentTargetColor);
@@ -213,42 +208,26 @@ public class PlanetPopulationVisuals : MonoBehaviour
         if (hasChanges) sys.SetParticles(buffer, count);
     }
 
-    // --- GENERAZIONE & SPAWN ---
-
-    // --- NUOVO: METODO PER SPAWN FORZATO (ATTERRAGGIO) ---
     public void SpawnSpecificEmitter(Vector3 exactPosition)
     {
         _occupiedPositions.Add(exactPosition);
-        SpawnedCount++; // Incrementiamo così non ne spawna un altro per errore
+        SpawnedCount++;
 
         float parentScale = GetParentScale();
         
-        // 1. Luce
         ParticleSystem.EmitParams lightParams = new ParticleSystem.EmitParams();
-        lightParams.startColor = new Color(1, 1, 1, 0f); // Parte invisibile e fa fade in
+        lightParams.startColor = new Color(1, 1, 1, 0f); 
         lightParams.startLifetime = float.MaxValue;
         lightParams.startSize = baseLightSize / parentScale;
-        lightParams.position = exactPosition * 1.002f; // Micro-sollevamento
+        lightParams.position = exactPosition * 1.002f; 
         _ps.Emit(lightParams, 1);
 
-        // 2. Connessioni
         TryConnectToNeighbors(exactPosition);
 
-        // 3. City Base (Sempre presente per il primo atterraggio)
+        // Nel caso di spawn specifico (atterraggio), la città è sempre garantita
         if (cityBasePS != null)
         {
-            ParticleSystem.EmitParams cityParams = new ParticleSystem.EmitParams();
-            cityParams.startColor = new Color(cityBaseColor.r, cityBaseColor.g, cityBaseColor.b, 0f);
-            cityParams.startLifetime = float.MaxValue;
-            cityParams.startSize = (cityBaseSize / parentScale) * citySizeMultiplier;
-            cityParams.position = exactPosition;
-
-            Quaternion lookRot = Quaternion.LookRotation(exactPosition.normalized);
-            Vector3 euler = lookRot.eulerAngles;
-            euler.z = Random.Range(0, 360f);
-            cityParams.rotation3D = euler;
-
-            cityBasePS.Emit(cityParams, 1);
+            EmitCityBase(exactPosition, parentScale);
         }
     }
 
@@ -261,11 +240,6 @@ public class PlanetPopulationVisuals : MonoBehaviour
         lightParams.startLifetime = float.MaxValue;
         lightParams.startSize = baseLightSize / parentScale;
 
-        ParticleSystem.EmitParams cityParams = new ParticleSystem.EmitParams();
-        cityParams.startColor = new Color(cityBaseColor.r, cityBaseColor.g, cityBaseColor.b, 0f);
-        cityParams.startLifetime = float.MaxValue;
-        cityParams.startSize = (cityBaseSize / parentScale) * citySizeMultiplier;
-
         for (int i = 0; i < count; i++)
         {
             Vector3 newPos = GetSmartPosition();
@@ -277,17 +251,34 @@ public class PlanetPopulationVisuals : MonoBehaviour
             lightParams.position = newPos * 1.002f; 
             _ps.Emit(lightParams, 1);
 
-            if (cityBasePS != null && Random.value < citySpawnChance)
+            if (cityBasePS != null)
             {
-                cityParams.position = newPos;
-                Quaternion lookRot = Quaternion.LookRotation(newPos.normalized);
-                Vector3 euler = lookRot.eulerAngles;
-                euler.z = Random.Range(0, 360f); 
+                // LOGICA RICHIESTA: Se il numero di posizioni occupate è entro il limite garantito, 
+                // saltiamo il calcolo casuale e forziamo lo spawn.
+                bool forceCity = _occupiedPositions.Count <= guaranteedCityCount;
                 
-                cityParams.rotation3D = euler;
-                cityBasePS.Emit(cityParams, 1);
+                if (forceCity || Random.value < citySpawnChance)
+                {
+                    EmitCityBase(newPos, parentScale);
+                }
             }
         }
+    }
+
+    private void EmitCityBase(Vector3 pos, float parentScale)
+    {
+        ParticleSystem.EmitParams cityParams = new ParticleSystem.EmitParams();
+        cityParams.startColor = new Color(cityBaseColor.r, cityBaseColor.g, cityBaseColor.b, 0f);
+        cityParams.startLifetime = float.MaxValue;
+        cityParams.startSize = (cityBaseSize / parentScale) * citySizeMultiplier;
+        cityParams.position = pos;
+
+        Quaternion lookRot = Quaternion.LookRotation(pos.normalized);
+        Vector3 euler = lookRot.eulerAngles;
+        euler.z = Random.Range(0, 360f);
+        cityParams.rotation3D = euler;
+
+        cityBasePS.Emit(cityParams, 1);
     }
 
     public void LoadEncodedPositions(List<string> savedPositions)
@@ -300,27 +291,25 @@ public class PlanetPopulationVisuals : MonoBehaviour
         lightParams.startColor = Color.white; lightParams.startLifetime = float.MaxValue;
         lightParams.startSize = baseLightSize / parentScale;
 
-        ParticleSystem.EmitParams cityParams = new ParticleSystem.EmitParams();
-        cityParams.startColor = cityBaseColor; cityParams.startLifetime = float.MaxValue;
-        cityParams.startSize = (cityBaseSize / parentScale) * citySizeMultiplier;
-
+        int loadedCounter = 0;
         foreach (string posStr in savedPositions)
         {
             Vector3 pos = StringToVector3(posStr);
             TryConnectToNeighbors(pos);
             _occupiedPositions.Add(pos);
+            loadedCounter++;
             
             lightParams.position = pos * 1.002f;
             _ps.Emit(lightParams, 1);
 
-            if (cityBasePS != null && Random.value < citySpawnChance)
+            if (cityBasePS != null)
             {
-                cityParams.position = pos;
-                Quaternion lookRot = Quaternion.LookRotation(pos.normalized);
-                Vector3 euler = lookRot.eulerAngles;
-                euler.z = Random.Range(0, 360f);
-                cityParams.rotation3D = euler;
-                cityBasePS.Emit(cityParams, 1);
+                // Anche durante il caricamento rispettiamo la regola del 100% per i primi N
+                bool forceCity = loadedCounter <= guaranteedCityCount;
+                if (forceCity || Random.value < citySpawnChance)
+                {
+                    EmitCityBase(pos, parentScale);
+                }
             }
         }
         SpawnedCount = _occupiedPositions.Count;
@@ -399,11 +388,6 @@ public class PlanetPopulationVisuals : MonoBehaviour
         
         while (attempts < maxSpawnAttempts) {
             Vector3 candidatePos = Vector3.zero;
-            
-            // --- FIX MODIFICA: Logica Safe Start ---
-            // Se abbiamo meno di 'safeStartCount' luci, forziamo il cluster (chance = 0).
-            // Altrimenti usiamo la chance definita nell'Inspector.
-            // Nota: _occupiedPositions.Count == 0 è gestito nell'if sotto per il primo punto assoluto.
             float currentHubChance = (_occupiedPositions.Count > 0 && _occupiedPositions.Count < safeStartCount) ? 0f : newHubChance;
 
             if (_occupiedPositions.Count == 0 || Random.value < currentHubChance) 
@@ -415,7 +399,6 @@ public class PlanetPopulationVisuals : MonoBehaviour
                 Vector3 randomOffset = Random.insideUnitSphere * clusterSpread; 
                 candidatePos = (randomNeighbor + randomOffset).normalized * surfaceRadius; 
             }
-            // ----------------------------------------
 
             float normalizedY = candidatePos.y / surfaceRadius;
             if (Mathf.Abs(normalizedY) > maxY) { attempts++; continue; }

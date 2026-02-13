@@ -1,40 +1,51 @@
 using UnityEngine;
+using BreakInfinity; 
 using System.Collections.Generic;
 
-// Tipi di curva per quando finiscono i prezzi manuali
-public enum CostCurve
-{
-    Exponential, // Moltiplica (x1.5, x2.0...) -> Standard
-    Linear       // Somma (+10, +50...) -> Per slot o cap
-}
-
-[CreateAssetMenu(fileName = "NewResearch", menuName = "IdleGame/Research Definition")]
+[CreateAssetMenu(fileName = "New Research", menuName = "Research/Research Definition")]
 public class ResearchDefinition : ScriptableObject
 {
-    [Header("Identificativi")]
+    [Header("Identità")]
     public string id;
     public string title;
     [TextArea] public string description;
-    public Sprite icon;
+    
+    // Icona e Tipo Valuta
+    public Sprite icon;             
+    public CurrencyType costType;   // Che valuta usa? (Energy, Iridium...)
 
-    [Header("Effetto")]
+    [Header("Logica Effetto")]
     public ResearchType type;
     public ResearchTarget target;
-    public double bonusValue;
+    public double bonusValue; 
 
-    [Header("Economia Avanzata (Stile Egg Inc)")]
-    [Tooltip("Inserisci qui i prezzi esatti per i primi livelli. Es: 100, 500, 1000")]
-    public List<double> manualCosts = new List<double>();
+    [Tooltip("SE VERO: Il bonus si moltiplica esponenzialmente (es. Bonus 10 al liv 3 = 1000x).\nSE FALSO (Default): Il bonus si somma (es. Bonus 0.10 al liv 3 = +30% ovvero 1.3x).")]
+    public bool isExponentialBonus = false; // <--- NUOVO CAMPO
 
-    [Header("Economia Automatica (Dopo la lista manuale)")]
-    public CostCurve costType = CostCurve.Exponential;
+    [Header("Logica Costi")]
+    public CostCurve costCurve = CostCurve.Exponential; // Default Esponenziale
+
+    public BigDouble baseCost; 
+    public float costFactor;
+    public int maxLevel;
     
-    [Tooltip("Costo base usato SOLO se la lista manuale è vuota")]
-    public double baseCost = 10; 
-    
-    [Tooltip("Moltiplicatore (es. 1.5) o Addendo (es. 10) per i livelli successivi")]
-    public double costFactor = 1.50d; 
-    
-    [Tooltip("0 = Infinito")]
-    public int maxLevel = 0;
+    // Lista per costi manuali (opzionale)
+    public List<BigDouble> manualCosts = new List<BigDouble>();
+
+    // Metodo helper per calcolare il costo attuale
+    public BigDouble GetCost(int currentLevel)
+    {
+        if (currentLevel < manualCosts.Count)
+        {
+            return manualCosts[currentLevel];
+        }
+        
+        BigDouble calculationBase = manualCosts.Count > 0 ? manualCosts[manualCosts.Count - 1] : baseCost;
+        int levelsBeyond = manualCosts.Count > 0 ? currentLevel - (manualCosts.Count - 1) : currentLevel;
+        
+        if (costCurve == CostCurve.Exponential)
+            return calculationBase * BigDouble.Pow(costFactor, levelsBeyond);
+        else
+            return calculationBase + (costFactor * levelsBeyond);
+    }
 }

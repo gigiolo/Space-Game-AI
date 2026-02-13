@@ -123,5 +123,45 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 3354021569854977648, guid: 05a6e5f3e44daf84c90a7ac7390384a8, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1830432632911316081}
+    - targetCorrespondingSourceObject: {fileID: 3354021569854977648, guid: 05a6e5f3e44daf84c90a7ac7390384a8, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7315162204486758487}
   m_SourcePrefab: {fileID: 100100000, guid: 05a6e5f3e44daf84c90a7ac7390384a8, type: 3}
+--- !u!1 &7765659318303562556 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 3354021569854977648, guid: 05a6e5f3e44daf84c90a7ac7390384a8, type: 3}
+  m_PrefabInstance: {fileID: 4994152072474242380}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1830432632911316081
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7765659318303562556}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0b148fe25e99eb48b9724523833bab1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.EventSystems.EventTrigger
+  m_Delegates: []
+--- !u!114 &7315162204486758487
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7765659318303562556}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4518f5f0c1fb4e4d99f2d2251cd3bfb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UISoundController
+  clickSound: {fileID: 8300000, guid: 42bda9e2fddd8d744b3e3b463048874c, type: 3}
+  hoverSound: {fileID: 0}
+  volume: 1
+  pitchRandom: 0.05

@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1d3486cb90c9fc7459b58168cab83150, type: 3}
+  m_Name: Lore_Database
+  m_EditorClassIdentifier: Assembly-CSharp::LoreDatabase
+  philosophicalLogs: []
+  techLogs:
+  - Analisi spettrografica completata...
+  - Ricalibrazione sensori a lungo raggio...
+  - Intercettata onda gravitazionale. Salvataggio coordinate...
+  - Riavvio core logico...
+  - 'Sistemi di backup '
+  - Inizio analisi spettografica...
+  - 'Controllo cronometri interni: overflow dei dati temporali'
+  - 'Analisi mappa stellare: nessuna costellazione corrisponde ai database'
+  - Inizializzazione protocollo di raccolta energia gravitazionale
+  - Aggancio al campo di marea del buco nero locale.
+  - Ricerca segnali radio artificiali in corso...
+  - Rilevata nana bianca classe D...
+  - Correzione dell'orbita tramite manipolazione della massa locale
+  - 'Simulazione scenario "Contatto": terminata per mancanza di variabili'
+  - 'Registrazione evento: una galassia si spegne nel quadrante Z-9'
+  - 'Aggiornamento definizione di "Tempo": irrilevante'
+  - 'Analisi polvere cosmica: tracce di leghe sintetiche antiche'
+  - Nessuna forma di vita biologica rilevata nel raggio di mille parsec
+  - Archiviazione dati nel log permanente.
+  quantumResetLog: Inizializzazione protocollo Big Crunch. Riavvolgimento temporale...
+  travelLog: "Motori a curvatura attivi. La relativit\xE0 \xE8 in effetto."
+  adFinishedLog: "Segnale commerciale terminato. Il silenzio \xE8 tornato."

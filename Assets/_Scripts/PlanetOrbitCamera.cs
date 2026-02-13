@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement; // Aggiunto per gestire i cambi scena
 
 public class PlanetOrbitCamera : MonoBehaviour
 {
@@ -17,8 +18,6 @@ public class PlanetOrbitCamera : MonoBehaviour
     public float startAngle = 0.0f;
 
     // --- VARIABILE STATICA GLOBALE ---
-    // Questa è accessibile da qualsiasi script del gioco.
-    // Se è vera, l'input utente viene ignorato.
     public static bool IsInputBlocked = false; 
 
     private float currentAngleH = 0.0f;
@@ -27,15 +26,33 @@ public class PlanetOrbitCamera : MonoBehaviour
     // Flag interno per sapere se stiamo animando via script (cinematica)
     private bool _isAnimating = false;
 
+    // --- LOGICA DI SICUREZZA CAMBIO SCENA ---
+    private void OnEnable()
+    {
+        // Ogni volta che la camera si attiva, resettiamo lo stato di blocco
+        IsInputBlocked = false;
+        SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        // Forza lo sblocco dell'input ad ogni cambio scena per evitare "soft-lock"
+        IsInputBlocked = false;
+        _isAnimating = false;
+    }
+    // ----------------------------------------
+
     void Start()
     {
         if (planetTarget != null)
         {
-            // Usiamo l'angolo definito nell'Inspector
             currentAngleH = startAngle;
             targetAngleH = startAngle;
-
-            // Aggiorniamo subito la posizione al primo frame per evitare scatti
             UpdateCameraPosition();
         }
     }
@@ -51,39 +68,28 @@ public class PlanetOrbitCamera : MonoBehaviour
         }
 
         // Movimento fluido (Lerp)
-        // Se stiamo animando, targetAngleH viene pilotato dalla coroutine frame per frame
         currentAngleH = Mathf.Lerp(currentAngleH, targetAngleH, Time.deltaTime * damping);
-        
         UpdateCameraPosition();
     }
 
-    // Metodo separato per pulizia, calcola posizione e rotazione
     void UpdateCameraPosition()
     {
-        // Calcolo posizione
         Quaternion rotation = Quaternion.Euler(0, currentAngleH, 0);
-        
-        // La camera sta a 'distance' unità indietro rispetto alla rotazione
         Vector3 direction = new Vector3(0, 0, -distance);
         Vector3 position = planetTarget.position + (rotation * direction); 
         position.y += heightOffset;
 
         transform.position = position;
         transform.rotation = rotation;
-        
-        // Assicuriamoci che guardi sempre il centro del pianeta
         transform.LookAt(planetTarget);
     }
     
     void HandleInput()
     {
-        // 1. Blocco Totale (da UI Blockers o Eventi)
         if (IsInputBlocked) return;
 
-        // 2. Controllo se stiamo toccando un bottone o un pannello UI
         if (IsPointerOverUIObject()) return;
 
-        // 3. Input Touch (Mobile)
         if (Input.touchCount > 0)
         {
             Touch touch = Input.GetTouch(0);
@@ -92,16 +98,16 @@ public class PlanetOrbitCamera : MonoBehaviour
                 targetAngleH += touch.deltaPosition.x * sensitivity;
             }
         }
-        // 4. Input Mouse (Editor/PC)
         else if (Input.GetMouseButton(0))
         {
             targetAngleH += Input.GetAxis("Mouse X") * sensitivity * 5;
         }
     }
 
-    // --- METODO DI CONTROLLO UI ---
     private bool IsPointerOverUIObject()
     {
+        if (EventSystem.current == null) return false;
+
         if (Input.touchCount > 0)
         {
             return EventSystem.current.IsPointerOverGameObject(Input.GetTouch(0).fingerId);
@@ -109,7 +115,6 @@ public class PlanetOrbitCamera : MonoBehaviour
         return EventSystem.current.IsPointerOverGameObject();
     }
 
-    // --- METODO PUBBLICO: Avvia la rotazione cinematica ---
     public void AnimateToLookAt(Vector3 worldPoint, float angleOffset, float duration, System.Action onComplete)
     {
         StopAllCoroutines();
@@ -135,7 +140,7 @@ public class PlanetOrbitCamera : MonoBehaviour
         {
             timer += Time.deltaTime;
             float t = timer / duration;
-            t = t * t * (3f - 2f * t); 
+            t = t * t * (3f - 2f * t); // Smoothstep
 
             targetAngleH = startRotation + (deltaAngle * t);
             currentAngleH = targetAngleH; 
