@@ -13,15 +13,15 @@ MonoBehaviour:
   m_Name: Spaceship_1
   m_EditorClassIdentifier: Assembly-CSharp::SpaceshipDefinition
   id: Spaceship_1
-  title: Bagnarola
-  description: "Un catorcio\t"
+  title: Millennium Falcon
+  description: Entry level spaceship
   icon: {fileID: 0}
-  baseSpeed: 500
+  baseSpeed: 10
   upgradeType: 0
-  upgradeValue: 0.1
+  upgradeValue: 1
   currencyType: 0
   manualCosts: []
   costCurveType: 0
-  baseCost: 5000
-  costFactor: 1.5
+  baseCost: 8000
+  costFactor: 1.2
   maxLevel: 0

@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 66016a23d69cd6244b5518a58af1aeb9, type: 3}
   m_Name: Planet_1
   m_EditorClassIdentifier: Assembly-CSharp::PlanetData
-  planetName: Mars - 623
+  planetName: Planet_1
   planetIcon: {fileID: 0}
   sceneName: Scene_planet1
   planetThemeMusic: {fileID: 8300000, guid: b12b4a8eca7737542aa8c58dacb13298, type: 3}
@@ -21,8 +21,8 @@ MonoBehaviour:
     mantissa: 0
     exponent: 0
   requiredPlanetValue:
-    mantissa: 1
-    exponent: 3
+    mantissa: 2
+    exponent: 2
   productionMultiplier:
     mantissa: 1
     exponent: 0

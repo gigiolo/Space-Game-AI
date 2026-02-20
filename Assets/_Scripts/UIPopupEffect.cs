@@ -28,19 +28,15 @@ public class UIPopupEffect : MonoBehaviour
         _defaultScale = transform.localScale; 
     }
 
-    // --- SETUP AUTOMATICO PER L'EDITOR ---
-    // Questa funzione viene chiamata da Unity appena aggiungi lo script all'oggetto.
-    // Imposta dei valori di default carini così non devi farlo a mano.
+    // Setup automatico per l'editor
     private void Reset()
     {
-        // Curva Apertura: Rimbalzo elastico (va da 0, supera 1.1, torna a 1)
         openCurve = new AnimationCurve(
             new Keyframe(0, 0), 
             new Keyframe(0.7f, 1.1f), 
             new Keyframe(1, 1)
         );
         
-        // Curva Chiusura: Accelerazione morbida (Anticipation)
         closeCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
     }
 
@@ -85,18 +81,13 @@ public class UIPopupEffect : MonoBehaviour
 
             if (isOpening)
             {
-                // APERTURA: Seguiamo la curva (che può andare oltre 1 per il rimbalzo)
-                // Usiamo LerpUnclamped per permettere il bounce
+                // APERTURA
                 transform.localScale = Vector3.LerpUnclamped(startSize, endSize, curveValue);
-                _cg.alpha = Mathf.Lerp(startAlpha, endAlpha, progress); // Alpha sempre lineare o quasi
+                _cg.alpha = Mathf.Lerp(startAlpha, endAlpha, progress); 
             }
             else
             {
-                // CHIUSURA: Invertiamo la logica. 
-                // La curva va da 0 a 1, ma noi vogliamo andare da GRANDE a PICCOLO.
-                // Quindi usiamo (1 - curveValue) oppure invertiamo Start/End nel Lerp.
-                
-                // Qui usiamo la curva per interpolare "indietro"
+                // CHIUSURA: Invertiamo la logica usando la curva
                 transform.localScale = Vector3.LerpUnclamped(endSize, startSize, curveValue);
                 _cg.alpha = Mathf.Lerp(endAlpha, startAlpha, progress);
             }

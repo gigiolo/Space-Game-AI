@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: 1_Global_Production_10
   m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
   id: 1_Global_Production_10
-  title: 
+  title: Global Production 10
   description: Global energy production +100%
   icon: {fileID: 0}
   costType: 0

@@ -23,28 +23,27 @@ public class IntroSequenceController : MonoBehaviour
     public RectTransform placeholderInRealPanel; 
 
     [Header("Generative AI Text Settings (Intro Text Only)")]
-    [Tooltip("Tempo in secondi per il fade-in di un singolo carattere.")]
     public float charFadeDuration = 0.3f; 
-    
-    [Tooltip("Velocità base tra un carattere e l'altro.")]
     public float typingDelay = 0.04f; 
-
-    [Tooltip("Ritardo extra aggiunto dopo la punteggiatura (.,?!).")]
     public float punctuationPause = 0.2f;
-
-    [Tooltip("Probabilità (0-1) di esitazione tra le parole.")]
     public float hesitationChance = 0.2f;
     public float hesitationDuration = 0.3f;
 
-    [Header("Cursor Settings (Intro Text Only)")]
+    [Header("Cursor Settings")]
     public string cursorSymbol = "|";
     public float cursorBlinkSpeed = 0.3f;
 
     [Header("Timing Sequenza")]
-    public float titleFadeInDuration = 2.0f; // <--- NUOVO: Durata comparsa Titolo
-    public float stayTime = 2.0f;            // Quanto resta visibile il testo
-    public float fadeOutTime = 1.0f;         // Quanto ci mette a sparire
+    public float titleFadeInDuration = 2.0f; 
+    public float stayTime = 2.0f;            
+    public float fadeOutTime = 1.0f;         
     public float delayBetweenTexts = 0.5f;
+
+    [Header("Cinematic Camera")] // <--- NUOVA SEZIONE
+    [Tooltip("Offset in gradi per l'inquadratura finale (es. 15 per non centrare perfettamente l'emitter).")]
+    public float cameraFocusOffset = 15f; 
+    [Tooltip("Durata della rotazione della camera.")]
+    public float cameraRotationDuration = 1.5f;
 
     // Cache
     private TMP_TextInfo _currentTextInfo;
@@ -85,37 +84,28 @@ public class IntroSequenceController : MonoBehaviour
     {
         yield return new WaitForSeconds(0.5f);
 
-        // --- 1. TITOLO (STILE CINEMATICO CLASSICO) ---
+        // 1. TITOLO
         if (titleText != null)
         {
-            // Dissolvenza in entrata pulita (NO AI Effects)
             yield return StartCoroutine(FadeTextAlpha(titleText, 0f, 1f, titleFadeInDuration));
-            
             yield return new WaitForSeconds(stayTime);
-            
-            // Dissolvenza in uscita
             yield return StartCoroutine(FadeTextAlpha(titleText, 1f, 0f, fadeOutTime));
         }
         
         yield return new WaitForSeconds(delayBetweenTexts);
         
-        // --- 2. INTRO LORE (STILE AI GENERATIVA) ---
+        // 2. INTRO LORE
         if (introText != null)
         {
             string originalIntro = introText.text;
-            introText.alpha = 1f; // Rendiamo l'oggetto visibile per manipolare i vertici
+            introText.alpha = 1f; 
             
-            // Scrittura AI (Carattere per carattere + Esitazioni)
             yield return StartCoroutine(TypewriterAI(introText, originalIntro));
-            
-            // Attesa con cursore lampeggiante
             yield return StartCoroutine(BlinkCursorDuringStay(introText, stayTime));
-            
-            // Dissolvenza in uscita
             yield return StartCoroutine(FadeTextAlpha(introText, 1f, 0f, fadeOutTime));
         }
 
-        // --- 3. RIVELAZIONE GIOCO ---
+        // 3. RIVELAZIONE
         StartCoroutine(FadeCanvasGroup(blackScreen, 1f, 0f, 2.0f));
         if (tapPromptPanel) StartCoroutine(FadeCanvasGroup(tapPromptPanel, 0f, 1f, 1.5f));
 
@@ -126,53 +116,34 @@ public class IntroSequenceController : MonoBehaviour
             GameManager.Instance.OnFirstInput += OnFirstInteraction;
     }
 
-    // --- LOGICA AI GENERATIVA (SOLO PER INTRO TEXT) ---
+    // --- LOGICA AI GENERATIVA ---
     private IEnumerator TypewriterAI(TextMeshProUGUI targetText, string content)
     {
-        // 1. Aggiungiamo il cursore alla stringa
         targetText.text = content + cursorSymbol;
         targetText.ForceMeshUpdate();
         
         _currentTextInfo = targetText.textInfo;
         int totalChars = _currentTextInfo.characterCount;
 
-        // Nascondiamo TUTTI i caratteri (testo + cursore) inizialmente
-        Color32[] newVertexColors;
         for (int i = 0; i < totalChars; i++)
         {
             SetCharAlpha(targetText, i, 0);
         }
         targetText.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32);
 
-        // 2. Loop di Scrittura (Escluso cursore finale)
         int contentLen = content.Length; 
 
         for (int i = 0; i < contentLen; i++)
         {
-            // Avvia fade-in per QUESTO carattere
             StartCoroutine(FadeInChar(targetText, i));
 
-            // Calcolo ritardo stile AI
             float currentDelay = typingDelay;
             char c = content[i];
 
-            if (c == '.' || c == '?' || c == '!' || c == ':') 
-            {
-                currentDelay += punctuationPause;
-            }
-            else if (c == ',' || c == ';') 
-            {
-                currentDelay += punctuationPause * 0.5f;
-            }
+            if (c == '.' || c == '?' || c == '!' || c == ':') currentDelay += punctuationPause;
+            else if (c == ',' || c == ';') currentDelay += punctuationPause * 0.5f;
 
-            // Esitazione sugli spazi
-            if (c == ' ')
-            {
-                if (Random.value < hesitationChance)
-                {
-                    yield return new WaitForSeconds(hesitationDuration);
-                }
-            }
+            if (c == ' ' && Random.value < hesitationChance) yield return new WaitForSeconds(hesitationDuration);
 
             yield return new WaitForSeconds(currentDelay);
         }
@@ -184,7 +155,6 @@ public class IntroSequenceController : MonoBehaviour
         float elapsed = 0f;
         bool isVisible = true;
 
-        // Assicuriamoci che il cursore parta visibile
         SetCharAlpha(targetText, cursorIndex, 255);
         targetText.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32);
 
@@ -192,13 +162,10 @@ public class IntroSequenceController : MonoBehaviour
         {
             yield return new WaitForSeconds(cursorBlinkSpeed);
             elapsed += cursorBlinkSpeed;
-
             isVisible = !isVisible;
             SetCharAlpha(targetText, cursorIndex, isVisible ? (byte)255 : (byte)0);
             targetText.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32);
         }
-
-        // Pulizia finale: nascondi cursore prima del fade out
         SetCharAlpha(targetText, cursorIndex, 0);
         targetText.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32);
     }
@@ -211,10 +178,8 @@ public class IntroSequenceController : MonoBehaviour
             timer += Time.deltaTime;
             float t = Mathf.Clamp01(timer / charFadeDuration);
             byte alpha = (byte)(t * 255);
-
             SetCharAlpha(txt, charIndex, alpha);
             txt.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32);
-            
             yield return null;
         }
         SetCharAlpha(txt, charIndex, 255);
@@ -224,22 +189,17 @@ public class IntroSequenceController : MonoBehaviour
     private void SetCharAlpha(TextMeshProUGUI txt, int charIndex, byte alpha)
     {
         if (charIndex >= txt.textInfo.characterCount) return;
-
         TMP_CharacterInfo cInfo = txt.textInfo.characterInfo[charIndex];
         if (!cInfo.isVisible) return; 
-
         int materialIndex = cInfo.materialReferenceIndex;
         int vertexIndex = cInfo.vertexIndex;
         Color32[] vertexColors = txt.textInfo.meshInfo[materialIndex].colors32;
-
-        for (int i = 0; i < 4; i++)
-        {
+        for (int i = 0; i < 4; i++) {
             Color32 baseColor = vertexColors[vertexIndex + i]; 
             baseColor.a = alpha;
             vertexColors[vertexIndex + i] = baseColor;
         }
     }
-
     // --- FINE LOGICA AI ---
 
     private void OnFirstInteraction()
@@ -258,31 +218,50 @@ public class IntroSequenceController : MonoBehaviour
 
         if (tapPromptPanel) StartCoroutine(FadeCanvasGroup(tapPromptPanel, tapPromptPanel.alpha, 0f, 0.5f));
 
+        StartCoroutine(FocusCameraOnFirstEmitter());
+
         Destroy(gameObject, 2.0f);
+    }
+
+    // --- COROUTINE MODIFICATA ---
+    private IEnumerator FocusCameraOnFirstEmitter()
+    {
+        yield return new WaitForEndOfFrame();
+
+        var visuals = FindFirstObjectByType<PlanetPopulationVisuals>();
+        var orbitCam = FindFirstObjectByType<PlanetOrbitCamera>();
+
+        if (visuals != null && orbitCam != null)
+        {
+            Vector3 targetPos = visuals.GetLastAddedWorldPosition();
+
+            if (targetPos != Vector3.zero)
+            {
+                // Qui passiamo 'cameraFocusOffset' invece di 0f
+                orbitCam.AnimateToLookAt(targetPos, cameraFocusOffset, cameraRotationDuration, null);
+                Debug.Log($"[IntroSequence] Camera focusing with offset: {cameraFocusOffset}");
+            }
+        }
     }
 
     private void ReparentButtonNow()
     {
         if (energyButtonRect == null || realBottomPanel == null || placeholderInRealPanel == null) return;
-
         int targetIndex = placeholderInRealPanel.GetSiblingIndex();
         energyButtonRect.SetParent(realBottomPanel);
         energyButtonRect.SetSiblingIndex(targetIndex);
         energyButtonRect.localScale = Vector3.one;
         energyButtonRect.localPosition = Vector3.zero;
-
         Destroy(placeholderInRealPanel.gameObject);
         if (fakeBottomPanel) fakeBottomPanel.gameObject.SetActive(false);
         LayoutRebuilder.ForceRebuildLayoutImmediate(realBottomPanel);
     }
 
-    // Gestisce dissolvenza classica (Alpha dell'intero oggetto testo)
     private IEnumerator FadeTextAlpha(TextMeshProUGUI text, float start, float end, float duration)
     {
         if (text == null) yield break;
         float timer = 0f;
         text.alpha = start;
-        
         while (timer < duration) { 
             timer += Time.deltaTime; 
             text.alpha = Mathf.Lerp(start, end, timer / duration); 

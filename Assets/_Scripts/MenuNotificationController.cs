@@ -11,8 +11,15 @@ public class MenuNotificationController : MonoBehaviour
     [Tooltip("Trascina qui l'oggetto con lo script AttentionPulseEffect del bottone Navi Spaziali.")]
     public AttentionPulseEffect spaceshipButtonEffect;
 
+    [Tooltip("Trascina qui l'oggetto con lo script AttentionPulseEffect del bottone Planet Status (in alto a sinistra).")]
+    public AttentionPulseEffect planetButtonEffect; // <--- NUOVO
+
+    [Header("Riferimenti UI per Stop")]
+    [Tooltip("Trascina qui il pannello del PlanetStatusPopup. Se è aperto, smettiamo di pulsare.")]
+    public GameObject planetPopupPanel; // <--- NUOVO
+
     [Header("Configurazione Controllo")]
-    [Tooltip("Ogni quanti secondi controllare se ci sono upgrade acquistabili (per performance).")]
+    [Tooltip("Ogni quanti secondi controllare se ci sono notifiche (per performance).")]
     public float checkInterval = 1.0f;
 
     private void Start()
@@ -29,34 +36,47 @@ public class MenuNotificationController : MonoBehaviour
         {
             CheckResearchAvailability();
             CheckSpaceshipAvailability();
+            CheckPlanetAvailability(); // <--- NUOVO
             yield return wait;
         }
     }
 
+    // --- LOGICA RICERCA ---
     private void CheckResearchAvailability()
     {
         if (researchButtonEffect == null || ResearchManager.Instance == null || GameManager.Instance == null) return;
 
+        if (ResearchManager.Instance.menuPanel != null && ResearchManager.Instance.menuPanel.activeSelf)
+        {
+            researchButtonEffect.SetActive(false);
+            return;
+        }
+
         bool canAffordAny = false;
         BigDouble currentEnergy = GameManager.Instance.CurrentEnergy;
 
-        // Itera su tutte le ricerche disponibili
         foreach (var item in ResearchManager.Instance.allResearches)
         {
-            // Se non è maxata E abbiamo abbastanza energia
             if (!item.IsMaxed() && currentEnergy >= item.GetCost())
             {
                 canAffordAny = true;
-                break; // Ne basta una per accendere la notifica
+                break; 
             }
         }
 
         researchButtonEffect.SetActive(canAffordAny);
     }
 
+    // --- LOGICA NAVI ---
     private void CheckSpaceshipAvailability()
     {
         if (spaceshipButtonEffect == null || SpaceshipManager.Instance == null || GameManager.Instance == null) return;
+
+        if (SpaceshipManager.Instance.menuPanel != null && SpaceshipManager.Instance.menuPanel.activeSelf)
+        {
+            spaceshipButtonEffect.SetActive(false);
+            return;
+        }
 
         bool canAffordAny = false;
         BigDouble currentEnergy = GameManager.Instance.CurrentEnergy;
@@ -68,7 +88,6 @@ public class MenuNotificationController : MonoBehaviour
 
             BigDouble cost = ship.GetCost();
             
-            // Controlla in base al tipo di valuta della nave
             if (ship.info.currencyType == SpaceshipCurrency.Energy)
             {
                 if (currentEnergy >= cost)
@@ -88,5 +107,38 @@ public class MenuNotificationController : MonoBehaviour
         }
 
         spaceshipButtonEffect.SetActive(canAffordAny);
+    }
+
+    // --- NUOVA LOGICA PIANETA ---
+    private void CheckPlanetAvailability()
+    {
+        // Se non abbiamo assegnato l'effetto, usciamo
+        if (planetButtonEffect == null || PlanetManager.Instance == null) return;
+
+        // 1. Se il popup del pianeta è già aperto, spegni l'effetto (non serve più attirare l'attenzione)
+        if (planetPopupPanel != null && planetPopupPanel.activeSelf)
+        {
+            planetButtonEffect.SetActive(false);
+            return;
+        }
+
+        // 2. Se stiamo già preparando o viaggiando, non pulsare (l'azione è già in corso)
+        if (PlanetManager.Instance.isPreparingForLaunch || PlanetManager.Instance.isTraveling)
+        {
+            planetButtonEffect.SetActive(false);
+            return;
+        }
+
+        // 3. Controlla se abbiamo raggiunto il valore target
+        PlanetData currentData = PlanetManager.Instance.GetCurrentPlanetData();
+        if (currentData == null) return;
+
+        BigDouble currentValue = PlanetManager.Instance.CalculatePlanetValue();
+        BigDouble requiredValue = currentData.requiredPlanetValue;
+
+        // Attiva l'effetto SOLO se abbiamo superato la soglia richiesta
+        bool isReadyToLaunch = currentValue >= requiredValue;
+
+        planetButtonEffect.SetActive(isReadyToLaunch);
     }
 }

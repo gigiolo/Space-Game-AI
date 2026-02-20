@@ -1,7 +1,25 @@
 using UnityEngine;
 using TMPro;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine.UI;
+
+public enum LogCategory
+{
+    System,
+    Philosophy,
+    Logistics,
+    Alert,
+    Tutorial
+}
+
+[System.Serializable]
+public struct LogStyle
+{
+    public LogCategory category;
+    public Color color;
+    public string prefix;
+}
 
 public class ShipTerminalController : MonoBehaviour
 {
@@ -12,37 +30,38 @@ public class ShipTerminalController : MonoBehaviour
 
     [Header("UI References")]
     public TextMeshProUGUI terminalText;
-    [Tooltip("Il RectTransform del pannello che si deve allargare/stringere.")]
     public RectTransform panelRect;
 
-    [Header("Configurazione Cursore")]
-    public string cursorSymbol = "█";
+    [Header("Stili")]
+    public List<LogStyle> styles = new List<LogStyle>();
+
+    [Header("Cursore")]
+    public string cursorSymbol = "_";
     public float blinkSpeed = 0.5f;
 
-    [Header("Settings Animazione Pannello")]
-    public float expandDuration = 0.5f;
-    public float messageStayTime = 5.0f;
+    [Header("Dimensioni & Animazione")]
+    // Questo valore viene sovrascritto automaticamente all'avvio dalla larghezza reale del RectTransform
+    [HideInInspector] public float panelWidth; 
+    public float minHeight = 60f;
+    
+    [Tooltip("Spazio extra calcolato automaticamente dai margini del testo.")]
+    private float _textVerticalMargin = 0f; 
+    
+    [Tooltip("Tempo di adattamento dell'altezza. Consigliato basso (0.05 - 0.08) per reattività immediata.")]
+    public float heightSmoothTime = 0.08f; 
+
+    [Header("Velocità Scrittura")]
+    public float typingDelay = 0.03f;
+    public float messageStayTime = 4.0f;
     public float intervalMin = 20f;
     public float intervalMax = 45f;
 
-    [Header("Settings AI Typing (Generative Style)")]
-    [Tooltip("Tempo in secondi per il fade-in di un singolo carattere.")]
-    public float charFadeDuration = 0.2f; // Durata della dissolvenza del singolo carattere
-    
-    [Tooltip("Velocità di avanzamento tra un carattere e l'altro.")]
-    public float typingDelay = 0.03f; 
-
-    [Tooltip("Ritardo extra aggiunto dopo la punteggiatura (.,?!).")]
-    public float punctuationPause = 0.2f;
-
-    [Tooltip("Probabilità (0-1) di una esitazione TRA LE PAROLE.")]
-    public float hesitationChance = 0.15f; // Aumentata un po' dato che capita solo sugli spazi
-    public float hesitationDuration = 0.4f;
-
     // Variabili interne
-    private float _targetWidth;
+    private float _currentPanelHeight;
+    private float _targetPanelHeight;
+    private float _heightVelocity;
+    private bool _isPanelOpen = false;
     private Coroutine _currentRoutine;
-    private TMP_TextInfo _textInfo;
 
     private void Awake()
     {
@@ -50,26 +69,74 @@ public class ShipTerminalController : MonoBehaviour
         if (panelRect == null) panelRect = GetComponent<RectTransform>();
     }
 
-    private IEnumerator Start()
+    private void Start()
     {
-        // 1. Pulizia testo
-        if (terminalText) terminalText.text = "";
-
-        // 2. SALVATAGGIO DIMENSIONI
-        LayoutRebuilder.ForceRebuildLayoutImmediate(panelRect);
-        yield return new WaitForEndOfFrame();
-
+        // 1. AUTO-RILEVAMENTO LARGHEZZA
+        // Cattura la larghezza esatta che hai impostato visivamente nell'Editor
         if (panelRect != null)
         {
-            _targetWidth = panelRect.rect.width;
-            if (_targetWidth < 10) _targetWidth = 500f; // Fallback di sicurezza
-            SetWidth(0);
+            panelWidth = panelRect.rect.width;
         }
+        else
+        {
+            panelWidth = 500f; // Fallback
+        }
+
+        if (terminalText)
+        {
+            terminalText.text = "";
+            terminalText.overflowMode = TextOverflowModes.Overflow;
+            terminalText.alignment = TextAlignmentOptions.TopLeft; 
+            
+            // Calcolo Margini (Padding) basato sugli Anchors Unity
+            if (terminalText.rectTransform != null)
+            {
+                float topGap = Mathf.Abs(terminalText.rectTransform.offsetMax.y);
+                float bottomGap = Mathf.Abs(terminalText.rectTransform.offsetMin.y);
+                _textVerticalMargin = topGap + bottomGap;
+
+                if (_textVerticalMargin < 20) _textVerticalMargin = 40f; 
+            }
+        }
+
+        // Setup Stili di default
+        if (styles.Count == 0)
+        {
+            styles.Add(new LogStyle { category = LogCategory.System, color = Color.white, prefix = "SYS >" });
+            styles.Add(new LogStyle { category = LogCategory.Tutorial, color = new Color(1f, 0.8f, 0f), prefix = "GUIDE >" });
+            styles.Add(new LogStyle { category = LogCategory.Logistics, color = Color.cyan, prefix = "LOG >" });
+            styles.Add(new LogStyle { category = LogCategory.Alert, color = new Color(1f, 0.3f, 0.3f), prefix = "WARN >" });
+            styles.Add(new LogStyle { category = LogCategory.Philosophy, color = new Color(0.8f, 0.5f, 1f), prefix = "MEMO >" });
+        }
+
+        // CHIUSURA INIZIALE
+        SetPanelSize(0, 0);
+        _currentPanelHeight = 0;
 
         if (PlanetManager.Instance != null)
             PlanetManager.Instance.OnTravelStarted += OnTravelStarted;
 
         StartCoroutine(RandomMessageLoop());
+    }
+
+    private void Update()
+    {
+        if (_isPanelOpen)
+        {
+            // Adatta l'altezza dinamicamente verso il target
+            // Usiamo SmoothDamp per fluidità, ma con un controllo di tolleranza
+            if (Mathf.Abs(_currentPanelHeight - _targetPanelHeight) > 0.1f)
+            {
+                _currentPanelHeight = Mathf.SmoothDamp(_currentPanelHeight, _targetPanelHeight, ref _heightVelocity, heightSmoothTime);
+                SetPanelSize(panelWidth, _currentPanelHeight);
+            }
+            else
+            {
+                // Se siamo vicinissimi, scatta al valore esatto per evitare micro-movimenti
+                _currentPanelHeight = _targetPanelHeight;
+                SetPanelSize(panelWidth, _currentPanelHeight);
+            }
+        }
     }
 
     private void OnDestroy()
@@ -78,207 +145,155 @@ public class ShipTerminalController : MonoBehaviour
             PlanetManager.Instance.OnTravelStarted -= OnTravelStarted;
     }
 
-    private void SetWidth(float width)
+    private void SetPanelSize(float width, float height)
     {
-        if (panelRect)
-        {
-            panelRect.sizeDelta = new Vector2(width, panelRect.sizeDelta.y);
-        }
+        if (panelRect) panelRect.sizeDelta = new Vector2(width, height);
     }
 
     private IEnumerator RandomMessageLoop()
     {
         yield return new WaitForSeconds(3f);
-
         while (true)
         {
             float waitTime = Random.Range(intervalMin, intervalMax);
             yield return new WaitForSeconds(waitTime);
-
-            if (database != null)
-            {
-                ShowLog(database.GetRandomLog());
-            }
+            if (database != null && !_isPanelOpen)
+                ShowLog(database.GetRandomLog(), LogCategory.Philosophy);
         }
     }
 
     private void OnTravelStarted()
     {
-        if (database) ShowLog(database.travelLog, true);
+        if (database) ShowLog(database.travelLog, LogCategory.Logistics, true);
     }
 
+    // --- Metodo Helper per GameManager ---
     public void ShowSystemMessage(string message)
     {
-        ShowLog(message, true);
+        ShowLog(message, LogCategory.System, true);
     }
 
-    private void ShowLog(string content, bool priority = false)
+    public void ShowLog(string content, LogCategory category = LogCategory.System, bool priority = false)
     {
-        if (_currentRoutine != null)
+        if (_isPanelOpen)
         {
-            if (priority) StopCoroutine(_currentRoutine);
+            if (priority) StopAllCoroutines();
             else return;
         }
-
-        _currentRoutine = StartCoroutine(AISequenceRoutine(content));
+        _currentRoutine = StartCoroutine(TypingRoutine(content, category));
     }
 
-    // --- NUOVA LOGICA: Vertex Fade per effetto "Generativo" ---
-    private IEnumerator AISequenceRoutine(string fullText)
+    private IEnumerator TypingRoutine(string content, LogCategory category)
     {
-        // 1. Pulizia e Preparazione
-        terminalText.text = "";
-        terminalText.color = new Color(terminalText.color.r, terminalText.color.g, terminalText.color.b, 0); // Nascondi tutto inizialmente
+        _isPanelOpen = true;
 
-        // 2. ESPANSIONE (Apre la tendina)
-        yield return StartCoroutine(AnimateWidth(0f, _targetWidth, expandDuration));
-
-        // 3. Setup del Testo completo ma INVISIBILE
-        // Aggiungiamo il cursore alla fine della stringa
-        string displayText = fullText + cursorSymbol;
-        terminalText.text = displayText;
-        terminalText.color = new Color(terminalText.color.r, terminalText.color.g, terminalText.color.b, 1); // Rendi base visibile
-        terminalText.ForceMeshUpdate();
-
-        _textInfo = terminalText.textInfo;
-        int totalChars = _textInfo.characterCount;
-
-        // Rendiamo tutti i caratteri trasparenti (Alpha 0) manipolando i vertici
-        Color32[] newVertexColors;
-        for (int i = 0; i < totalChars; i++)
-        {
-            SetCharAlpha(i, 0);
-        }
-        terminalText.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32);
-
-        // 4. CICLO DI SCRITTURA (FADE-IN)
-        // Iteriamo fino a totalChars - 1 (l'ultimo è il cursore, che trattiamo diversamente)
-        int contentLen = fullText.Length;
+        // 1. Configurazione Stile
+        LogStyle style = styles.Find(x => x.category == category);
+        if (string.IsNullOrEmpty(style.prefix) && styles.Count > 0) style = styles[0];
         
-        for (int i = 0; i < contentLen; i++)
+        string fullText = $"{style.prefix} {content}";
+        
+        // Colore Pieno (Alpha 1)
+        Color finalColor = style.color; 
+        if (finalColor.a <= 0.05f) finalColor.a = 1f;
+        terminalText.color = finalColor;
+        terminalText.text = ""; 
+
+        // 2. Animazione Apertura (Da sinistra verso destra)
+        float timer = 0f;
+        float openDuration = 0.25f;
+        
+        while (timer < openDuration)
         {
-            // --- A. Fade-In del carattere corrente ---
-            // Avviamo una coroutine separata per il fade di QUESTO carattere
-            StartCoroutine(FadeInChar(i));
+            timer += Time.deltaTime;
+            float t = timer / openDuration;
+            t = Mathf.Sin(t * Mathf.PI * 0.5f); // EaseOut
 
-            // --- B. Gestione Cursore ---
-            // Il cursore (che è l'ultimo char della stringa) deve essere sempre visibile o lampeggiare?
-            // Per semplicità, lo teniamo spento durante la scrittura o lo accendiamo solo alla fine.
-            // Oppure, possiamo farlo "saltare" ma è complesso coi vertex. 
-            // In questo stile "flow", il cursore appare spesso solo quando l'AI si ferma.
+            float currentW = Mathf.Lerp(0, panelWidth, t);
+            float currentH = Mathf.Lerp(0, minHeight, t);
+            SetPanelSize(currentW, currentH);
+            yield return null;
+        }
+        
+        _currentPanelHeight = minHeight;
+        SetPanelSize(panelWidth, minHeight);
+
+        // 3. Setup Testo per Typing
+        terminalText.text = fullText;
+        terminalText.maxVisibleCharacters = 99999; 
+        terminalText.ForceMeshUpdate(); 
+        terminalText.maxVisibleCharacters = 0; 
+
+        int totalChars = fullText.Length;
+        _targetPanelHeight = minHeight;
+
+        // 4. Ciclo di Scrittura SINCRONIZZATO
+        for (int i = 0; i <= totalChars; i++)
+        {
+            // --- A. CALCOLO PREVENTIVO DELL'ALTEZZA ---
+            // Calcoliamo quanto sarà alto il testo SE mostriamo il carattere 'i'
+            float textAvailableWidth = panelWidth - 20f; 
+            float currentTextHeight = terminalText.GetPreferredValues(fullText.Substring(0, i), textAvailableWidth, float.PositiveInfinity).y;
+            float requiredHeight = Mathf.Max(minHeight, currentTextHeight + _textVerticalMargin);
             
-            // --- C. Ritardo di Scrittura (Typing Speed) ---
-            float currentDelay = typingDelay;
+            // Impostiamo il target per l'Update
+            _targetPanelHeight = requiredHeight;
 
-            // Logica Punteggiatura
-            char c = fullText[i];
-            if (c == '.' || c == '?' || c == '!' || c == ':') currentDelay += punctuationPause;
-            else if (c == ',') currentDelay += punctuationPause * 0.5f;
-
-            // --- D. Logica Hesitation (Solo sugli SPAZI) ---
-            if (c == ' ')
+            // --- B. SINCRONIZZAZIONE (Blocco di sicurezza) ---
+            // Se il pannello è ancora troppo piccolo (più di 2 pixel di differenza),
+            // mettiamo in PAUSA la scrittura finché l'Update non ha allargato il pannello.
+            // Questo impedisce al testo di apparire "fuori" dal bordo.
+            while (_currentPanelHeight < _targetPanelHeight - 2f)
             {
-                // L'AI ha appena finito una parola. Esita prima della prossima?
-                if (Random.value < hesitationChance)
-                {
-                    // Mostriamo il cursore mentre pensa?
-                    SetCharAlpha(totalChars - 1, 255); // Accendi cursore (ultimo char)
-                    terminalText.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32);
-                    
-                    yield return new WaitForSeconds(hesitationDuration);
-                    
-                    SetCharAlpha(totalChars - 1, 0); // Spegni cursore
-                    terminalText.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32);
-                }
+                yield return null; // Aspetta un frame
             }
 
-            yield return new WaitForSeconds(currentDelay);
+            // --- C. RIVELAZIONE ---
+            terminalText.maxVisibleCharacters = i;
+
+            // Ritardo Punteggiatura
+            float delay = typingDelay;
+            if (i > 0 && i < totalChars)
+            {
+                char c = fullText[i - 1];
+                if (c == '.' || c == '?' || c == '!') delay *= 6f;
+                else if (c == ',') delay *= 3f;
+            }
+            yield return new WaitForSeconds(delay);
         }
 
-        // 5. ATTESA LETTURA (Cursore lampeggiante alla fine)
-        int cursorIndex = totalChars - 1; // L'indice del simbolo cursore
-        float elapsedWait = 0f;
+        // 5. Cursore Lampeggiante
+        terminalText.text = fullText + cursorSymbol;
         bool cursorOn = true;
+        float elapsed = 0f;
+        float readTime = Mathf.Max(messageStayTime, totalChars * 0.05f);
 
-        while (elapsedWait < messageStayTime)
+        while (elapsed < readTime)
         {
-            // Blink Cursore
-            SetCharAlpha(cursorIndex, cursorOn ? (byte)255 : (byte)0);
-            terminalText.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32);
-            
+            terminalText.maxVisibleCharacters = cursorOn ? totalChars + 1 : totalChars;
             cursorOn = !cursorOn;
             yield return new WaitForSeconds(blinkSpeed);
-            elapsedWait += blinkSpeed;
+            elapsed += blinkSpeed;
         }
 
-        // 6. CHIUSURA
-        terminalText.text = "";
-        yield return StartCoroutine(AnimateWidth(_targetWidth, 0f, expandDuration));
+        // 6. Chiusura (Collapse)
+        terminalText.text = ""; 
+        timer = 0f;
+        float startH = _currentPanelHeight;
+        float closeDuration = 0.25f;
+        
+        while (timer < closeDuration)
+        {
+            timer += Time.deltaTime;
+            float t = 1f - (timer / closeDuration); 
+            t = t * t; // EaseIn
+
+            SetPanelSize(panelWidth * t, startH * t);
+            yield return null;
+        }
+
+        SetPanelSize(0, 0);
+        _isPanelOpen = false;
         _currentRoutine = null;
-    }
-
-    // Coroutine per sfumare un singolo carattere da Alpha 0 a 255
-    private IEnumerator FadeInChar(int charIndex)
-    {
-        float timer = 0f;
-        while (timer < charFadeDuration)
-        {
-            timer += Time.deltaTime;
-            float t = Mathf.Clamp01(timer / charFadeDuration);
-            byte alpha = (byte)(t * 255);
-
-            SetCharAlpha(charIndex, alpha);
-            
-            // Nota: Aggiornare i dati dei vertici in continuazione per ogni carattere può essere pesante
-            // se ci sono centinaia di caratteri contemporanei, ma per un terminale va bene.
-            terminalText.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32);
-            
-            yield return null;
-        }
-        // Assicura visibilità finale
-        SetCharAlpha(charIndex, 255);
-        terminalText.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32);
-    }
-
-    // Helper per settare l'alpha dei 4 vertici di un carattere
-    private void SetCharAlpha(int charIndex, byte alpha)
-    {
-        if (charIndex >= _textInfo.characterCount) return;
-
-        TMP_CharacterInfo cInfo = _textInfo.characterInfo[charIndex];
-        if (!cInfo.isVisible) return; // Salta spazi vuoti o caratteri invisibili
-
-        int materialIndex = cInfo.materialReferenceIndex;
-        int vertexIndex = cInfo.vertexIndex;
-        Color32[] vertexColors = _textInfo.meshInfo[materialIndex].colors32;
-
-        // Un carattere ha 4 vertici (Top-Left, Top-Right, Bottom-Right, Bottom-Left)
-        // Dobbiamo cambiare l'alpha a tutti mantenendo il colore originale (solitamente bianco/verde terminale)
-        // Nota: Assumiamo che il colore base sia già settato correttamente nel componente UI
-        Color32 baseColor = terminalText.color; 
-
-        for (int i = 0; i < 4; i++)
-        {
-            vertexColors[vertexIndex + i].a = alpha;
-        }
-    }
-
-    private IEnumerator AnimateWidth(float startW, float endW, float duration)
-    {
-        if (panelRect == null) yield break;
-
-        float timer = 0f;
-        while (timer < duration)
-        {
-            timer += Time.deltaTime;
-            float t = timer / duration;
-            t = Mathf.SmoothStep(0, 1, t);
-
-            float currentW = Mathf.Lerp(startW, endW, t);
-            SetWidth(currentW);
-
-            yield return null;
-        }
-        SetWidth(endW);
     }
 }

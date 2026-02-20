@@ -30,6 +30,16 @@ public class GameManager : MonoBehaviour
     [Header("--- BILANCIAMENTO ---")]
     public double offlineProductionRatio = 0.5d;
 
+    [Header("--- PRESTIGE SETTINGS (Egg Inc Style) ---")]
+    [Tooltip("Quanto devi guadagnare prima di ottenere il primo nodo (Divisore). Default Egg Inc: 1.000.000")]
+    public double prestigeDivisor = 1000000; 
+    
+    [Tooltip("La potenza della curva. Più è basso, meno nodi ottieni (Egg Inc usa ~0.15).")]
+    public double prestigePower = 0.15; 
+
+    [Tooltip("Il bonus di produzione per OGNI singolo nodo (0.50 = +50%, 1.0 = +100%).")]
+    public double nodesBonusPerUnit = 0.50; 
+
     [Header("--- ENERGY BUTTON ---")]
     [SerializeField] private float energyButton_RampUpDuration = 7.0f;
     [SerializeField] private float energyButton_MaxMultiplier = 3.0f; 
@@ -37,7 +47,6 @@ public class GameManager : MonoBehaviour
     [SerializeField] private float energyButton_RampDownDuration = 7.0f;
     [SerializeField] private float energyButton_CooldownMultiplier = 1.0f;
 
-    // --- NUOVO: AUDIO SEZIONE ---
     [Header("--- AUDIO ---")]
     [Tooltip("Il suono riprodotto quando premi il pulsante energia.")]
     [SerializeField] private AudioClip energyClickSound;
@@ -54,19 +63,31 @@ public class GameManager : MonoBehaviour
     // --- VARIABILI PERMANENTI (RESET QUANTISTICO) ---
     public BigDouble ScientificNodes { get; private set; } = 0;
 
-    // --- NUOVO: VALUTE IRIDIO (PERSISTENTI) ---
+    // --- VALUTE IRIDIO (PERSISTENTI) ---
     public BigDouble RawIridium { get; private set; } = 0;
     public BigDouble PureIridium { get; private set; } = 0;
     
-    // --- CAPACITA' & LIMITI ---
-    public BigDouble BaseEmissionPerUnit { get; private set; } = 0.01; 
-    public double MaxOfflineSeconds { get; private set; } = 7200; 
-    public BigDouble LogisticsCap { get; private set; } = 3;
+    // --- CAPACITA' & LIMITI (MODIFICABILI PER BILANCIAMENTO) ---
+    [Header("--- BILANCIAMENTO BASE ---")]
+    [Tooltip("Quanto produce un singolo Emitter al livello 0.")]
+    public BigDouble baseEmissionPerUnit = 0.01; 
+    public BigDouble BaseEmissionPerUnit => baseEmissionPerUnit; // Proprietà pubblica in sola lettura
+
+    [Tooltip("Capacità Logistica di partenza (prima degli upgrade).")]
+    public BigDouble initialLogisticsCap = 10; 
+
+    [Tooltip("Tempo massimo offline in secondi (default 7200 = 2 ore).")]
+    public double baseMaxOfflineSeconds = 7200;
+
+    // Variabili calcolate a runtime
+    public BigDouble LogisticsCap { get; private set; }
+    public double MaxOfflineSeconds { get; private set; }
     public int EmitterCap { get; private set; } = 1; 
 
     // --- MOLTIPLICATORI & BONUS ---
     public BigDouble ResearchMultiplier { get; set; } = 1;
     public BigDouble LogisticsResearchBonus { get; set; } = 0;
+    public BigDouble LogisticsMultiplier { get; set; } = 1; 
     public BigDouble StorageResearchBonus { get; set; } = 0; 
     public int EmitterCapResearchBonus { get; set; } = 0; 
     
@@ -79,11 +100,10 @@ public class GameManager : MonoBehaviour
     
     private double _emitterAccumulator = 0; 
 
-    public BigDouble EarningsBonus => 1 + (ScientificNodes * 0.50); 
+    public BigDouble EarningsBonus => 1 + (ScientificNodes * nodesBonusPerUnit); 
 
     // --- STATO & TIMER ---
     public BigDouble LastOfflineEarnings { get; private set; } = 0;
-    // --- NUOVO: Conteggio Emitter guadagnati offline ---
     public int LastOfflineEmittersGained { get; private set; } = 0; 
     
     public TimeSpan LastOfflineTimeSpan { get; private set; }
@@ -109,36 +129,75 @@ public class GameManager : MonoBehaviour
     public double PendingOfflineSeconds { get; set; } = 0f;
 
     // --- INTRO STATE ---
-    public bool IsFirstSession { get; set; } = true; // <--- NUOVO
+    public bool IsFirstSession { get; set; } = true; 
 
-    // FORMULE
-    public BigDouble RawProductionRate 
+    // ========================================================================================
+    // SEZIONE FORMULE DI PRODUZIONE (LOGICA OVERCHARGE)
+    // ========================================================================================
+
+    /// <summary>
+    /// La produzione "Passive" degli Emitter, inclusi tutti i bonus permanenti.
+    /// NON include il moltiplicatore del bottone Energy.
+    /// </summary>
+    public BigDouble RawPassiveProduction
     {
-        get 
+        get
         {
             BigDouble baseProd = EmitterCount * BaseEmissionPerUnit;
             BigDouble planetMultiplier = PlanetManager.Instance?.GetCurrentPlanetData()?.productionMultiplier ?? 1;
-            BigDouble multipliers = ResearchMultiplier * EarningsBonus * planetMultiplier;
-            multipliers *= CurrentEnergyMultiplier;
-            return baseProd * multipliers;
+            
+            // Formula base: (Unit * Emission) * Ricerche * Nodi * Pianeta
+            return baseProd * ResearchMultiplier * EarningsBonus * planetMultiplier;
         }
     }
 
-    public BigDouble RawStableProductionRate 
+    /// <summary>
+    /// La produzione effettiva che entra in cassa.
+    /// LOGICA: Min(Passive, Cap) * ButtonMultiplier
+    /// Il bottone agisce DOPO il cap, permettendo l'Overcharge.
+    /// </summary>
+    public BigDouble EffectiveIncomePerSec
     {
-        get 
+        get
         {
-            BigDouble baseProd = EmitterCount * BaseEmissionPerUnit;
-            BigDouble planetMultiplier = PlanetManager.Instance?.GetCurrentPlanetData()?.productionMultiplier ?? 1;
-            BigDouble multipliers = ResearchMultiplier * EarningsBonus * planetMultiplier;
-            return baseProd * multipliers;
+            // 1. Applichiamo il collo di bottiglia logistico alla produzione passiva
+            BigDouble cappedPassive = BigDouble.Min(RawPassiveProduction, LogisticsCap);
+
+            // 2. Applichiamo il moltiplicatore del bottone (Overcharge)
+            return cappedPassive * CurrentEnergyMultiplier;
         }
     }
 
-    public BigDouble EffectiveIncomePerSec => BigDouble.Min(RawProductionRate, LogisticsCap);
-    public BigDouble EffectiveStableIncomePerSec => BigDouble.Min(RawStableProductionRate, LogisticsCap);
+    /// <summary>
+    /// La produzione stabile usata per calcoli a lungo termine (es. Valore Pianeta, Offline).
+    /// </summary>
+    public BigDouble EffectiveStableIncomePerSec
+    {
+        get
+        {
+            return BigDouble.Min(RawPassiveProduction, LogisticsCap);
+        }
+    }
+
+    /// <summary>
+    /// La produzione potenziale TOTALE se non ci fosse il limite logistico, INCLUSO il bottone.
+    /// </summary>
+    public BigDouble PotentialProductionWithButton
+    {
+        get
+        {
+            return RawPassiveProduction * CurrentEnergyMultiplier;
+        }
+    }
+
+    /// <summary>
+    /// Alias per PotentialProductionWithButton (per compatibilità UI).
+    /// </summary>
+    public BigDouble RawProductionRate => PotentialProductionWithButton;
 
     public float EffectiveMaxMultiplier => energyButton_MaxMultiplier + ClickPowerResearchBonus;
+
+    // ========================================================================================
 
     private void Awake()
     {
@@ -219,7 +278,7 @@ public class GameManager : MonoBehaviour
                 int toAdd = (int)_emitterAccumulator; 
                 int spaceLeft = EmitterCap - EmitterCount;
                 int actualAdd = Mathf.Min(toAdd, spaceLeft);
-                _emitterAccumulator -= actualAdd;                                                                        
+                _emitterAccumulator -= actualAdd;                                                                                                   
                 if (actualAdd < toAdd) _emitterAccumulator = 0;
 
                 if (actualAdd > 0)
@@ -280,17 +339,24 @@ public class GameManager : MonoBehaviour
 
     public BigDouble CalculatePotentialNodes()
     {
-        if (LifetimeEarnings < 1000) return 0;
-        BigDouble baseVal = LifetimeEarnings / 1000;
-        return BigDouble.Floor(BigDouble.Pow(baseVal, 0.5));        
+        if (LifetimeEarnings < prestigeDivisor) return 0;
+
+        BigDouble normalizedEarnings = LifetimeEarnings / prestigeDivisor;
+        BigDouble nodes = BigDouble.Pow(normalizedEarnings, prestigePower);
+
+        return BigDouble.Floor(nodes);        
     }
 
     public void RecalculateCaps()
     {
-        LogisticsCap = 5000 + (LogisticsLevel * 50) + LogisticsResearchBonus; 
+        // Usa initialLogisticsCap invece del valore fisso
+        BigDouble baseLogistics = initialLogisticsCap + (LogisticsLevel * 5) + LogisticsResearchBonus;
+        LogisticsCap = baseLogistics * LogisticsMultiplier;
+
         double bonusSeconds = StorageResearchBonus.ToDouble() * 1800;
-        MaxOfflineSeconds = 7200 + bonusSeconds;
-        // MODIFICA: Il limite base passa da 5 a 1
+        // Usa baseMaxOfflineSeconds
+        MaxOfflineSeconds = baseMaxOfflineSeconds + bonusSeconds; 
+        
         EmitterCap = 1 + EmitterCapResearchBonus;
     }
 
@@ -300,26 +366,19 @@ public class GameManager : MonoBehaviour
         OnEconomyUpdated?.Invoke(); 
     }
 
-    // =================================================================================
-    // --- RESET QUANTISTICO AVANZATO ---
-    // =================================================================================
     public void PerformQuantumReset()
     {
         BigDouble nodesToGain = CalculatePotentialNodes();
         if (nodesToGain <= 0) return;
 
-        // 1. SALVIAMO I NODI SUBITO!
         ScientificNodes += nodesToGain;
         Debug.Log($"[GameManager] Quantum Reset. Nodes gained: {nodesToGain}. New Total: {ScientificNodes}");
 
-        // --- NUOVO: Trigger messaggio terminale prima del reset ---
         if (ShipTerminalController.Instance != null)
         {
             ShipTerminalController.Instance.ShowSystemMessage("ANOMALIA CRONALE RILEVATA. INIZIO SEQUENZA DI RIAVVOLGIMENTO.");
         }
-        // ---------------------------------------------------------
 
-        // 2. Cerchiamo se c'è l'effetto Rewind nella scena (Uso il nome corretto!)
         var rewindEffect = FindFirstObjectByType<QuantumEffectManager>();
         
         if (rewindEffect != null)
@@ -335,13 +394,11 @@ public class GameManager : MonoBehaviour
         }
         else
         {
-            // Fallback
             StartFadeSequence();
             StartCoroutine(DelayedResetFallback(1.0f));
         }
     }
 
-    // Gestisce solo la dissolvenza visiva
     private void StartFadeSequence()
     {
         string targetSceneName = SceneManager.GetActiveScene().name; 
@@ -359,8 +416,6 @@ public class GameManager : MonoBehaviour
         if (SceneFader.Instance != null)
         {
             SceneFader.Instance.SetLoadingInfo(loadingText, loadingIcon);
-            // Avviamo la transizione della scena SENZA callback logica
-            // La logica verrà chiamata da ExecuteResetAndLoad
             SceneFader.Instance.FadeAndLoadScene(targetSceneName, null); 
         }
         else
@@ -369,14 +424,10 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // Esegue il reset effettivo dei dati (chiamato quando lo schermo è nero)
     private void ExecuteResetAndLoad()
     {
-        // 1. Resetta l'economia della run (Energy, Emitters, Upgrade)
-        // NOTA: ScientificNodes NON viene toccato qui.
         InitializeGameState(); 
 
-        // 2. Reset Logiche Manager
         if (PlanetManager.Instance != null)
         {
             PlanetManager.Instance.currentPlanetIndex = 0;
@@ -402,9 +453,7 @@ public class GameManager : MonoBehaviour
                 ship.currentLevel = 0;
         }
 
-        // 3. Salva lo stato pulito (Con i Nodi salvati al passo 1)
         SaveGame(); 
-        
         OnEconomyUpdated?.Invoke();
     }
 
@@ -413,7 +462,6 @@ public class GameManager : MonoBehaviour
         yield return new WaitForSeconds(delay);
         ExecuteResetAndLoad();
     }
-    // =================================================================================
 
     public void PerformPlanetChangeReset()
     {
@@ -434,14 +482,13 @@ public class GameManager : MonoBehaviour
 
     private void InitializeGameState()
     {
-        // --- QUESTO METODO RESETTA SOLO LA RUN CORRENTE ---
-        // NON resettare ScientificNodes qui!
         CurrentEnergy = 0;
         LifetimeEarnings = 0;
         EmitterCount = 0; 
         LogisticsLevel = 1; 
         ResearchMultiplier = 1;
         LogisticsResearchBonus = 0;
+        LogisticsMultiplier = 1; 
         StorageResearchBonus = 0;
         EmitterCapResearchBonus = 0;
         ClickPowerResearchBonus = 0;
@@ -451,6 +498,10 @@ public class GameManager : MonoBehaviour
         LastOfflineEmittersGained = 0; 
         StoredLaunchSitePosition = ""; 
         StoredSunRotation = 0f; 
+
+        // Assicuriamoci che i valori base siano settati correttamente all'avvio
+        if (initialLogisticsCap <= 0) initialLogisticsCap = 10;
+        if (baseEmissionPerUnit <= 0) baseEmissionPerUnit = 0.01;
         
         RecalculateCaps();
     }
@@ -458,7 +509,7 @@ public class GameManager : MonoBehaviour
     public void SaveGame()
     {
         SaveData data = new SaveData();
-        data.isFirstSession = IsFirstSession; // <--- NUOVO
+        data.isFirstSession = IsFirstSession;
         data.currentEnergy = CurrentEnergy.ToString();
         data.lifetimeEarnings = LifetimeEarnings.ToString();
         data.emitterCount = EmitterCount;
@@ -526,7 +577,7 @@ public class GameManager : MonoBehaviour
             StoredSunRotation = 0f;
             if (dailyGiftManager != null) dailyGiftManager.Initialize(null);
             StoredLaunchSitePosition = ""; 
-            IsFirstSession = true; // Default
+            IsFirstSession = true; 
             return; 
         }
 
@@ -535,13 +586,8 @@ public class GameManager : MonoBehaviour
         if (!string.IsNullOrEmpty(data.currentEnergy)) CurrentEnergy = BigDouble.Parse(data.currentEnergy);
         if (!string.IsNullOrEmpty(data.lifetimeEarnings)) LifetimeEarnings = BigDouble.Parse(data.lifetimeEarnings);
 
-        // Caricamento diretto, accetta anche 0
         EmitterCount = data.emitterCount; 
         
-        // --- AUTO-FIX LOGICA PER ISFIRSTSESSION (AGGIORNATA) ---
-        // Se il salvataggio dice che è la prima sessione, ma abbiamo già risorse, 
-        // significa che c'è stato un errore nel salvataggio del flag. 
-        // Usiamo > 0 per LifetimeEarnings per coprire anche guadagni minimi.
         if (IsFirstSession)
         {
             if (EmitterCount > 0 || LifetimeEarnings > 0)
@@ -550,7 +596,6 @@ public class GameManager : MonoBehaviour
                 IsFirstSession = false;
             }
         }
-        // ------------------------------------------
         
         LogisticsLevel = data.logisticsLevel > 0 ? data.logisticsLevel : 1;
 
@@ -609,8 +654,6 @@ public class GameManager : MonoBehaviour
         else
             StoredLaunchSitePosition = "";
 
-        // Se è la prima sessione, NON calcolare l'offline progress.
-        // Grazie al fix sopra, se hai risorse IsFirstSession sarà false e questo calcolo partirà.
         if (!IsFirstSession && !string.IsNullOrEmpty(data.lastSaveTime))
             HandleOfflineProgress(data.lastSaveTime);
 
@@ -654,7 +697,8 @@ public class GameManager : MonoBehaviour
         if (secondsAway > 1) 
         {
             double actualSeconds = Math.Min(secondsAway, MaxOfflineSeconds);
-            BigDouble actualEarnings = EffectiveIncomePerSec * actualSeconds * offlineProductionRatio;
+            // Per l'offline usiamo la Stable Income (senza il boost del bottone)
+            BigDouble actualEarnings = EffectiveStableIncomePerSec * actualSeconds * offlineProductionRatio;
 
             if (actualEarnings > 0) 
             {
@@ -664,7 +708,7 @@ public class GameManager : MonoBehaviour
             }
 
             double offlineGrowthSpeed = EmitterAutoGrowthSpeed;
-            // EmitterCount > 0: La crescita offline avviene solo se il pianeta è già stato attivato.
+            
             if (offlineGrowthSpeed > 0 && EmitterCount > 0 && EmitterCount < EmitterCap)
             {
                 double rawGrowth = offlineGrowthSpeed * actualSeconds * offlineProductionRatio;
@@ -709,25 +753,16 @@ public class GameManager : MonoBehaviour
             _energyButtonTimer = 0.0f;
         }
 
-        // --- NUOVO: INTEGRAZIONE AUDIO ---
-        // Riproduce il suono del click se l'AudioManager e il clip sono presenti
         if (AudioManager.Instance != null && energyClickSound != null)
         {
-            // Usiamo una leggera variazione di pitch per un effetto più organico
             AudioManager.Instance.PlaySFX(energyClickSound, 1.0f, 0.05f);
         }
-        // --------------------------------
 
-        // --- NUOVO: Trigger Evento Intro ---
-        // Se è la prima sessione e non l'abbiamo ancora marcata come completata
         if (IsFirstSession)
         {
             OnFirstInput?.Invoke();
         }
-        // -----------------------------------
 
-        // Start Manuale Scena 1
-        // Se non abbiamo emitter E non stiamo aspettando una nave (pendingLanding)
         if (EmitterCount == 0 && PlanetManager.Instance != null && !PlanetManager.Instance.pendingLanding)
         {
              AddInstantEmitters(1);
@@ -829,7 +864,7 @@ public class GameManager : MonoBehaviour
         LogisticsLevel = 1; 
         StoredLaunchSitePosition = "";
         StoredSunRotation = 0f;
-        IsFirstSession = true; // Reset Intro
+        IsFirstSession = true; 
         
         if (PlanetManager.Instance != null)
         {
@@ -864,14 +899,9 @@ public class GameManager : MonoBehaviour
         RecalculateCaps();
     }
 
-    // --- NUOVO METODO PER LA UI ---
-    // Restituisce un valore tra 0.0 (vuoto) e 1.0 (pieno)
     public float GetEmitterGrowthProgress()
     {
-        // Se siamo al massimo, restituiamo 0 (o 1, a seconda di come vuoi che appaia visivamente quando è fermo)
         if (EmitterCount >= EmitterCap) return 0f;
-        
-        // _emitterAccumulator è double, lo convertiamo in float per la UI
         return (float)_emitterAccumulator; 
     }
 }

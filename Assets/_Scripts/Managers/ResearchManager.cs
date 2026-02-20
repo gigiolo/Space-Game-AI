@@ -166,6 +166,7 @@ public class ResearchManager : MonoBehaviour
         // Reset dei moltiplicatori prima del ricalcolo
         GameManager.Instance.ResearchMultiplier = 1;
         GameManager.Instance.LogisticsResearchBonus = 0;
+        GameManager.Instance.LogisticsMultiplier = 1; // <--- RESET IMPORTANTE
         GameManager.Instance.StorageResearchBonus = 0;
         GameManager.Instance.EmitterCapResearchBonus = 0; 
         GameManager.Instance.ClickPowerResearchBonus = 0; 
@@ -183,11 +184,11 @@ public class ResearchManager : MonoBehaviour
 
     void ApplyEffectBasedOnTotalLevel(ResearchItem item)
     {
+        // 1. GLOBAL PRODUCTION MULTIPLIER
         if (item.target == ResearchTarget.GlobalProduction && item.type == ResearchType.Multiplier)
         {
             BigDouble multiplierFromThisResearch;
 
-            // Controlliamo il nuovo flag nello ScriptableObject
             if (item.info.isExponentialBonus)
             {
                 // FORMULA ESPONENZIALE (Potente)
@@ -200,9 +201,28 @@ public class ResearchManager : MonoBehaviour
                 multiplierFromThisResearch = 1 + totalBonusPercent;
             }
 
-            // Applichiamo il risultato al moltiplicatore globale
             GameManager.Instance.ResearchMultiplier *= multiplierFromThisResearch;
         }
+        
+        // 2. LOGISTICS CAPACITY MULTIPLIER (NUOVO!)
+        else if (item.target == ResearchTarget.LogisticsCapacity && item.type == ResearchType.Multiplier)
+        {
+            BigDouble multiplierFromThisResearch;
+
+            if (item.info.isExponentialBonus)
+            {
+                multiplierFromThisResearch = BigDouble.Pow(item.bonusValue, item.currentLevel);
+            }
+            else
+            {
+                BigDouble totalBonusPercent = item.bonusValue * item.currentLevel;
+                multiplierFromThisResearch = 1 + totalBonusPercent;
+            }
+
+            GameManager.Instance.LogisticsMultiplier *= multiplierFromThisResearch;
+        }
+
+        // 3. BONUS ADDITIVI
         else if (item.type == ResearchType.Additive)
         {
             double totalAdditive = item.bonusValue * item.currentLevel;

@@ -26,7 +26,7 @@ public class PlanetPopulationVisuals : MonoBehaviour
     public float citySpawnChance = 0.3f; 
 
     [Tooltip("Quanti dei primi emitter avranno SEMPRE una base cittadina (Chance 100%) per feedback iniziale.")]
-    public int guaranteedCityCount = 5; // <--- NUOVO PARAMETRO RICHIESTO
+    public int guaranteedCityCount = 5; 
 
     [Tooltip("Quanto ingrandire le chiazze per compensare il numero ridotto.")]
     public float citySizeMultiplier = 1.7f;
@@ -280,6 +280,21 @@ public class PlanetPopulationVisuals : MonoBehaviour
 
         cityBasePS.Emit(cityParams, 1);
     }
+
+    // --- NUOVO METODO PER LA CAMERA ---
+    // Restituisce la posizione in coordinate WORLD dell'ultimo emitter aggiunto
+    public Vector3 GetLastAddedWorldPosition()
+    {
+        if (_occupiedPositions.Count > 0)
+        {
+            // _occupiedPositions contiene coordinate LOCALI
+            Vector3 localPos = _occupiedPositions[_occupiedPositions.Count - 1];
+            // Convertiamo in WORLD space per la camera
+            return transform.TransformPoint(localPos);
+        }
+        return Vector3.zero;
+    }
+    // ----------------------------------
 
     public void LoadEncodedPositions(List<string> savedPositions)
     {

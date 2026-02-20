@@ -10934,34 +10934,34 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 08aca4f16edca3c41aee84bf2e4a3f6e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlanetPopulationVisuals
-  surfaceRadius: 1.01
+  surfaceRadius: 1.005
   baseLightSize: 0.005
-  maxLights: 2000
+  maxLights: 10000
   cityBasePS: {fileID: 558382827}
   cityBaseSize: 0.15
-  cityBaseColor: {r: 0.3, g: 0.35, b: 0.4, a: 0.8}
-  citySpawnChance: 0.5
+  cityBaseColor: {r: 0.16981131, g: 0.16981131, b: 0.16981131, a: 1}
+  citySpawnChance: 1
   guaranteedCityCount: 5
-  citySizeMultiplier: 1.7
+  citySizeMultiplier: 1
   idleColor: {r: 1, g: 0.6, b: 0.2, a: 1}
   idleIntensity: 0.6
-  maxPowerColor: {r: 0.3254902, g: 0.56078434, b: 0.9803922, a: 1}
+  maxPowerColor: {r: 333.30197, g: 574.24316, b: 1003.92163, a: 1}
   maxPowerIntensity: 10
   firstNodeMaxLatitude: 50
   generalMaxLatitude: 70
   minDistance: 0.05
   maxSpawnAttempts: 20
-  fadeDuration: 1.5
+  fadeDuration: 3
   clusterSpread: 0.2
-  newHubChance: 0.05
-  safeStartCount: 6
+  newHubChance: 0.04
+  safeStartCount: 10
   sunLight: {fileID: 126104936}
   connectionPS: {fileID: 1301505221}
   connectionNightColor: {r: 0.07604913, g: 0.069068305, b: 0, a: 1}
-  connectionDayColor: {r: 0, g: 0, b: 0, a: 1}
+  connectionDayColor: {r: 0.2, g: 0.2, b: 0.2, a: 1}
   maxConnectionDistance: 0.3
   lineThickness: 0.005
-  arcHeight: 0.02
+  arcHeight: 0.01
   randomHeightVariance: 0.01
   maxConnectionsPerNode: 2
 --- !u!199 &1058039599
@@ -15812,7 +15812,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5245f0708e57ca44495b14d687a1fed2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Rotator
-  rotationSpeed: {x: 0, y: 1, z: 0}
+  rotationSpeed: {x: 0, y: 3, z: 0}
   rotationSpace: 1
 --- !u!1 &1124239460
 GameObject:
@@ -21561,7 +21561,7 @@ Material:
     - _CameraFadeParams: {r: 0, g: Infinity, b: 0, a: 0}
     - _Color: {r: 0.0124860145, g: 0.0124860145, b: 0.0124860145, a: 0.48235294}
     - _ColorAddSubDiff: {r: 1, g: 0, b: 0, a: 0}
-    - _DayColor: {r: 0, g: 0, b: 0, a: 1}
+    - _DayColor: {r: 0.3207547, g: 0.3207547, b: 0.3207547, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _NightColor: {r: 0.07604913, g: 0.069068305, b: 0, a: 1}
     - _PlanetPosition: {r: 0, g: 0, b: 0, a: 0}
@@ -21700,7 +21700,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!199 &2136256923
 ParticleSystemRenderer:
   serializedVersion: 7
@@ -26738,7 +26738,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: skyMaxSpeed
-      value: 1000
+      value: 200
       objectReference: {fileID: 0}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: skyRenderer
@@ -26746,11 +26746,11 @@ PrefabInstance:
       objectReference: {fileID: 5670378979914487573}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: lightExponent
-      value: 8
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: lightMaxSpeed
-      value: 40000
+      value: 30000
       objectReference: {fileID: 0}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: planetExponent
@@ -26758,11 +26758,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: planetMaxSpeed
-      value: 700000
+      value: 60000
       objectReference: {fileID: 0}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: skyRotationAxis.x
-      value: 1
+      value: 0.3
       objectReference: {fileID: 0}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: skyRotationAxis.y
@@ -26774,7 +26774,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: maxEmissionIntensity
-      value: 5
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 4863903166693563181, guid: a224fa9808c498f4f8f45497fff09eb4, type: 3}
       propertyPath: colorShiftSequence.key0.b

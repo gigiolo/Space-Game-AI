@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
-using TMPro;                    
+using TMPro;                                    
 using BreakInfinity; 
 using System; 
 using System.Collections; 
@@ -15,7 +15,7 @@ public class UIManager : MonoBehaviour
     public CanvasGroup mainHUDGroup; 
 
     [Header("Top HUD - Standard")]
-    public TextMeshProUGUI scoreText;                    
+    public TextMeshProUGUI scoreText;                                     
     public TextMeshProUGUI incomeText;
     [Tooltip("Trascina qui l'icona dell'Income (Produzione)")]
     public Image incomeIcon; 
@@ -69,7 +69,7 @@ public class UIManager : MonoBehaviour
     public TextMeshProUGUI travelInfoText; 
 
     [Header("OPTIONS MENU")]
-    public Button optionsButton;                                       
+    public Button optionsButton;                                                                
     public OptionsMenu optionsMenuController;
 
     [Header("Visual Feedback")]
@@ -605,6 +605,8 @@ public class UIManager : MonoBehaviour
         if (exponent < 9) return (number / 1e6).ToString("F" + decimals) + "M";
         if (exponent < 12) return (number / 1e9).ToString("F" + decimals) + "B";
         if (exponent < 15) return (number / 1e12).ToString("F" + decimals) + "T";
-        return number.ToString("e" + decimals);
+        
+        // FIX: Costruzione manuale per evitare il formato 'e' non supportato
+        return $"{number.Mantissa.ToString("F" + decimals)}e{number.Exponent}";
     }
 }
