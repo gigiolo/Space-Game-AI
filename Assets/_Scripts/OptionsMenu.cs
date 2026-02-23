@@ -1,3 +1,4 @@
+// --- File: _Scripts\OptionsMenu.cs ---
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement; 
@@ -13,14 +14,18 @@ public class OptionsMenu : MonoBehaviour
     public Button wipeSaveButton; 
     public Button closeButton;
 
+    [Header("Nuovi Bottoni")]
+    public Button artifactsMenuButton; 
+    public ArtifactsMenuUI artifactsUIController; 
+
     [Header("Feedback Texts")]
     public TextMeshProUGUI statusText; 
 
     private bool _isWipeConfirmationActive = false;
+    private bool _isOpenedByClick = false; 
 
     private void Start()
     {
-        // --- REGISTRAZIONE MENU ---
         if (UIManager.Instance != null && panelVisuals != null)
             UIManager.Instance.RegisterMenu(panelVisuals);
 
@@ -28,57 +33,57 @@ public class OptionsMenu : MonoBehaviour
         if(wipeSaveButton) wipeSaveButton.onClick.AddListener(OnWipeClicked);
         if(closeButton) closeButton.onClick.AddListener(CloseMenu);
 
-        if(panelVisuals) panelVisuals.SetActive(false);
+        if (artifactsMenuButton != null && artifactsUIController != null)
+        {
+            artifactsMenuButton.onClick.AddListener(() => 
+            {
+                CloseMenu(); 
+                artifactsUIController.ToggleMenu();
+            });
+        }
+
+        // Fix Start() Sabotaggio
+        if(panelVisuals && !_isOpenedByClick) panelVisuals.SetActive(false);
     }
 
     public void ToggleMenu()
     {
-        if (panelVisuals == null) return;
-
-        bool isActive = !panelVisuals.activeSelf;
-
-        if (isActive)
+        if (panelVisuals)
         {
-            // APERTURA - Chiudi gli altri!
-            if (UIManager.Instance != null)
-                UIManager.Instance.CloseAllMenusExcept(panelVisuals);
-        }
-        else
-        {
-            // CHIUSURA - Usa l'effetto se c'è
-            UIPopupEffect effect = panelVisuals.GetComponent<UIPopupEffect>();
-            if (effect != null) 
+            _isOpenedByClick = true; 
+            bool opening = !panelVisuals.activeSelf;
+
+            if (!opening)
             {
-                effect.Close();
+                UIPopupEffect effect = panelVisuals.GetComponent<UIPopupEffect>();
+                if (effect != null) effect.Close();
+                else panelVisuals.SetActive(false);
+                
                 PlanetOrbitCamera.IsInputBlocked = false;
-                return; // Esce qui perché la chiusura è gestita dall'effetto
             }
-        }
-
-        panelVisuals.SetActive(isActive);
-        PlanetOrbitCamera.IsInputBlocked = isActive;
-
-        if (isActive)
-        {
-            _isWipeConfirmationActive = false;
-            if(statusText) statusText.text = "OPTIONS";
-            if (wipeSaveButton) 
+            else
             {
-                var txt = wipeSaveButton.GetComponentInChildren<TextMeshProUGUI>();
-                if(txt) txt.text = "DELETE SAVE";
+                if (UIManager.Instance != null) UIManager.Instance.CloseAllMenusExcept(panelVisuals);
+                panelVisuals.SetActive(true);
+                PlanetOrbitCamera.IsInputBlocked = true;
+
+                _isWipeConfirmationActive = false;
+                if(statusText) statusText.text = "OPTIONS";
+                if (wipeSaveButton)
+                {
+                    var txt = wipeSaveButton.GetComponentInChildren<TextMeshProUGUI>();
+                    if(txt) txt.text = "DELETE SAVE";
+                }
             }
         }
     }
 
     public void CloseMenu()
     {
-        if (panelVisuals)
+        if (panelVisuals != null && panelVisuals.activeSelf)
         {
-             UIPopupEffect effect = panelVisuals.GetComponent<UIPopupEffect>();
-             if (effect != null) effect.Close();
-             else panelVisuals.SetActive(false);
+             ToggleMenu();
         }
-        PlanetOrbitCamera.IsInputBlocked = false;
     }
 
     private void OnSaveClicked()

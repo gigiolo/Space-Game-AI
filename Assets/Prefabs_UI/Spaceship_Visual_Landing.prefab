@@ -223,7 +223,7 @@ ParticleSystem:
       serializedVersion: 2
       minMaxState: 0
       minColor: {r: 1, g: 1, b: 1, a: 1}
-      maxColor: {r: 1, g: 0.5490196, b: 0, a: 1}
+      maxColor: {r: 1, g: 0.54901963, b: 0, a: 1}
       maxGradient:
         serializedVersion: 2
         key0: {r: 1, g: 1, b: 1, a: 1}
@@ -4916,6 +4916,9 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  randomizeStartVector: 1
+  spawnDistance: 35
+  curveHeight: 5
   fixInvertedModel: 1
   trailVisuals: {fileID: 1428241516090150532}
   landingVFX: {fileID: 0}

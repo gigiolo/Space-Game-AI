@@ -1,3 +1,4 @@
+// --- File: _Scripts\SaveData.cs ---
 using System;
 using System.Collections.Generic;
 
@@ -7,7 +8,7 @@ public class SaveData
     public string lastSaveTime;
 
     // --- PRIMA SESSIONE ---
-    public bool isFirstSession = true; // <--- NUOVO: Default a true
+    public bool isFirstSession = true;
 
     // --- ECONOMIA BASE ---
     public string currentEnergy;
@@ -15,7 +16,7 @@ public class SaveData
     public int emitterCount;
     public int logisticsLevel;
     
-    // --- NUOVO: Rotazione Sole/Pianeta ---
+    // --- ROTAZIONE ---
     public float sunRotationY;
 
     // --- RICERCHE & NAVI ---
@@ -48,6 +49,11 @@ public class SaveData
 
     // --- LAUNCH SITE ---
     public string launchSitePosition; 
+
+    // --- NUOVO: DRONE EXPEDITIONS E ARTEFATTI ---
+    public List<string> discoveredArtifacts = new List<string>();
+    public List<string> equippedArtifacts = new List<string>(); // Salva gli artefatti attivi
+    public List<DroneSaveData> activeDrones = new List<DroneSaveData>();
 }
 
 [Serializable]
@@ -55,4 +61,14 @@ public class ResearchSaveData
 {
     public string id;   
     public int level;   
+}
+
+// Struttura dati per ricordare un drone mentre il gioco è chiuso
+[Serializable]
+public class DroneSaveData
+{
+    public int slotIndex;
+    public string missionID; 
+    public string launchTimeBinary; // <--- NUOVO: Ricorda quando è partito
+    public string returnTimeBinary; 
 }

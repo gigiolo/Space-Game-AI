@@ -10,7 +10,7 @@ public enum LogCategory
     Philosophy,
     Logistics,
     Alert,
-    Tutorial
+    Tutorial // <--- I messaggi Tutorial ora sono SEMPRE persistenti
 }
 
 [System.Serializable]
@@ -40,14 +40,9 @@ public class ShipTerminalController : MonoBehaviour
     public float blinkSpeed = 0.5f;
 
     [Header("Dimensioni & Animazione")]
-    // Questo valore viene sovrascritto automaticamente all'avvio dalla larghezza reale del RectTransform
     [HideInInspector] public float panelWidth; 
     public float minHeight = 60f;
-    
-    [Tooltip("Spazio extra calcolato automaticamente dai margini del testo.")]
     private float _textVerticalMargin = 0f; 
-    
-    [Tooltip("Tempo di adattamento dell'altezza. Consigliato basso (0.05 - 0.08) per reattività immediata.")]
     public float heightSmoothTime = 0.08f; 
 
     [Header("Velocità Scrittura")]
@@ -56,31 +51,29 @@ public class ShipTerminalController : MonoBehaviour
     public float intervalMin = 20f;
     public float intervalMax = 45f;
 
-    // Variabili interne
     private float _currentPanelHeight;
     private float _targetPanelHeight;
     private float _heightVelocity;
     private bool _isPanelOpen = false;
+    private bool _isPersistentMessage = false;
     private Coroutine _currentRoutine;
+    
+    private CanvasGroup _canvasGroup;
 
     private void Awake()
     {
         Instance = this;
         if (panelRect == null) panelRect = GetComponent<RectTransform>();
+
+        _canvasGroup = GetComponent<CanvasGroup>();
+        if (_canvasGroup == null) 
+            _canvasGroup = gameObject.AddComponent<CanvasGroup>();
     }
 
     private void Start()
     {
-        // 1. AUTO-RILEVAMENTO LARGHEZZA
-        // Cattura la larghezza esatta che hai impostato visivamente nell'Editor
-        if (panelRect != null)
-        {
-            panelWidth = panelRect.rect.width;
-        }
-        else
-        {
-            panelWidth = 500f; // Fallback
-        }
+        if (panelRect != null) panelWidth = panelRect.rect.width;
+        else panelWidth = 500f;
 
         if (terminalText)
         {
@@ -88,18 +81,15 @@ public class ShipTerminalController : MonoBehaviour
             terminalText.overflowMode = TextOverflowModes.Overflow;
             terminalText.alignment = TextAlignmentOptions.TopLeft; 
             
-            // Calcolo Margini (Padding) basato sugli Anchors Unity
             if (terminalText.rectTransform != null)
             {
                 float topGap = Mathf.Abs(terminalText.rectTransform.offsetMax.y);
                 float bottomGap = Mathf.Abs(terminalText.rectTransform.offsetMin.y);
                 _textVerticalMargin = topGap + bottomGap;
-
                 if (_textVerticalMargin < 20) _textVerticalMargin = 40f; 
             }
         }
 
-        // Setup Stili di default
         if (styles.Count == 0)
         {
             styles.Add(new LogStyle { category = LogCategory.System, color = Color.white, prefix = "SYS >" });
@@ -109,7 +99,6 @@ public class ShipTerminalController : MonoBehaviour
             styles.Add(new LogStyle { category = LogCategory.Philosophy, color = new Color(0.8f, 0.5f, 1f), prefix = "MEMO >" });
         }
 
-        // CHIUSURA INIZIALE
         SetPanelSize(0, 0);
         _currentPanelHeight = 0;
 
@@ -123,8 +112,6 @@ public class ShipTerminalController : MonoBehaviour
     {
         if (_isPanelOpen)
         {
-            // Adatta l'altezza dinamicamente verso il target
-            // Usiamo SmoothDamp per fluidità, ma con un controllo di tolleranza
             if (Mathf.Abs(_currentPanelHeight - _targetPanelHeight) > 0.1f)
             {
                 _currentPanelHeight = Mathf.SmoothDamp(_currentPanelHeight, _targetPanelHeight, ref _heightVelocity, heightSmoothTime);
@@ -132,7 +119,6 @@ public class ShipTerminalController : MonoBehaviour
             }
             else
             {
-                // Se siamo vicinissimi, scatta al valore esatto per evitare micro-movimenti
                 _currentPanelHeight = _targetPanelHeight;
                 SetPanelSize(panelWidth, _currentPanelHeight);
             }
@@ -150,6 +136,12 @@ public class ShipTerminalController : MonoBehaviour
         if (panelRect) panelRect.sizeDelta = new Vector2(width, height);
     }
 
+    public void SetOverrideVisibility(bool overrideVisibility)
+    {
+        if (_canvasGroup != null)
+            _canvasGroup.ignoreParentGroups = overrideVisibility;
+    }
+
     private IEnumerator RandomMessageLoop()
     {
         yield return new WaitForSeconds(3f);
@@ -157,6 +149,7 @@ public class ShipTerminalController : MonoBehaviour
         {
             float waitTime = Random.Range(intervalMin, intervalMax);
             yield return new WaitForSeconds(waitTime);
+            // Non interrompe i tutorial o i messaggi di sistema attivi
             if (database != null && !_isPanelOpen)
                 ShowLog(database.GetRandomLog(), LogCategory.Philosophy);
         }
@@ -167,19 +160,39 @@ public class ShipTerminalController : MonoBehaviour
         if (database) ShowLog(database.travelLog, LogCategory.Logistics, true);
     }
 
-    // --- Metodo Helper per GameManager ---
     public void ShowSystemMessage(string message)
     {
         ShowLog(message, LogCategory.System, true);
+    }
+
+    // --- NUOVO: Chiusura immediata attivata da bottoni esterni ---
+    public void CloseTerminal()
+    {
+        if (!_isPanelOpen) return;
+        
+        // Fermiamo la routine attuale (battitura o lampeggio)
+        if (_currentRoutine != null) StopCoroutine(_currentRoutine);
+        
+        _isPersistentMessage = false;
+        
+        // Avviamo direttamente la chiusura
+        _currentRoutine = StartCoroutine(CloseRoutine());
     }
 
     public void ShowLog(string content, LogCategory category = LogCategory.System, bool priority = false)
     {
         if (_isPanelOpen)
         {
-            if (priority) StopAllCoroutines();
+            if (priority) 
+            {
+                if (_currentRoutine != null) StopCoroutine(_currentRoutine);
+            }
             else return;
         }
+
+        // SE È UN TUTORIAL, LO RENDIAMO AUTOMATICAMENTE PERSISTENTE
+        _isPersistentMessage = (category == LogCategory.Tutorial);
+
         _currentRoutine = StartCoroutine(TypingRoutine(content, category));
     }
 
@@ -187,19 +200,16 @@ public class ShipTerminalController : MonoBehaviour
     {
         _isPanelOpen = true;
 
-        // 1. Configurazione Stile
-        LogStyle style = styles.Find(x => x.category == category);
-        if (string.IsNullOrEmpty(style.prefix) && styles.Count > 0) style = styles[0];
+        int styleIndex = styles.FindIndex(x => x.category == category);
+        LogStyle style = styleIndex >= 0 ? styles[styleIndex] : (styles.Count > 0 ? styles[0] : new LogStyle { color = Color.white, prefix = ">" });
         
-        string fullText = $"{style.prefix} {content}";
+        string fullText = string.IsNullOrEmpty(style.prefix) ? content : $"{style.prefix} {content}";
         
-        // Colore Pieno (Alpha 1)
         Color finalColor = style.color; 
         if (finalColor.a <= 0.05f) finalColor.a = 1f;
         terminalText.color = finalColor;
         terminalText.text = ""; 
 
-        // 2. Animazione Apertura (Da sinistra verso destra)
         float timer = 0f;
         float openDuration = 0.25f;
         
@@ -207,7 +217,7 @@ public class ShipTerminalController : MonoBehaviour
         {
             timer += Time.deltaTime;
             float t = timer / openDuration;
-            t = Mathf.Sin(t * Mathf.PI * 0.5f); // EaseOut
+            t = Mathf.Sin(t * Mathf.PI * 0.5f);
 
             float currentW = Mathf.Lerp(0, panelWidth, t);
             float currentH = Mathf.Lerp(0, minHeight, t);
@@ -218,7 +228,6 @@ public class ShipTerminalController : MonoBehaviour
         _currentPanelHeight = minHeight;
         SetPanelSize(panelWidth, minHeight);
 
-        // 3. Setup Testo per Typing
         terminalText.text = fullText;
         terminalText.maxVisibleCharacters = 99999; 
         terminalText.ForceMeshUpdate(); 
@@ -227,31 +236,21 @@ public class ShipTerminalController : MonoBehaviour
         int totalChars = fullText.Length;
         _targetPanelHeight = minHeight;
 
-        // 4. Ciclo di Scrittura SINCRONIZZATO
         for (int i = 0; i <= totalChars; i++)
         {
-            // --- A. CALCOLO PREVENTIVO DELL'ALTEZZA ---
-            // Calcoliamo quanto sarà alto il testo SE mostriamo il carattere 'i'
             float textAvailableWidth = panelWidth - 20f; 
             float currentTextHeight = terminalText.GetPreferredValues(fullText.Substring(0, i), textAvailableWidth, float.PositiveInfinity).y;
             float requiredHeight = Mathf.Max(minHeight, currentTextHeight + _textVerticalMargin);
             
-            // Impostiamo il target per l'Update
             _targetPanelHeight = requiredHeight;
 
-            // --- B. SINCRONIZZAZIONE (Blocco di sicurezza) ---
-            // Se il pannello è ancora troppo piccolo (più di 2 pixel di differenza),
-            // mettiamo in PAUSA la scrittura finché l'Update non ha allargato il pannello.
-            // Questo impedisce al testo di apparire "fuori" dal bordo.
             while (_currentPanelHeight < _targetPanelHeight - 2f)
             {
-                yield return null; // Aspetta un frame
+                yield return null; 
             }
 
-            // --- C. RIVELAZIONE ---
             terminalText.maxVisibleCharacters = i;
 
-            // Ritardo Punteggiatura
             float delay = typingDelay;
             if (i > 0 && i < totalChars)
             {
@@ -262,31 +261,43 @@ public class ShipTerminalController : MonoBehaviour
             yield return new WaitForSeconds(delay);
         }
 
-        // 5. Cursore Lampeggiante
         terminalText.text = fullText + cursorSymbol;
         bool cursorOn = true;
         float elapsed = 0f;
         float readTime = Mathf.Max(messageStayTime, totalChars * 0.05f);
 
-        while (elapsed < readTime)
+        // Finché è persistente, gira all'infinito qui dentro
+        while (elapsed < readTime || _isPersistentMessage)
         {
             terminalText.maxVisibleCharacters = cursorOn ? totalChars + 1 : totalChars;
             cursorOn = !cursorOn;
             yield return new WaitForSeconds(blinkSpeed);
-            elapsed += blinkSpeed;
+            
+            if (!_isPersistentMessage) 
+            {
+                elapsed += blinkSpeed;
+            }
         }
 
-        // 6. Chiusura (Collapse)
+        // Se arriva qui naturalmente (non era un tutorial), si chiude
+        _currentRoutine = StartCoroutine(CloseRoutine());
+    }
+
+    // --- NUOVO: Routine di chiusura isolata per poter essere chiamata da fuori ---
+    private IEnumerator CloseRoutine()
+    {
         terminalText.text = ""; 
-        timer = 0f;
+        float timer = 0f;
         float startH = _currentPanelHeight;
-        float closeDuration = 0.25f;
+        
+        // Usiamo un tempo più veloce (0.15s invece di 0.25s) per reattività immediata
+        float closeDuration = 0.15f; 
         
         while (timer < closeDuration)
         {
             timer += Time.deltaTime;
             float t = 1f - (timer / closeDuration); 
-            t = t * t; // EaseIn
+            t = t * t; 
 
             SetPanelSize(panelWidth * t, startH * t);
             yield return null;
@@ -295,5 +306,6 @@ public class ShipTerminalController : MonoBehaviour
         SetPanelSize(0, 0);
         _isPanelOpen = false;
         _currentRoutine = null;
+        _isPersistentMessage = false;
     }
 }

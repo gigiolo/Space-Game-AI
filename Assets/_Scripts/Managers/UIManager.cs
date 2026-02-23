@@ -1,7 +1,8 @@
+// --- File: _Scripts\UIManager.cs ---
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
-using TMPro;                                    
+using TMPro;                                        
 using BreakInfinity; 
 using System; 
 using System.Collections; 
@@ -15,7 +16,7 @@ public class UIManager : MonoBehaviour
     public CanvasGroup mainHUDGroup; 
 
     [Header("Top HUD - Standard")]
-    public TextMeshProUGUI scoreText;                                     
+    public TextMeshProUGUI scoreText;                                       
     public TextMeshProUGUI incomeText;
     [Tooltip("Trascina qui l'icona dell'Income (Produzione)")]
     public Image incomeIcon; 
@@ -68,10 +69,6 @@ public class UIManager : MonoBehaviour
     public TextMeshProUGUI travelStatusText; 
     public TextMeshProUGUI travelInfoText; 
 
-    [Header("OPTIONS MENU")]
-    public Button optionsButton;                                                                
-    public OptionsMenu optionsMenuController;
-
     [Header("Visual Feedback")]
     public Color normalColor = Color.white;        
     public Color warningColor = new Color(1f, 0.3f, 0.3f); 
@@ -94,7 +91,7 @@ public class UIManager : MonoBehaviour
 
     private List<GameObject> _registeredMenus = new List<GameObject>();
 
-    // --- NUOVO: Riferimenti agli Animatori dei Numeri ---
+    // --- Riferimenti agli Animatori dei Numeri ---
     private NumberDigitAnimator _scoreAnimator;
     private NumberDigitAnimator _incomeAnimator;
 
@@ -121,14 +118,11 @@ public class UIManager : MonoBehaviour
         // --- SETUP INIZIALE PIE CHART ---
         if (emitterProgressPie != null)
         {
-            // Aggiungiamo un CanvasGroup per gestire la trasparenza (Alpha)
             _pieCanvasGroup = emitterProgressPie.GetComponent<CanvasGroup>();
             if (_pieCanvasGroup == null) _pieCanvasGroup = emitterProgressPie.gameObject.AddComponent<CanvasGroup>();
 
-            // Partiamo invisibili
             _pieCanvasGroup.alpha = 0f;
             _isPieVisible = false;
-            // Importante: lasciamo gameObject attivo per permettere il fade-in, ma con alpha 0
             emitterProgressPie.gameObject.SetActive(true); 
         }
     }
@@ -138,8 +132,6 @@ public class UIManager : MonoBehaviour
         gm = GameManager.Instance;
         pm = PlanetManager.Instance;
         
-        // --- NUOVO: Inizializzazione Animatori ---
-        // Cerchiamo il componente NumberDigitAnimator sugli oggetti di testo
         if (scoreText != null) _scoreAnimator = scoreText.GetComponent<NumberDigitAnimator>();
         if (incomeText != null) _incomeAnimator = incomeText.GetComponent<NumberDigitAnimator>();
 
@@ -155,14 +147,6 @@ public class UIManager : MonoBehaviour
             }
 
             SetupPlanetButtons(); 
-
-            if (optionsButton != null && optionsMenuController != null)
-            {
-                RegisterMenu(optionsMenuController.panelVisuals);
-                optionsButton.onClick.RemoveAllListeners();
-                optionsButton.onClick.AddListener(optionsMenuController.ToggleMenu);
-            }
-            
             SetupHoldButton();
             RefreshUI();
         }
@@ -265,14 +249,12 @@ public class UIManager : MonoBehaviour
         pm = PlanetManager.Instance;
         _registeredMenus.RemoveAll(x => x == null);
         
-        // Reset stato al cambio scena
         if (multiplierContainer != null) 
         {
             multiplierContainer.SetActive(false);
             _isMultVisible = false;
         }
         
-        // Aggiorna riferimenti animatori al cambio scena
         if (scoreText != null) _scoreAnimator = scoreText.GetComponent<NumberDigitAnimator>();
         if (incomeText != null) _incomeAnimator = incomeText.GetComponent<NumberDigitAnimator>();
 
@@ -300,17 +282,13 @@ public class UIManager : MonoBehaviour
     {
         if (gm == null) return;
 
-        // 1. Current Energy (MODIFICATO PER ANIMAZIONE)
         if (scoreText != null) 
         {
             string val = FormatNumber(gm.CurrentEnergy);
-            
-            // Se c'è l'animatore, usiamo quello, altrimenti metodo classico
             if (_scoreAnimator != null) _scoreAnimator.SetText(val);
             else scoreText.text = val;
         }
         
-        // 2. Offline Storage
         if (storageText != null) 
         {
             TimeSpan ts = TimeSpan.FromSeconds(gm.MaxOfflineSeconds);
@@ -318,16 +296,13 @@ public class UIManager : MonoBehaviour
             storageText.text = $"Offline: {formattedTime}";
         }
 
-        // 3. Income per sec (MODIFICATO PER ANIMAZIONE)
         if (incomeText != null) 
         {
             string val = $"{FormatNumber(gm.EffectiveIncomePerSec)}/sec";
-
             if (_incomeAnimator != null) _incomeAnimator.SetText(val);
             else incomeText.text = val;
         }
 
-        // 4. Pure Iridium & Icon
         if (pureIridiumText != null)
         {
             if (!_isShowingIridiumFeedback) 
@@ -344,10 +319,8 @@ public class UIManager : MonoBehaviour
             }
         }
 
-        // 5. Raw Iridium
         if (rawIridiumText != null) rawIridiumText.text = $"Raw Iridium: {FormatNumber(gm.RawIridium)}";
 
-        // 6. Emitter Count & Icon
         if (emitterCountText != null)
         {
             string currentStr = (gm.EmitterCount < 1000) 
@@ -371,11 +344,9 @@ public class UIManager : MonoBehaviour
             if (emitterIcon != null && emitterIcon.color != finalColor) emitterIcon.color = finalColor;
         }
 
-        // --- GESTIONE MULTIPLIER (Visibile solo se attivo) ---
         if (multiplierContainer != null && energyMultiplierText != null)
         {
             float currentMult = gm.CurrentEnergyMultiplier;
-            // Compare se maggiore di 1.01 (quindi se diverso da 0/1)
             bool shouldBeVisible = currentMult > 1.01f; 
 
             energyMultiplierText.text = $"< {currentMult:F2} x";
@@ -398,7 +369,6 @@ public class UIManager : MonoBehaviour
             logisticsStatusText.text = $"{emitterString}\nProd: {FormatNumber(gm.RawProductionRate)} | Log Cap: {FormatNumber(gm.LogisticsCap)}";
         }
 
-        // --- NANOBOT GROWTH ---
         if (emitterGrowthText != null)
         {
             if (gm.EmitterCount >= gm.EmitterCap)
@@ -410,12 +380,10 @@ public class UIManager : MonoBehaviour
             }
         }
 
-        // --- NUOVO: LOGICA PIE CHART CON DISSOLVENZA ---
         if (emitterProgressPie != null && _pieCanvasGroup != null)
         {
             bool shouldShowPie = gm.EmitterCount < gm.EmitterCap;
 
-            // Se lo stato desiderato è diverso da quello attuale, avvia l'animazione
             if (shouldShowPie != _isPieVisible)
             {
                 _isPieVisible = shouldShowPie;
@@ -423,13 +391,11 @@ public class UIManager : MonoBehaviour
                 _pieAnimRoutine = StartCoroutine(TogglePieRoutine(shouldShowPie));
             }
 
-            // Aggiorna il riempimento solo se è (o sta diventando) visibile
             if (_isPieVisible || _pieCanvasGroup.alpha > 0.01f)
             {
                 emitterProgressPie.fillAmount = gm.GetEmitterGrowthProgress();
             }
         }
-        // -----------------------------------------------
 
         if (prestigeInfoText != null)
         {
@@ -442,7 +408,6 @@ public class UIManager : MonoBehaviour
         RefreshPlanetUI();
     }
 
-    // --- ANIMAZIONE MULTIPLIER (Fade) ---
     private IEnumerator ToggleMultiplierRoutine(bool show)
     {
         float timer = 0f;
@@ -476,11 +441,10 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    // --- NUOVO: ANIMAZIONE PIE CHART (Fade) ---
     private IEnumerator TogglePieRoutine(bool show)
     {
         float timer = 0f;
-        float duration = 0.5f; // Durata dissolvenza
+        float duration = 0.5f;
 
         float startAlpha = _pieCanvasGroup.alpha;
         float targetAlpha = show ? 1f : 0f;
@@ -587,10 +551,8 @@ public class UIManager : MonoBehaviour
         if (gm.activeTheme != null) targetNormal = gm.activeTheme.textHighlight; 
         Color finalColor = isBottleneck ? warningColor : targetNormal;
         
-        // Applica al testo
         if (incomeText.color != finalColor) incomeText.color = finalColor;
         
-        // Applica all'icona
         if (incomeIcon != null && incomeIcon.color != finalColor) 
         {
             incomeIcon.color = finalColor;
@@ -606,7 +568,6 @@ public class UIManager : MonoBehaviour
         if (exponent < 12) return (number / 1e9).ToString("F" + decimals) + "B";
         if (exponent < 15) return (number / 1e12).ToString("F" + decimals) + "T";
         
-        // FIX: Costruzione manuale per evitare il formato 'e' non supportato
         return $"{number.Mantissa.ToString("F" + decimals)}e{number.Exponent}";
     }
 }

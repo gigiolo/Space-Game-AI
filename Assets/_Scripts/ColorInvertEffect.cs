@@ -6,25 +6,23 @@ using System.Collections;
 public class ColorInvertEffect : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
 {
     [Header("Riferimenti UI")]
-    [Tooltip("L'immagine di sfondo (quella nera) che diventerà colorata.")]
     public Image backgroundFill;
-
-    [Tooltip("L'immagine dell'icona (quella colorata) che diventerà nera.")]
     public Image iconGraphic;
 
     [Header("Impostazioni Animazione")]
-    [Tooltip("Durata della transizione di colore.")]
     public float duration = 0.1f;
 
-    // Colori rilevati automaticamente allo Start
-    private Color _colorColored; // Il colore "Tema" (preso dall'icona)
-    private Color _colorDark;    // Il colore "Sfondo" (preso dal background, solitamente nero)
+    private Color _colorColored; 
+    private Color _colorDark;    
 
     private Coroutine _currentRoutine;
+    
+    // --- NUOVE VARIABILI ---
+    private AttentionPulseEffect _pulseEffect; 
+    private bool _isPressed = false; 
 
     private void Start()
     {
-        // Se i riferimenti mancano, proviamo a trovarli nei figli (fallback intelligente)
         if (backgroundFill == null) 
             backgroundFill = transform.Find("Background")?.GetComponent<Image>();
         
@@ -38,47 +36,46 @@ public class ColorInvertEffect : MonoBehaviour, IPointerDownHandler, IPointerUpH
             return;
         }
 
-        // SALVIAMO I COLORI INIZIALI
-        // Nota: Lo facciamo in Start così se ThemedUIElement ha settato i colori, noi li leggiamo corretti.
         _colorColored = iconGraphic.color;
         _colorDark = backgroundFill.color;
+
+        // Cerca lo script AttentionPulseEffect sullo stesso bottone
+        _pulseEffect = GetComponent<AttentionPulseEffect>();
     }
 
-    // Quando premi il dito/mouse
     public void OnPointerDown(PointerEventData eventData)
     {
-        // Interrompiamo eventuali animazioni precedenti
+        _isPressed = true;
+        
+        // 1. Diciamo all'animazione di pulsazione di bloccarsi e resettare i colori
+        if (_pulseEffect != null) _pulseEffect.Suppress(true);
+
         if (_currentRoutine != null) StopCoroutine(_currentRoutine);
         
-        // Avviamo l'animazione verso lo stato "PREMUTO" (Invertito)
-        // Background -> Colore Acceso
-        // Icona -> Colore Scuro
+        // 2. Avviamo la nostra animazione di click
         _currentRoutine = StartCoroutine(AnimateColors(_colorColored, _colorDark));
     }
 
-    // Quando rilasci il dito/mouse
     public void OnPointerUp(PointerEventData eventData)
     {
-        RestoreColors();
+        if (_isPressed) RestoreColors();
     }
 
-    // Quando il dito esce dal bottone mentre premi (per evitare che rimanga bloccato)
     public void OnPointerExit(PointerEventData eventData)
     {
-        RestoreColors();
+        if (_isPressed) RestoreColors();
     }
 
     private void RestoreColors()
     {
+        _isPressed = false;
         if (_currentRoutine != null) StopCoroutine(_currentRoutine);
         
-        // Avviamo l'animazione verso lo stato "NORMALE"
-        // Background -> Colore Scuro
-        // Icona -> Colore Acceso
-        _currentRoutine = StartCoroutine(AnimateColors(_colorDark, _colorColored));
+        // Avviamo l'animazione di ritorno e passiamo 'true' per dire che alla fine deve riattivare la pulsazione
+        _currentRoutine = StartCoroutine(AnimateColors(_colorDark, _colorColored, true));
     }
 
-    private IEnumerator AnimateColors(Color targetBgColor, Color targetIconColor)
+    private IEnumerator AnimateColors(Color targetBgColor, Color targetIconColor, bool isRestoring = false)
     {
         float timer = 0f;
         Color startBg = backgroundFill.color;
@@ -86,7 +83,7 @@ public class ColorInvertEffect : MonoBehaviour, IPointerDownHandler, IPointerUpH
 
         while (timer < duration)
         {
-            timer += Time.unscaledDeltaTime; // Unscaled per funzionare anche in pausa
+            timer += Time.unscaledDeltaTime; 
             float t = Mathf.Clamp01(timer / duration);
 
             backgroundFill.color = Color.Lerp(startBg, targetBgColor, t);
@@ -95,15 +92,32 @@ public class ColorInvertEffect : MonoBehaviour, IPointerDownHandler, IPointerUpH
             yield return null;
         }
 
-        // Assicuriamo i valori finali precisi
         backgroundFill.color = targetBgColor;
         iconGraphic.color = targetIconColor;
+
+        // Se abbiamo finito di ripristinare il bottone, lasciamo che la pulsazione riprenda
+        if (isRestoring && _pulseEffect != null)
+        {
+            _pulseEffect.Suppress(false);
+        }
     }
     
-    // Metodo opzionale se il tema cambia a runtime (es. cambi pianeta)
     public void RefreshBaseColors()
     {
         if (backgroundFill != null) _colorDark = backgroundFill.color;
         if (iconGraphic != null) _colorColored = iconGraphic.color;
+    }
+
+    // --- FAILSAFE: Rete di sicurezza ---
+    // Se il bottone viene nascosto/disattivato all'improvviso, lo resettiamo con la forza.
+    private void OnDisable()
+    {
+        _isPressed = false;
+        if (_currentRoutine != null) StopCoroutine(_currentRoutine);
+        
+        if (backgroundFill != null) backgroundFill.color = _colorDark;
+        if (iconGraphic != null) iconGraphic.color = _colorColored;
+        
+        if (_pulseEffect != null) _pulseEffect.Suppress(false);
     }
 }

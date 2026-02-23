@@ -10,11 +10,15 @@ public class IntroSequenceController : MonoBehaviour
     public TextMeshProUGUI titleText;
     public TextMeshProUGUI introText;
 
-    [Header("Tutorial Prompt")]
-    public CanvasGroup tapPromptPanel; 
+    [Header("Terminal Prompt")]
+    [Tooltip("Il testo che apparirà nel terminale alla fine dell'intro.")]
+    [TextArea(2,4)]
+    public string promptTerminalMessage = "INIZIALIZZAZIONE SISTEMA COMPLETATA. TOCCARE [ENERGY] PER AVVIARE I NANOBOT."; 
+    
+    [Tooltip("Imposta su TUTORIAL affinchè rimanga fisso sullo schermo senza mai sparire.")]
+    public LogCategory promptCategory = LogCategory.Tutorial;
 
     [Header("Reparenting Logic")]
-    [Tooltip("Il vero bottone Energy.")]
     public RectTransform energyButtonRect; 
     
     [Header("Hierarchy Targets")]
@@ -22,7 +26,7 @@ public class IntroSequenceController : MonoBehaviour
     public RectTransform realBottomPanel;
     public RectTransform placeholderInRealPanel; 
 
-    [Header("Generative AI Text Settings (Intro Text Only)")]
+    [Header("Generative AI Text Settings")]
     public float charFadeDuration = 0.3f; 
     public float typingDelay = 0.04f; 
     public float punctuationPause = 0.2f;
@@ -35,17 +39,14 @@ public class IntroSequenceController : MonoBehaviour
 
     [Header("Timing Sequenza")]
     public float titleFadeInDuration = 2.0f; 
-    public float stayTime = 2.0f;            
-    public float fadeOutTime = 1.0f;         
+    public float stayTime = 2.0f;             
+    public float fadeOutTime = 1.0f;          
     public float delayBetweenTexts = 0.5f;
 
-    [Header("Cinematic Camera")] // <--- NUOVA SEZIONE
-    [Tooltip("Offset in gradi per l'inquadratura finale (es. 15 per non centrare perfettamente l'emitter).")]
+    [Header("Cinematic Camera")]
     public float cameraFocusOffset = 15f; 
-    [Tooltip("Durata della rotazione della camera.")]
     public float cameraRotationDuration = 1.5f;
 
-    // Cache
     private TMP_TextInfo _currentTextInfo;
 
     private void Start()
@@ -71,8 +72,6 @@ public class IntroSequenceController : MonoBehaviour
         
         if (titleText) titleText.alpha = 0f; 
         if (introText) introText.alpha = 0f;
-        
-        if (tapPromptPanel) tapPromptPanel.alpha = 0f; 
 
         if (UIManager.Instance != null)
             UIManager.Instance.SetHUDVisibility(false, 0f);
@@ -84,7 +83,6 @@ public class IntroSequenceController : MonoBehaviour
     {
         yield return new WaitForSeconds(0.5f);
 
-        // 1. TITOLO
         if (titleText != null)
         {
             yield return StartCoroutine(FadeTextAlpha(titleText, 0f, 1f, titleFadeInDuration));
@@ -94,7 +92,6 @@ public class IntroSequenceController : MonoBehaviour
         
         yield return new WaitForSeconds(delayBetweenTexts);
         
-        // 2. INTRO LORE
         if (introText != null)
         {
             string originalIntro = introText.text;
@@ -105,18 +102,22 @@ public class IntroSequenceController : MonoBehaviour
             yield return StartCoroutine(FadeTextAlpha(introText, 1f, 0f, fadeOutTime));
         }
 
-        // 3. RIVELAZIONE
         StartCoroutine(FadeCanvasGroup(blackScreen, 1f, 0f, 2.0f));
-        if (tapPromptPanel) StartCoroutine(FadeCanvasGroup(tapPromptPanel, 0f, 1f, 1.5f));
 
         yield return new WaitForSeconds(1.5f);
         blackScreen.blocksRaycasts = false; 
+
+        // Rende il terminale visibile sopra l'oscuramento e lancia il messaggio
+        if (ShipTerminalController.Instance != null)
+        {
+            ShipTerminalController.Instance.SetOverrideVisibility(true);
+            ShipTerminalController.Instance.ShowLog(promptTerminalMessage, promptCategory, true);
+        }
 
         if (GameManager.Instance != null)
             GameManager.Instance.OnFirstInput += OnFirstInteraction;
     }
 
-    // --- LOGICA AI GENERATIVA ---
     private IEnumerator TypewriterAI(TextMeshProUGUI targetText, string content)
     {
         targetText.text = content + cursorSymbol;
@@ -125,10 +126,7 @@ public class IntroSequenceController : MonoBehaviour
         _currentTextInfo = targetText.textInfo;
         int totalChars = _currentTextInfo.characterCount;
 
-        for (int i = 0; i < totalChars; i++)
-        {
-            SetCharAlpha(targetText, i, 0);
-        }
+        for (int i = 0; i < totalChars; i++) SetCharAlpha(targetText, i, 0);
         targetText.UpdateVertexData(TMP_VertexDataUpdateFlags.Colors32);
 
         int contentLen = content.Length; 
@@ -200,7 +198,6 @@ public class IntroSequenceController : MonoBehaviour
             vertexColors[vertexIndex + i] = baseColor;
         }
     }
-    // --- FINE LOGICA AI ---
 
     private void OnFirstInteraction()
     {
@@ -216,31 +213,28 @@ public class IntroSequenceController : MonoBehaviour
 
         ReparentButtonNow();
 
-        if (tapPromptPanel) StartCoroutine(FadeCanvasGroup(tapPromptPanel, tapPromptPanel.alpha, 0f, 0.5f));
+        if (ShipTerminalController.Instance != null)
+        {
+            // --- CHIUSURA IMMEDIATA AL CLICK ---
+            ShipTerminalController.Instance.CloseTerminal();
+            ShipTerminalController.Instance.SetOverrideVisibility(false); 
+        }
 
         StartCoroutine(FocusCameraOnFirstEmitter());
-
         Destroy(gameObject, 2.0f);
     }
 
-    // --- COROUTINE MODIFICATA ---
     private IEnumerator FocusCameraOnFirstEmitter()
     {
         yield return new WaitForEndOfFrame();
-
         var visuals = FindFirstObjectByType<PlanetPopulationVisuals>();
         var orbitCam = FindFirstObjectByType<PlanetOrbitCamera>();
 
         if (visuals != null && orbitCam != null)
         {
             Vector3 targetPos = visuals.GetLastAddedWorldPosition();
-
             if (targetPos != Vector3.zero)
-            {
-                // Qui passiamo 'cameraFocusOffset' invece di 0f
                 orbitCam.AnimateToLookAt(targetPos, cameraFocusOffset, cameraRotationDuration, null);
-                Debug.Log($"[IntroSequence] Camera focusing with offset: {cameraFocusOffset}");
-            }
         }
     }
 

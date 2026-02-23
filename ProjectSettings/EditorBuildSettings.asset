@@ -5,18 +5,69 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 0
-    path: Assets/Scenes/SampleScene.unity
-    guid: 99c9720ab356a0642a771bea13969a05
   - enabled: 1
     path: Assets/Scenes/Scene_planet1.unity
     guid: c06cd642e8745fb4bb3810bef47a3a93
-  - enabled: 0
-    path: Assets/Scenes/Scene_moon.unity
-    guid: 704984c77ef572444be1a03456e40212
   - enabled: 1
     path: Assets/Scenes/Scene_planet2.unity
-    guid: 7036443ba3ebad940b8f927107549bbc
+    guid: c9e14726cec49da4ab2b7bf202f1dfde
+  - enabled: 1
+    path: Assets/Scenes/Scene_planet3.unity
+    guid: 8c49b81a7242e2b49b976854451377f8
+  - enabled: 1
+    path: Assets/Scenes/Scene_planet4.unity
+    guid: 0fa2fd1473fc9a741a67f03a8a677545
+  - enabled: 1
+    path: Assets/Scenes/Scene_planet5.unity
+    guid: 4a7c265b847fd2e4a8517611614a3790
+  - enabled: 1
+    path: Assets/Scenes/Scene_planet6.unity
+    guid: 9d4381f8101e7cb468d0a8b2d0bce157
+  - enabled: 1
+    path: Assets/Scenes/Scene_planet7.unity
+    guid: 1ab63cd4646895048a65d1be472f75b9
+  - enabled: 1
+    path: Assets/Scenes/Scene_planet8.unity
+    guid: ed0a156010d22c94b97e71decd4ef110
+  - enabled: 1
+    path: Assets/Scenes/Scene_planet9.unity
+    guid: e6b0e55ba1fe6e24bb8aa471dbf2e4f8
+  - enabled: 1
+    path: Assets/Scenes/Scene_planet10.unity
+    guid: 05c928bf31e6dd04ba6b62f583e66b80
+  - enabled: 1
+    path: Assets/Scenes/Scene_planet11.unity
+    guid: a83577abcd302ea4696b55ae5af24867
+  - enabled: 1
+    path: Assets/Scenes/Scene_planet12.unity
+    guid: 07bc35c4e9f507e46ae1e9c99b03eb74
+  - enabled: 1
+    path: Assets/Scenes/Scene_planet13.unity
+    guid: 38e3f9fd3af990942bf07311f60f1f85
+  - enabled: 1
+    path: Assets/Scenes/Scene_planet14.unity
+    guid: ec9413d3c5dddfa468125cbe7b960699
+  - enabled: 1
+    path: Assets/Scenes/Scene_planet15.unity
+    guid: 7a00e01b040eeb446ac812e5f7ec6ebb
+  - enabled: 1
+    path: Assets/Scenes/Scene_planet16.unity
+    guid: b87ea4ee9753e2542b15e3e8636980ac
+  - enabled: 1
+    path: Assets/Scenes/Scene_planet17.unity
+    guid: 691d5a883d1fe9048a52805999fb349a
+  - enabled: 1
+    path: Assets/Scenes/Scene_planet18.unity
+    guid: e307dfba12fee194597d90d8f45c516b
+  - enabled: 1
+    path: Assets/Scenes/Scene_planet19.unity
+    guid: f475ef93a6afcdc499d6aacdfbf837e4
+  - enabled: 1
+    path: Assets/Scenes/Scene_planet20.unity
+    guid: ad18badb99b5d8f43b532b341a7fe642
+  - enabled: 1
+    path: Assets/Scenes/Scene_planet21.unity
+    guid: 90639eaaa1ec02b42bd08d6cce0b6ef8
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

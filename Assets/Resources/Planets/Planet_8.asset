@@ -16,16 +16,16 @@ MonoBehaviour:
   planetIcon: {fileID: 0}
   sceneName: Scene_planet8
   planetThemeMusic: {fileID: 8300000, guid: b12b4a8eca7737542aa8c58dacb13298, type: 3}
-  visualData: {fileID: 11400000, guid: d201095be27d1784495395202b7fceb1, type: 2}
+  visualData: {fileID: 11400000, guid: 5b57d8ae5a29f0345a8a5e03068e8fa2, type: 2}
   travelDistance:
     mantissa: 1
-    exponent: 6
+    exponent: 3
   requiredPlanetValue:
     mantissa: 1
-    exponent: 12
+    exponent: 24
   productionMultiplier:
-    mantissa: 2.5
-    exponent: 1
+    mantissa: 2
+    exponent: 5
   balanceFactor:
     mantissa: 1
     exponent: 0

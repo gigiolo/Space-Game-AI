@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2cad424e32988e84fb82cfad7a5635ac, type: 3}
+  m_Name: Spaceship_2
+  m_EditorClassIdentifier: Assembly-CSharp::SpaceshipDefinition
+  id: Spaceship_2
+  title: Spaceship_2
+  description: Middle level spaceship
+  icon: {fileID: 21300000, guid: 608b5b4865b0aff4aa18423c91949c66, type: 3}
+  baseSpeed: 100
+  upgradeType: 0
+  upgradeValue: 10
+  currencyType: 0
+  manualCosts: []
+  costCurveType: 0
+  baseCost: 1000000
+  costFactor: 1.2
+  maxLevel: 10

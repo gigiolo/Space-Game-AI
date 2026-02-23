@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 70c39fb7bfa045f47aa4d25c2391e742, type: 3}
+  m_Name: Drone_Mission_1
+  m_EditorClassIdentifier: Assembly-CSharp::DroneMissionSO
+  id: Drone_Mission_1
+  missionName: Drone_Mission_1
+  description: Lunar orbit
+  durationSeconds: 30
+  energyCostMultiplier: 10
+  minLightYears: 0.00001
+  maxLightYears: 0.00005
+  minRewardMult: 2
+  maxRewardMult: 5
+  iridiumChance: 20
+  minIridium: 1
+  maxIridium: 5
+  artifactChance: 10

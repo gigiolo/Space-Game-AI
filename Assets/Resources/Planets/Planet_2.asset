@@ -21,8 +21,8 @@ MonoBehaviour:
     mantissa: 1
     exponent: 3
   requiredPlanetValue:
-    mantissa: 5.3
-    exponent: 6
+    mantissa: 1.8
+    exponent: 8
   productionMultiplier:
     mantissa: 5
     exponent: 0

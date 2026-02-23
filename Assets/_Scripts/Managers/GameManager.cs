@@ -96,7 +96,15 @@ public class GameManager : MonoBehaviour
     // --- FIX CRESCITA EMITTERS ---
     public double BaseAutoGrowthSpeed = 0.3; 
     public double EmitterSpeedResearchBonus { get; set; } = 0; 
-    public double EmitterAutoGrowthSpeed => BaseAutoGrowthSpeed + EmitterSpeedResearchBonus;
+    
+    public double EmitterAutoGrowthSpeed 
+    {
+        get 
+        {
+            double artifactGrowthBonus = DroneManager.Instance != null ? DroneManager.Instance.GetArtifactBonus(ArtifactBonusType.EmitterGrowthSpeed) : 0;
+            return (BaseAutoGrowthSpeed + EmitterSpeedResearchBonus) * (1.0 + artifactGrowthBonus);
+        }
+    }
     
     private double _emitterAccumulator = 0; 
 
@@ -132,11 +140,11 @@ public class GameManager : MonoBehaviour
     public bool IsFirstSession { get; set; } = true; 
 
     // ========================================================================================
-    // SEZIONE FORMULE DI PRODUZIONE (LOGICA OVERCHARGE)
+    // SEZIONE FORMULE DI PRODUZIONE (LOGICA OVERCHARGE & ARTEFATTI)
     // ========================================================================================
 
     /// <summary>
-    /// La produzione "Passive" degli Emitter, inclusi tutti i bonus permanenti.
+    /// La produzione "Passive" degli Emitter, inclusi tutti i bonus permanenti e gli artefatti.
     /// NON include il moltiplicatore del bottone Energy.
     /// </summary>
     public BigDouble RawPassiveProduction
@@ -146,8 +154,13 @@ public class GameManager : MonoBehaviour
             BigDouble baseProd = EmitterCount * BaseEmissionPerUnit;
             BigDouble planetMultiplier = PlanetManager.Instance?.GetCurrentPlanetData()?.productionMultiplier ?? 1;
             
-            // Formula base: (Unit * Emission) * Ricerche * Nodi * Pianeta
-            return baseProd * ResearchMultiplier * EarningsBonus * planetMultiplier;
+            // Aggiungiamo Bonus Artefatti
+            double artifactIncomeBonus = DroneManager.Instance != null ? DroneManager.Instance.GetArtifactBonus(ArtifactBonusType.GlobalIncome) : 0;
+            
+            // Formula base: (Unit * Emission) * Ricerche * Nodi * Pianeta * Bonus Artefatti
+            BigDouble finalMultiplier = ResearchMultiplier * EarningsBonus * planetMultiplier * (1.0 + artifactIncomeBonus);
+            
+            return baseProd * finalMultiplier;
         }
     }
 
@@ -278,7 +291,7 @@ public class GameManager : MonoBehaviour
                 int toAdd = (int)_emitterAccumulator; 
                 int spaceLeft = EmitterCap - EmitterCount;
                 int actualAdd = Mathf.Min(toAdd, spaceLeft);
-                _emitterAccumulator -= actualAdd;                                                                                                   
+                _emitterAccumulator -= actualAdd;                                                                                                                              
                 if (actualAdd < toAdd) _emitterAccumulator = 0;
 
                 if (actualAdd > 0)
@@ -349,13 +362,16 @@ public class GameManager : MonoBehaviour
 
     public void RecalculateCaps()
     {
+        // 1. Artefatti Bonus
+        double artifactStorageBonus = DroneManager.Instance != null ? DroneManager.Instance.GetArtifactBonus(ArtifactBonusType.StorageCapacity) : 0;
+        
         // Usa initialLogisticsCap invece del valore fisso
         BigDouble baseLogistics = initialLogisticsCap + (LogisticsLevel * 5) + LogisticsResearchBonus;
         LogisticsCap = baseLogistics * LogisticsMultiplier;
 
-        double bonusSeconds = StorageResearchBonus.ToDouble() * 1800;
-        // Usa baseMaxOfflineSeconds
-        MaxOfflineSeconds = baseMaxOfflineSeconds + bonusSeconds; 
+        // Storage Base + Ricerche + % Artefatti
+        double researchSeconds = StorageResearchBonus.ToDouble() * 1800;
+        MaxOfflineSeconds = (baseMaxOfflineSeconds + researchSeconds) * (1.0 + artifactStorageBonus); 
         
         EmitterCap = 1 + EmitterCapResearchBonus;
     }
@@ -562,6 +578,12 @@ public class GameManager : MonoBehaviour
 
         data.launchSitePosition = StoredLaunchSitePosition;
 
+        // --- SALVATAGGIO DRONI E ARTEFATTI ---
+        if (DroneManager.Instance != null)
+        {
+            DroneManager.Instance.SaveData(data);
+        }
+
         SaveManager.Save(data);
     }
 
@@ -592,7 +614,7 @@ public class GameManager : MonoBehaviour
         {
             if (EmitterCount > 0 || LifetimeEarnings > 0)
             {
-                Debug.LogWarning("[GameManager] Rilevata incongruenza: IsFirstSession era TRUE ma ci sono risorse (Earnings > 0 o Emitters > 0). Forzo a FALSE per abilitare l'offline.");
+                Debug.LogWarning("[GameManager] Rilevata incongruenza: IsFirstSession era TRUE ma ci sono risorse. Forzo a FALSE per abilitare l'offline.");
                 IsFirstSession = false;
             }
         }
@@ -644,6 +666,12 @@ public class GameManager : MonoBehaviour
 
         if (planetVisuals != null && data.cityLightPositions != null)
             planetVisuals.LoadEncodedPositions(data.cityLightPositions);
+
+        // --- CARICAMENTO DRONI E ARTEFATTI ---
+        if (DroneManager.Instance != null)
+        {
+            DroneManager.Instance.LoadData(data);
+        }
 
         RecalculateCaps();
         

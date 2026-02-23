@@ -13,9 +13,9 @@ MonoBehaviour:
   m_Name: Spaceship_1
   m_EditorClassIdentifier: Assembly-CSharp::SpaceshipDefinition
   id: Spaceship_1
-  title: Millennium Falcon
+  title: Spaceship_1
   description: Entry level spaceship
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 608b5b4865b0aff4aa18423c91949c66, type: 3}
   baseSpeed: 10
   upgradeType: 0
   upgradeValue: 1
@@ -24,4 +24,4 @@ MonoBehaviour:
   costCurveType: 0
   baseCost: 8000
   costFactor: 1.2
-  maxLevel: 0
+  maxLevel: 10

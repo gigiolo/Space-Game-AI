@@ -15,7 +15,7 @@ MonoBehaviour:
   id: 1_Emitter_Max_Cap_01
   title: Emitter Max Cap 01
   description: Max emitter number +1
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: f627f1dc580600745bf33ceb68b0f43c, type: 3}
   costType: 0
   type: 0
   target: 2
@@ -23,8 +23,8 @@ MonoBehaviour:
   isExponentialBonus: 0
   costCurve: 1
   baseCost:
-    mantissa: 3
-    exponent: 0
-  costFactor: 1.35
+    mantissa: 5
+    exponent: -1
+  costFactor: 1.4
   maxLevel: 19
   manualCosts: []

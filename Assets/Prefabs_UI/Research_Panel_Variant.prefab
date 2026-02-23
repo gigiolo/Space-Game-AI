@@ -112,6 +112,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1961059861591422215, guid: 05a6e5f3e44daf84c90a7ac7390384a8, type: 3}
+      propertyPath: m_text
+      value: DRONE MISSION CENTER
+      objectReference: {fileID: 0}
     - target: {fileID: 3354021569854977648, guid: 05a6e5f3e44daf84c90a7ac7390384a8, type: 3}
       propertyPath: m_Name
       value: Research_Panel_Variant

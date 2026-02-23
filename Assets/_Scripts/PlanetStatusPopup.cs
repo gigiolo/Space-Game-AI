@@ -1,3 +1,4 @@
+// --- File: _Scripts\PlanetStatusPopup.cs ---
 using UnityEngine;
 using TMPro;
 using BreakInfinity; 
@@ -22,13 +23,15 @@ public class PlanetStatusPopup : MonoBehaviour
     [Header("--- Settings ---")]
     public Animator popupAnimator; 
 
-    private bool isOpen = false;
+    private bool _isOpenedByClick = false;
 
     private void Start()
     {
         if(contentPanel != null) 
         {
-            contentPanel.SetActive(false);
+            // Fix Start() Sabotaggio
+            if (!_isOpenedByClick) contentPanel.SetActive(false);
+            
             if (UIManager.Instance != null)
                 UIManager.Instance.RegisterMenu(contentPanel);
         }
@@ -50,9 +53,7 @@ public class PlanetStatusPopup : MonoBehaviour
             {
                 if (PlanetManager.Instance != null) 
                 {
-                    // 1. Avvia la logica di viaggio
                     PlanetManager.Instance.StartInterplanetaryTravel();
-                    // 2. Chiudi immediatamente questo popup
                     ClosePopup();
                 }
             });
@@ -61,47 +62,50 @@ public class PlanetStatusPopup : MonoBehaviour
 
     private void Update()
     {
-        if (isOpen || (PlanetManager.Instance != null && PlanetManager.Instance.isPreparingForLaunch))
+        if ((contentPanel != null && contentPanel.activeSelf) || 
+            (PlanetManager.Instance != null && PlanetManager.Instance.isPreparingForLaunch))
         {
             UpdatePlanetValue();
             UpdateLaunchStatus();
         }
     }
 
+    public void ToggleMenu()
+    {
+        if (contentPanel)
+        {
+            _isOpenedByClick = true; 
+            bool opening = !contentPanel.activeSelf;
+
+            if (!opening)
+            {
+                UIPopupEffect effect = contentPanel.GetComponent<UIPopupEffect>();
+                if (effect != null) effect.Close();
+                else contentPanel.SetActive(false);
+            }
+            else
+            {
+                if (UIManager.Instance != null) UIManager.Instance.CloseAllMenusExcept(contentPanel);
+                contentPanel.SetActive(true);
+                
+                UpdateStaticInfo();
+                UpdatePlanetValue();
+                UpdateLaunchStatus(); 
+                
+                if (popupAnimator != null && contentPanel.GetComponent<UIPopupEffect>() == null) 
+                    popupAnimator.Play("PopupOpen");
+            }
+        }
+    }
+
     public void OpenPopup()
     {
-        if (contentPanel != null) 
-        {
-            if (UIManager.Instance != null)
-                UIManager.Instance.CloseAllMenusExcept(contentPanel);
-
-            contentPanel.SetActive(true);
-            isOpen = true;
-            
-            UpdateStaticInfo();
-            UpdatePlanetValue();
-            UpdateLaunchStatus(); 
-            
-            if (popupAnimator != null && contentPanel.GetComponent<UIPopupEffect>() == null) 
-                popupAnimator.Play("PopupOpen");
-        }
+        if (contentPanel != null && !contentPanel.activeSelf) ToggleMenu();
     }
 
     public void ClosePopup()
     {
-        if (contentPanel != null)
-        {
-            UIPopupEffect effect = contentPanel.GetComponent<UIPopupEffect>();
-            if (effect != null)
-            {
-                effect.Close();
-            }
-            else
-            {
-                contentPanel.SetActive(false);
-            }
-            isOpen = false;
-        }
+        if (contentPanel != null && contentPanel.activeSelf) ToggleMenu();
     }
 
     private void UpdateStaticInfo()

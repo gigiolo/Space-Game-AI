@@ -27,6 +27,7 @@ public class AttentionPulseEffect : MonoBehaviour
 
     // Stato interno
     private bool _shouldAnimate = false;
+    private bool _isSuppressed = false; // <--- NUOVO: Gestisce l'interruzione dal click
     private Coroutine _animationRoutine;
     
     // Colori originali
@@ -35,12 +36,10 @@ public class AttentionPulseEffect : MonoBehaviour
 
     private void Start()
     {
-        // Se l'utente non ha assegnato le immagini, proviamo a cercarle automaticamente
         if (backgroundImage == null) backgroundImage = GetComponent<Image>();
         
         if (iconImage == null)
         {
-            // Cerca la prima immagine nei figli che NON è lo sfondo
             foreach (var img in GetComponentsInChildren<Image>())
             {
                 if (img != backgroundImage)
@@ -51,7 +50,6 @@ public class AttentionPulseEffect : MonoBehaviour
             }
         }
 
-        // Memorizziamo i colori iniziali UNA SOLA VOLTA
         if (backgroundImage) 
         {
             if (forcePureBlack)
@@ -67,6 +65,7 @@ public class AttentionPulseEffect : MonoBehaviour
     {
         StopAllCoroutines();
         _animationRoutine = null;
+        _isSuppressed = false;
         ResetColors();
     }
 
@@ -80,10 +79,7 @@ public class AttentionPulseEffect : MonoBehaviour
         {
             if (_animationRoutine == null && gameObject.activeInHierarchy)
             {
-                // Aggiorniamo SOLO il colore del tema (icona), perché quello potrebbe 
-                // cambiare se cambi pianeta/tema, ma il nero deve restare nero.
                 if (iconImage) _colorTheme = iconImage.color;
-
                 _animationRoutine = StartCoroutine(PulseRoutine());
             }
         }
@@ -95,9 +91,20 @@ public class AttentionPulseEffect : MonoBehaviour
         }
     }
 
+    // --- NUOVO: Metodo per sospendere visivamente la pulsazione ---
+    public void Suppress(bool suppress)
+    {
+        _isSuppressed = suppress;
+        if (suppress)
+        {
+            // Forza i colori originali subito, così il ColorInvertEffect
+            // inizia la sua animazione partendo dai colori giusti, non sfumati.
+            ResetColors();
+        }
+    }
+
     private void ResetColors()
     {
-        // Ripristina i colori base
         if (backgroundImage) backgroundImage.color = _colorDark;
         if (iconImage) iconImage.color = _colorTheme;
     }
@@ -106,16 +113,13 @@ public class AttentionPulseEffect : MonoBehaviour
     {
         while (_shouldAnimate)
         {
-            // 1. Esegui la serie di flash
             for (int i = 0; i < pulseCount; i++)
             {
                 yield return StartCoroutine(SingleFlash());
             }
 
-            // Assicuriamoci che i colori siano resettati alla fine della serie
-            ResetColors();
+            if (!_isSuppressed) ResetColors();
 
-            // 2. Attesa
             yield return new WaitForSeconds(intervalDelay);
         }
     }
@@ -125,31 +129,38 @@ public class AttentionPulseEffect : MonoBehaviour
         float halfDuration = singleFlashDuration / 2f;
         float timer = 0f;
 
-        // FASE 1: Inversione (Sfondo diventa Colorato, Icona diventa Scura)
+        // FASE 1: Inversione
         while (timer < halfDuration)
         {
             timer += Time.unscaledDeltaTime;
             float t = Mathf.Clamp01(timer / halfDuration);
 
-            if (backgroundImage) backgroundImage.color = Color.Lerp(_colorDark, _colorTheme, t);
-            if (iconImage) iconImage.color = Color.Lerp(_colorTheme, _colorDark, t);
+            // Modifica i colori SOLO se non stiamo cliccando il bottone
+            if (!_isSuppressed)
+            {
+                if (backgroundImage) backgroundImage.color = Color.Lerp(_colorDark, _colorTheme, t);
+                if (iconImage) iconImage.color = Color.Lerp(_colorTheme, _colorDark, t);
+            }
 
             yield return null;
         }
 
-        // FASE 2: Ritorno (Sfondo diventa Scuro, Icona diventa Colorata)
+        // FASE 2: Ritorno
         timer = 0f;
         while (timer < halfDuration)
         {
             timer += Time.unscaledDeltaTime;
             float t = Mathf.Clamp01(timer / halfDuration);
 
-            if (backgroundImage) backgroundImage.color = Color.Lerp(_colorTheme, _colorDark, t);
-            if (iconImage) iconImage.color = Color.Lerp(_colorDark, _colorTheme, t);
+            if (!_isSuppressed)
+            {
+                if (backgroundImage) backgroundImage.color = Color.Lerp(_colorTheme, _colorDark, t);
+                if (iconImage) iconImage.color = Color.Lerp(_colorDark, _colorTheme, t);
+            }
 
             yield return null;
         }
 
-        ResetColors();
+        if (!_isSuppressed) ResetColors();
     }
 }

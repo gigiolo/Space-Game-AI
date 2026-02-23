@@ -1,5 +1,5 @@
 ID,Title,Description,Type,Target,Bonus,Est. Income,Wait Time (Sec),Wait Growth,Power Multiplier,BASE COST,COST FACTOR,MaxLevel
-1_Emitter_Max_Cap_01,Emitter Max Cap 01,Max emitter number +1,Additive,EmitterMaxCap,1,0.05,60,1.15,1.00,3,1.35,19
+1_Emitter_Max_Cap_01,Emitter Max Cap 01,Max emitter number +1,Additive,EmitterMaxCap,1,0.05,10,1.2,1.00,0.50,1.35,19
 1_Emitter_Max_Cap_02,Emitter Max Cap 02,Max emitter number +2,Additive,EmitterMaxCap,2,8.00,180,1.2,1.00,1440,1.4,15
 1_Emitter_Max_Cap_03,Emitter Max Cap 03,Max emitter number +5,Additive,EmitterMaxCap,5,250,600,1.25,1.00,150000,1.5,10
 1_Emitter_Max_Cap_04,Emitter Max Cap 04,Max emitter number +10,Additive,EmitterMaxCap,10,15000,1200,1.25,1.00,18000000,1.45,15
@@ -30,8 +30,8 @@ ID,Title,Description,Type,Target,Bonus,Est. Income,Wait Time (Sec),Wait Growth,P
 1_Global_Production_20,Global Production 20,Global energy production +1%,Multiplier,GlobalProduction,0.01,78536117580560600,7200,1.16,1.01,565460046580037000000,1.17,600
 1_Global_Production_21,Global Production 21,Global energy production x10,Multiplier,GlobalProduction,10.00,471216705483364000,86400,11.15,11.00,40713123353762600000000,122.65,1
 1_Global_Production_22,Global Production 22,Global energy production +10%,Multiplier,GlobalProduction,0.10,5183383760317000000,102200,1.25,1.10,529741820304398000000000,1.38,10
-1_Logistic_Max Cap_01,Logistic Capacity 1,Logistic Max Cap +100%,Multiplier,LogisticsCapacity,1.00,11,600,2.15,2.00,6732,4.30,3
-1_Logistic_Max Cap_02,Logistic Capacity 2,Logistic Max Cap +5%,Multiplier,LogisticsCapacity,0.05,34,60,1.20,1.05,2020,1.26,40
+1_Logistic_Max Cap_01,Logistic Capacity 1,Logistic Max Cap +100%,Multiplier,LogisticsCapacity,1.00,11,150,2.15,2.00,1683,4.30,3
+1_Logistic_Max Cap_02,Logistic Capacity 2,Logistic Max Cap +5%,Multiplier,LogisticsCapacity,0.05,34,15,1.20,1.05,505,1.26,40
 1_Logistic_Max Cap_03,Logistic Capacity 3,Logistic Max Cap +20%,Multiplier,LogisticsCapacity,0.20,118,900,1.35,1.20,106029,1.62,35
 1_Logistic_Max Cap_04,Logistic Capacity 4,Logistic Max Cap +30%,Multiplier,LogisticsCapacity,0.30,1149,1800,1.45,1.30,2067566,1.89,30
 1_Logistic_Max Cap_05,Logistic Capacity 5,Logistic Max Cap +10%,Multiplier,LogisticsCapacity,0.10,12262,7200,1.25,1.10,88285047,1.38,100

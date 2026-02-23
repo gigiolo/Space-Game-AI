@@ -44,7 +44,21 @@ public class GameSimulationTool : EditorWindow
             EditorGUILayout.LabelField("Prod. Lorda (No Cap):", FormatNumber(GameManager.Instance.RawProductionRate));
             EditorGUILayout.LabelField("Logistics Cap:", FormatNumber(GameManager.Instance.LogisticsCap));
             EditorGUILayout.LabelField("Emitters:", $"{GameManager.Instance.EmitterCount} / {GameManager.Instance.EmitterCap}");
-            EditorGUILayout.LabelField("Nodi Potenziali:", FormatNumber(GameManager.Instance.CalculatePotentialNodes()));
+            
+            GUILayout.Space(5);
+            EditorGUILayout.LabelField("Nodi Scientifici (Attuali):", FormatNumber(GameManager.Instance.ScientificNodes));
+            EditorGUILayout.LabelField("Nodi Potenziali (Reset):", FormatNumber(GameManager.Instance.CalculatePotentialNodes()));
+
+            if (PlanetManager.Instance != null)
+            {
+                int pIndex = PlanetManager.Instance.currentPlanetIndex + 1;
+                BigDouble pValue = PlanetManager.Instance.CalculatePlanetValue();
+                var pData = PlanetManager.Instance.GetCurrentPlanetData();
+                string reqString = pData != null ? FormatNumber(pData.requiredPlanetValue) : "MAX";
+                
+                EditorGUILayout.LabelField($"Pianeta Attuale:", $"Pianeta {pIndex}");
+                EditorGUILayout.LabelField("Valore Pianeta:", $"{FormatNumber(pValue)} / {reqString}");
+            }
         }
         catch { }
 
@@ -83,14 +97,13 @@ public class GameSimulationTool : EditorWindow
             Debug.Log("Dati simulazione resettati.");
         }
 
-        // Preview del log (ultime 5 righe) - MODIFICATO PER EVITARE CRASH
+        // Preview del log (ultime 5 righe)
         GUILayout.Label("Anteprima Log (Ultime righe):", EditorStyles.miniLabel);
         
         string preview = "";
         int start = Mathf.Max(0, _reportLog.Count - 5);
         for (int i = start; i < _reportLog.Count; i++) preview += _reportLog[i] + "\n";
         
-        // Usa HelpBox invece di TextArea per evitare allocazioni massicce di memoria modificabile
         EditorGUILayout.HelpBox(preview, MessageType.None);
     }
 
@@ -164,28 +177,45 @@ public class GameSimulationTool : EditorWindow
         return bought;
     }
 
-    // --- SISTEMA DI LOGGING CORRETTO ---
+    // --- SISTEMA DI LOGGING CORRETTO E AMPLIATO ---
     private void RecordDataLog(float secondsSkipped, int upgradesBought)
     {
         if (_reportLog.Count == 0)
         {
-            // Header del CSV
-            _reportLog.Add("Time_Total_Sec;Time_Formatted;Energy;Income_Net;Income_Raw;Logistics_Cap;Emitters;Upgrades_Bought_In_Step;Potential_Nodes");
+            // Header del CSV Aggiornato con Planet_Index
+            _reportLog.Add("Time_Total_Sec;Time_Formatted;Planet_Index;Energy;Income_Net;Income_Raw;Logistics_Cap;Emitters;Upgrades_Bought_In_Step;Current_Nodes;Potential_Nodes;Planet_Value;Planet_Req");
         }
 
         var gm = GameManager.Instance;
         
-        // FIX: Usiamo FormatNumber (scientifico) invece di ToString("F0") per evitare stringhe giganti
-        string line = string.Format("{0};{1};{2};{3};{4};{5};{6};{7};{8}",
+        // Calcolo sicuro del Planet Value e Requirement
+        BigDouble planetVal = 0;
+        BigDouble planetReq = 0;
+        int currentPlanet = 1; // Default se manca il PlanetManager
+        
+        if (PlanetManager.Instance != null)
+        {
+            currentPlanet = PlanetManager.Instance.currentPlanetIndex + 1; // Partiamo da 1 invece che da 0 per comodità di lettura
+            planetVal = PlanetManager.Instance.CalculatePlanetValue();
+            var pData = PlanetManager.Instance.GetCurrentPlanetData();
+            if (pData != null) planetReq = pData.requiredPlanetValue;
+        }
+
+        // Formattazione della riga (Nota i 13 parametri da {0} a {12})
+        string line = string.Format("{0};{1};{2};{3};{4};{5};{6};{7};{8};{9};{10};{11};{12}",
             _totalSimulatedSeconds,
             FormatTime(_totalSimulatedSeconds),
+            currentPlanet,                                // <--- AGGIUNTO IL PIANETA ATTUALE
             FormatNumber(gm.CurrentEnergy),      
             FormatNumber(gm.EffectiveIncomePerSec),
             FormatNumber(gm.RawProductionRate),
             FormatNumber(gm.LogisticsCap),
             gm.EmitterCount,
             upgradesBought,
-            FormatNumber(gm.CalculatePotentialNodes())
+            FormatNumber(gm.ScientificNodes),             
+            FormatNumber(gm.CalculatePotentialNodes()),   
+            FormatNumber(planetVal),                      
+            FormatNumber(planetReq)                       
         );
 
         _reportLog.Add(line);
@@ -203,7 +233,6 @@ public class GameSimulationTool : EditorWindow
     private string FormatNumber(BigDouble number)
     {
         if (number < 1000) return number.ToString("F2");
-        // Usa la notazione scientifica (es. 1.25e10) che è sicura per la memoria e leggibile da Excel
         return $"{number.Mantissa:F2}e{number.Exponent}";
     }
 

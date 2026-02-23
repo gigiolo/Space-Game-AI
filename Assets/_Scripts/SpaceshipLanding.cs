@@ -1,3 +1,4 @@
+// --- File: _Scripts\SpaceshipLanding.cs ---
 using UnityEngine;
 using System.Collections;
 
@@ -69,8 +70,27 @@ public class SpaceshipLanding : MonoBehaviour
 
     private void HandleImpact(Vector3 pos)
     {
+        // Nascondiamo solo la mesh della nave
         if (shipMesh) shipMesh.SetActive(false);
-        if (trailVisuals) trailVisuals.SetActive(false);
+        
+        // --- MODIFICA FLUIDITA' DELLA SCIA ---
+        if (trailVisuals) 
+        {
+            // 1. Sganciamo la scia dalla nave, così non viene distrutta assieme ad essa
+            trailVisuals.transform.SetParent(null);
+
+            // 2. Fermiamo l'emissione di nuove particelle (sia per ParticleSystem che per eventuali figli)
+            ParticleSystem[] pSystems = trailVisuals.GetComponentsInChildren<ParticleSystem>();
+            foreach (var ps in pSystems)
+            {
+                // Questo comando dice al sistema: "Smetti di creare particelle, ma fai vivere e svanire quelle già create"
+                ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+            }
+
+            // 3. Autodistruzione ritardata dell'oggetto "orfano" (5 secondi sono sufficienti per far sfumare qualsiasi scia)
+            Destroy(trailVisuals, 5.0f);
+        }
+        // -------------------------------------
 
         if (landingVFX)
         {

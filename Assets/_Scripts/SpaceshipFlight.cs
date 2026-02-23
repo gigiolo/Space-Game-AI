@@ -7,10 +7,10 @@ public class SpaceshipFlight : MonoBehaviour
     [Tooltip("Secondi di volo perpendicolare prima di iniziare a curvare. Tienilo basso (0.2 - 0.5) per evitare l'effetto 'ascensore'.")]
     public float verticalDuration = 0.5f; 
 
-    [Tooltip("Quanto tempo impiega per completare la virata verso l'orizzonte.")]
-    public float curveDuration = 10.0f;
+    [Tooltip("Quanto tempo impiega per completare la virata verso lo spazio profondo.")]
+    public float curveDuration = 5.0f;
     
-    [Tooltip("Definisce la morbidezza della virata. ASSE X = Tempo (0 a 1), ASSE Y = Angolo (0=Su, 1=Orizzonte). Assicurati che inizi e finisca dolce.")]
+    [Tooltip("Definisce la morbidezza della virata. ASSE X = Tempo (0 a 1), ASSE Y = Angolo (0=Su, 1=Spazio). Assicurati che inizi e finisca dolce.")]
     public AnimationCurve turnCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
     [Header("Controllo Velocità")]
@@ -41,58 +41,69 @@ public class SpaceshipFlight : MonoBehaviour
     {
         float timer = 0f;
         
-        // --- CALCOLO VETTORE TANGENTE (ORIZZONTE) ---
-        // Calcoliamo la direzione "destra" relativa alla superficie e poi ricalcoliamo il "forward"
-        // per ottenere una tangente perfetta all'equatore/orizzonte locale.
-        Vector3 horizonDir = Vector3.Cross(upDir, Vector3.up).normalized;
-        if (horizonDir == Vector3.zero) horizonDir = Vector3.forward; // Fallback se siamo ai poli
-        horizonDir = Vector3.Cross(horizonDir, upDir).normalized;
+        // --- CALCOLO DIREZIONE SPAZIO PROFONDO ---
+        // Generiamo una direzione completamente casuale a 360°
+        Vector3 targetSpaceDir = Random.onUnitSphere;
+        
+        // 1. Evitiamo che la nave scavi nel terreno (deve puntare in su, nel cielo)
+        // Se il "Dot Product" è minore di 0.3, significa che sta puntando parallelamente al suolo o verso il basso.
+        if (Vector3.Dot(targetSpaceDir, upDir) < 0.3f)
+        {
+            // La spingiamo forzatamente verso l'alto
+            targetSpaceDir = (targetSpaceDir + upDir * 2f).normalized;
+        }
+
+        // 2. ANTI-CLIPPING CAMERA (La magia che cercavamo)
+        // Se la nave sta per caso puntando dritta in faccia al giocatore, la facciamo deviare.
+        if (Camera.main != null)
+        {
+            Vector3 camForward = Camera.main.transform.forward;
+            // Un dot product vicino a -1 significa che i vettori si scontrano frontalmente
+            if (Vector3.Dot(targetSpaceDir, camForward) < -0.2f)
+            {
+                // Aggiungiamo il vettore "in avanti" della telecamera, spingendo la rotta verso lo sfondo
+                targetSpaceDir = (targetSpaceDir + camForward).normalized;
+            }
+        }
 
         while (timer < lifeTime)
         {
             timer += Time.deltaTime;
             
             // 1. GESTIONE VELOCITA' (Basata sul tempo totale di vita)
-            // Normalizziamo il tempo da 0 a 1 rispetto alla vita totale
             float normalizedTime = Mathf.Clamp01(timer / lifeTime);
-            // Leggiamo la curva di accelerazione
             float speedMultiplier = accelerationCurve.Evaluate(normalizedTime);
-            // Interpoliamo tra min e max
             float currentSpeed = Mathf.Lerp(startSpeed, endSpeed, speedMultiplier);
 
             // 2. GESTIONE TRAIETTORIA
             Vector3 currentDirection;
 
-            // Fase A: Brevissimo decollo verticale (per staccarsi da terra)
+            // Fase A: Brevissimo decollo verticale (per staccarsi da terra in sicurezza)
             if (timer < verticalDuration)
             {
                 currentDirection = upDir;
             }
-            // Fase B: Virata Graduale verso l'orizzonte
+            // Fase B: Virata Graduale verso lo spazio profondo
             else if (timer < verticalDuration + curveDuration)
             {
-                // Calcoliamo quanto siamo avanti nella virata (da 0 a 1)
                 float timeInCurve = timer - verticalDuration;
                 float t = Mathf.Clamp01(timeInCurve / curveDuration);
                 
-                // Valutiamo la curva (0 = Verticale, 1 = Orizzontale)
                 float curveT = turnCurve.Evaluate(t);
 
-                // SLERP: Ruota gradualmente il vettore da SU a ORIZZONTE
-                currentDirection = Vector3.Slerp(upDir, horizonDir, curveT);
+                // SLERP: Ruota gradualmente il vettore da SU verso la direzione spaziale
+                currentDirection = Vector3.Slerp(upDir, targetSpaceDir, curveT);
             }
-            // Fase C: Crociera (Orbita raggiunta)
+            // Fase C: Crociera (Spazio profondo raggiunto)
             else
             {
-                currentDirection = horizonDir;
+                currentDirection = targetSpaceDir;
             }
 
             // 3. APPLICAZIONE FISICA
-            // Ruota la nave verso la direzione calcolata
             if (currentDirection != Vector3.zero)
             {
                 Quaternion targetRot = Quaternion.LookRotation(currentDirection);
-                // Time.deltaTime * 5f rende la rotazione visiva fluida ma reattiva
                 transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 10f);
             }
 
@@ -122,7 +133,6 @@ public class SpaceshipFlight : MonoBehaviour
             if (rend == null) continue;
             foreach (var mat in rend.materials)
             {
-                // Supporto per URP e Standard Shader
                 if (mat.HasProperty("_BaseColor")) 
                 {
                     Color c = mat.GetColor("_BaseColor");
