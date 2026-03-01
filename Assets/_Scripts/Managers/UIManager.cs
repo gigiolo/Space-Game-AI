@@ -16,7 +16,7 @@ public class UIManager : MonoBehaviour
     public CanvasGroup mainHUDGroup; 
 
     [Header("Top HUD - Standard")]
-    public TextMeshProUGUI scoreText;                                       
+    public TextMeshProUGUI scoreText;                                        
     public TextMeshProUGUI incomeText;
     [Tooltip("Trascina qui l'icona dell'Income (Produzione)")]
     public Image incomeIcon; 
@@ -90,6 +90,9 @@ public class UIManager : MonoBehaviour
     private Coroutine _pieAnimRoutine;
 
     private List<GameObject> _registeredMenus = new List<GameObject>();
+    
+    // --- NUOVO: Timer per sincronizzare i pannelli ---
+    private float _closingEndTime = 0f; 
 
     // --- Riferimenti agli Animatori dei Numeri ---
     private NumberDigitAnimator _scoreAnimator;
@@ -182,20 +185,52 @@ public class UIManager : MonoBehaviour
         }
     }
 
+    // --- NUOVI METODI PER SINCRONIZZARE I PANNELLI ---
+
+    // Chiamato dal UIPopupEffect quando inizia a chiudersi
+    public void RegisterClosingMenu(float duration)
+    {
+        float newEndTime = Time.unscaledTime + duration;
+        if (newEndTime > _closingEndTime)
+        {
+            _closingEndTime = newEndTime;
+        }
+    }
+
+    // Chiamato dal UIPopupEffect quando vuole aprirsi per sapere quanto aspettare
+    public float GetClosingDelay()
+    {
+        if (Time.unscaledTime < _closingEndTime)
+        {
+            return _closingEndTime - Time.unscaledTime;
+        }
+        return 0f;
+    }
+
     public void CloseAllMenusExcept(GameObject menuToKeepOpen)
     {
         _registeredMenus.RemoveAll(x => x == null);
         foreach (var menu in _registeredMenus)
         {
             if (menu == menuToKeepOpen) continue;
+            
             if (menu.activeSelf)
             {
                 UIPopupEffect effect = menu.GetComponent<UIPopupEffect>();
-                if (effect != null) effect.Close();
-                else menu.SetActive(false);
+                if (effect != null) 
+                {
+                    // effect.Close() adesso registrerà automaticamente il tempo di chiusura globale
+                    effect.Close(); 
+                }
+                else 
+                {
+                    menu.SetActive(false);
+                }
             }
         }
     }
+
+    // --------------------------------------------------
 
     private void SetupPlanetButtons()
     {

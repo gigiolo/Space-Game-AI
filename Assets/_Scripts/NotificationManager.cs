@@ -25,6 +25,17 @@ public class NotificationManager : MonoBehaviour
         if (popupWindow) popupWindow.Close();
     }
 
+    // --- AGGIUNTO PER IL TEST RAPIDO DELLE ADS ---
+    private void Update()
+    {
+        // Premi "A" sulla tastiera in Play Mode per generare la notifica del video
+        if (Input.GetKeyDown(KeyCode.A))
+        {
+            SpawnRadioSignalAd();
+        }
+    }
+    // --------------------------------------------
+
     // --- FUNZIONE PRINCIPALE DA CHIAMARE DA OVUNQUE ---
     public void SpawnNotification(NotificationData data)
     {
@@ -44,30 +55,66 @@ public class NotificationManager : MonoBehaviour
         if (popupWindow) popupWindow.Show(data);
     }
 
-    // --- ESEMPI DI UTILIZZO (DEBUG) ---
-    // Puoi chiamare queste funzioni per testare se funziona
+    // --- ESEMPI E TRIGGER SPECIFICI ---
+
+    // 1. Test standard (Energia)
     public void TestSpawnGift()
     {
         SpawnNotification(new NotificationData(
             "Free Energy", 
             "A gift from the stars!", 
             moneyIcon, 
-            () => { GameManager.Instance.AddInstantEmitters(5); }, // Ora funziona perché il metodo esiste!
+            () => { GameManager.Instance.AddInstantEmitters(5); }, 
             false
         ));
     }
     
-    // Esempio avanzato: genera una ricompensa casuale
+    // 2. Regalo misterioso (Energia)
     public void SpawnRandomReward()
     {
-        // Qui potrai mettere logica randomica in futuro
         SpawnNotification(new NotificationData(
             "Mystery Box", 
             "Contains 100 Energy", 
             giftIcon, 
-            // CORRETTO: Ora usa il metodo pubblico AddEnergy
             () => { GameManager.Instance.AddEnergy(100); }, 
             false
+        ));
+    }
+
+    // --- NUOVO: EVENTO ADS (Segnale Radio / Iridio Puro) ---
+    public void SpawnRadioSignalAd()
+    {
+        // Quantità di premio
+        int iridiumRewardAmount = 2;
+
+        SpawnNotification(new NotificationData(
+            "Trasmissione Sconosciuta", 
+            "Segnale radio di origine terrestre intercettato.\nDecodificare la trasmissione visiva?\n\n<color=#FF00FF>Ricompensa: +" + iridiumRewardAmount + " Iridio Puro</color>", 
+            adsIcon, // Usa l'icona video/TV
+            () => {
+                // AZIONE QUANDO IL GIOCATORE CLICCA "CLAIM" SUL POPUP
+                if (AdsManager.Instance != null)
+                {
+                    AdsManager.Instance.ShowRewardedAd(() => 
+                    {
+                        // QUESTA PARTE VIENE ESEGUITA SOLO SE IL VIDEO VIENE VISTO FINO ALLA FINE
+                        if (GameManager.Instance != null)
+                        {
+                            GameManager.Instance.AddPureIridium(iridiumRewardAmount);
+                        }
+                        
+                        if (ShipTerminalController.Instance != null)
+                        {
+                            ShipTerminalController.Instance.ShowSystemMessage("DECODIFICA COMPLETATA. DATI COMMERCIALI TERRESTRI CONVERTITI IN IRIDIO.");
+                        }
+                    });
+                }
+                else
+                {
+                    Debug.LogError("[NotificationManager] AdsManager non trovato! Assicurati di aver messo il prefab nella scena.");
+                }
+            }, 
+            true // isAds = true (mostra il badge "Video" sul bottone della notifica)
         ));
     }
 }

@@ -19,9 +19,9 @@ MonoBehaviour:
   baseSpeed: 1000
   upgradeType: 0
   upgradeValue: 100
-  currencyType: 0
+  currencyType: 1
   manualCosts: []
   costCurveType: 0
-  baseCost: 1000000000
+  baseCost: 1000
   costFactor: 1.3
   maxLevel: 8

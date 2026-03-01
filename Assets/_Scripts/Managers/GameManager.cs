@@ -1,3 +1,4 @@
+// --- File: _Scripts\Managers\GameManager.cs ---
 using UnityEngine;
 using BreakInfinity; 
 using System;
@@ -20,24 +21,17 @@ public class GameManager : MonoBehaviour
     public SpaceshipManager spaceshipManager; 
     public UITheme activeTheme; 
     
-    // Questo cambia a ogni scena, quindi va cercato dinamicamente
     public PlanetPopulationVisuals planetVisuals; 
     public GameObject[] emitters;
 
-    [Tooltip("Trascina qui l'oggetto che ha lo script DailyGiftManager")]
     public DailyGiftManager dailyGiftManager; 
 
     [Header("--- BILANCIAMENTO ---")]
     public double offlineProductionRatio = 0.5d;
 
-    [Header("--- PRESTIGE SETTINGS (Egg Inc Style) ---")]
-    [Tooltip("Quanto devi guadagnare prima di ottenere il primo nodo (Divisore). Default Egg Inc: 1.000.000")]
+    [Header("--- PRESTIGE SETTINGS ---")]
     public double prestigeDivisor = 1000000; 
-    
-    [Tooltip("La potenza della curva. Più è basso, meno nodi ottieni (Egg Inc usa ~0.15).")]
     public double prestigePower = 0.15; 
-
-    [Tooltip("Il bonus di produzione per OGNI singolo nodo (0.50 = +50%, 1.0 = +100%).")]
     public double nodesBonusPerUnit = 0.50; 
 
     [Header("--- ENERGY BUTTON ---")]
@@ -48,7 +42,6 @@ public class GameManager : MonoBehaviour
     [SerializeField] private float energyButton_CooldownMultiplier = 1.0f;
 
     [Header("--- AUDIO ---")]
-    [Tooltip("Il suono riprodotto quando premi il pulsante energia.")]
     [SerializeField] private AudioClip energyClickSound;
 
     [Header("--- SALVATAGGIO ---")]
@@ -62,29 +55,25 @@ public class GameManager : MonoBehaviour
     
     // --- VARIABILI PERMANENTI (RESET QUANTISTICO) ---
     public BigDouble ScientificNodes { get; private set; } = 0;
+    
+    // NUOVO: Aggiunta la nuova risorsa permanente
+    public BigDouble QuantumManipulators { get; private set; } = 0; 
 
     // --- VALUTE IRIDIO (PERSISTENTI) ---
     public BigDouble RawIridium { get; private set; } = 0;
     public BigDouble PureIridium { get; private set; } = 0;
     
-    // --- CAPACITA' & LIMITI (MODIFICABILI PER BILANCIAMENTO) ---
     [Header("--- BILANCIAMENTO BASE ---")]
-    [Tooltip("Quanto produce un singolo Emitter al livello 0.")]
     public BigDouble baseEmissionPerUnit = 0.01; 
-    public BigDouble BaseEmissionPerUnit => baseEmissionPerUnit; // Proprietà pubblica in sola lettura
+    public BigDouble BaseEmissionPerUnit => baseEmissionPerUnit;
 
-    [Tooltip("Capacità Logistica di partenza (prima degli upgrade).")]
     public BigDouble initialLogisticsCap = 10; 
-
-    [Tooltip("Tempo massimo offline in secondi (default 7200 = 2 ore).")]
     public double baseMaxOfflineSeconds = 7200;
 
-    // Variabili calcolate a runtime
     public BigDouble LogisticsCap { get; private set; }
     public double MaxOfflineSeconds { get; private set; }
     public int EmitterCap { get; private set; } = 1; 
 
-    // --- MOLTIPLICATORI & BONUS ---
     public BigDouble ResearchMultiplier { get; set; } = 1;
     public BigDouble LogisticsResearchBonus { get; set; } = 0;
     public BigDouble LogisticsMultiplier { get; set; } = 1; 
@@ -93,7 +82,6 @@ public class GameManager : MonoBehaviour
     
     public float ClickPowerResearchBonus { get; set; } = 0.0f; 
 
-    // --- FIX CRESCITA EMITTERS ---
     public double BaseAutoGrowthSpeed = 0.3; 
     public double EmitterSpeedResearchBonus { get; set; } = 0; 
     
@@ -110,16 +98,13 @@ public class GameManager : MonoBehaviour
 
     public BigDouble EarningsBonus => 1 + (ScientificNodes * nodesBonusPerUnit); 
 
-    // --- STATO & TIMER ---
     public BigDouble LastOfflineEarnings { get; private set; } = 0;
     public int LastOfflineEmittersGained { get; private set; } = 0; 
-    
     public TimeSpan LastOfflineTimeSpan { get; private set; }
 
     private float _uiRefreshTimer = 0f;
     private float _uiRefreshRate = 0.05f;
 
-    // --- ENERGY BUTTON STATE ---
     private enum EnergyButtonState { Idle, RampingUp, HoldingMax, RampingDown, Cooldown }
     private EnergyButtonState _energyButtonState = EnergyButtonState.Idle;
     public float CurrentEnergyMultiplier { get; private set; } = 1.0f;
@@ -129,61 +114,32 @@ public class GameManager : MonoBehaviour
     private float _rampDownStartMultiplier = 1.0f;
     private float _currentRampDownDuration = 0.0f;
 
-    // --- POSIZIONE SITO DI LANCIO ---
     public string StoredLaunchSitePosition { get; set; } = "";
-
-    // --- ROTAZIONE SOLE E TEMPO OFFLINE ---
     public float StoredSunRotation { get; set; } = 0f;
     public double PendingOfflineSeconds { get; set; } = 0f;
-
-    // --- INTRO STATE ---
     public bool IsFirstSession { get; set; } = true; 
 
-    // ========================================================================================
-    // SEZIONE FORMULE DI PRODUZIONE (LOGICA OVERCHARGE & ARTEFATTI)
-    // ========================================================================================
-
-    /// <summary>
-    /// La produzione "Passive" degli Emitter, inclusi tutti i bonus permanenti e gli artefatti.
-    /// NON include il moltiplicatore del bottone Energy.
-    /// </summary>
     public BigDouble RawPassiveProduction
     {
         get
         {
             BigDouble baseProd = EmitterCount * BaseEmissionPerUnit;
             BigDouble planetMultiplier = PlanetManager.Instance?.GetCurrentPlanetData()?.productionMultiplier ?? 1;
-            
-            // Aggiungiamo Bonus Artefatti
             double artifactIncomeBonus = DroneManager.Instance != null ? DroneManager.Instance.GetArtifactBonus(ArtifactBonusType.GlobalIncome) : 0;
-            
-            // Formula base: (Unit * Emission) * Ricerche * Nodi * Pianeta * Bonus Artefatti
             BigDouble finalMultiplier = ResearchMultiplier * EarningsBonus * planetMultiplier * (1.0 + artifactIncomeBonus);
-            
             return baseProd * finalMultiplier;
         }
     }
 
-    /// <summary>
-    /// La produzione effettiva che entra in cassa.
-    /// LOGICA: Min(Passive, Cap) * ButtonMultiplier
-    /// Il bottone agisce DOPO il cap, permettendo l'Overcharge.
-    /// </summary>
     public BigDouble EffectiveIncomePerSec
     {
         get
         {
-            // 1. Applichiamo il collo di bottiglia logistico alla produzione passiva
             BigDouble cappedPassive = BigDouble.Min(RawPassiveProduction, LogisticsCap);
-
-            // 2. Applichiamo il moltiplicatore del bottone (Overcharge)
             return cappedPassive * CurrentEnergyMultiplier;
         }
     }
 
-    /// <summary>
-    /// La produzione stabile usata per calcoli a lungo termine (es. Valore Pianeta, Offline).
-    /// </summary>
     public BigDouble EffectiveStableIncomePerSec
     {
         get
@@ -192,9 +148,6 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// La produzione potenziale TOTALE se non ci fosse il limite logistico, INCLUSO il bottone.
-    /// </summary>
     public BigDouble PotentialProductionWithButton
     {
         get
@@ -203,14 +156,8 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Alias per PotentialProductionWithButton (per compatibilità UI).
-    /// </summary>
     public BigDouble RawProductionRate => PotentialProductionWithButton;
-
     public float EffectiveMaxMultiplier => energyButton_MaxMultiplier + ClickPowerResearchBonus;
-
-    // ========================================================================================
 
     private void Awake()
     {
@@ -291,7 +238,7 @@ public class GameManager : MonoBehaviour
                 int toAdd = (int)_emitterAccumulator; 
                 int spaceLeft = EmitterCap - EmitterCount;
                 int actualAdd = Mathf.Min(toAdd, spaceLeft);
-                _emitterAccumulator -= actualAdd;                                                                                                                              
+                _emitterAccumulator -= actualAdd;                                                                                                        
                 if (actualAdd < toAdd) _emitterAccumulator = 0;
 
                 if (actualAdd > 0)
@@ -353,23 +300,17 @@ public class GameManager : MonoBehaviour
     public BigDouble CalculatePotentialNodes()
     {
         if (LifetimeEarnings < prestigeDivisor) return 0;
-
         BigDouble normalizedEarnings = LifetimeEarnings / prestigeDivisor;
         BigDouble nodes = BigDouble.Pow(normalizedEarnings, prestigePower);
-
         return BigDouble.Floor(nodes);        
     }
 
     public void RecalculateCaps()
     {
-        // 1. Artefatti Bonus
         double artifactStorageBonus = DroneManager.Instance != null ? DroneManager.Instance.GetArtifactBonus(ArtifactBonusType.StorageCapacity) : 0;
-        
-        // Usa initialLogisticsCap invece del valore fisso
         BigDouble baseLogistics = initialLogisticsCap + (LogisticsLevel * 5) + LogisticsResearchBonus;
         LogisticsCap = baseLogistics * LogisticsMultiplier;
 
-        // Storage Base + Ricerche + % Artefatti
         double researchSeconds = StorageResearchBonus.ToDouble() * 1800;
         MaxOfflineSeconds = (baseMaxOfflineSeconds + researchSeconds) * (1.0 + artifactStorageBonus); 
         
@@ -400,12 +341,8 @@ public class GameManager : MonoBehaviour
         if (rewindEffect != null)
         {
             rewindEffect.PlayRewindEffect(
-                onTriggerFade: () => {
-                    StartFadeSequence(); 
-                },
-                onAnimationComplete: () => {
-                    ExecuteResetAndLoad(); 
-                }
+                onTriggerFade: () => { StartFadeSequence(); },
+                onAnimationComplete: () => { ExecuteResetAndLoad(); }
             );
         }
         else
@@ -515,7 +452,6 @@ public class GameManager : MonoBehaviour
         StoredLaunchSitePosition = ""; 
         StoredSunRotation = 0f; 
 
-        // Assicuriamoci che i valori base siano settati correttamente all'avvio
         if (initialLogisticsCap <= 0) initialLogisticsCap = 10;
         if (baseEmissionPerUnit <= 0) baseEmissionPerUnit = 0.01;
         
@@ -535,6 +471,8 @@ public class GameManager : MonoBehaviour
         data.scientificNodes = ScientificNodes.ToString();
         data.rawIridium = RawIridium.ToString();
         data.pureIridium = PureIridium.ToString();
+        // NUOVO: Salvataggio Manipolatori
+        data.quantumManipulators = QuantumManipulators.ToString();
 
         if (PlanetSunRotator.Instance != null)
         {
@@ -578,7 +516,6 @@ public class GameManager : MonoBehaviour
 
         data.launchSitePosition = StoredLaunchSitePosition;
 
-        // --- SALVATAGGIO DRONI E ARTEFATTI ---
         if (DroneManager.Instance != null)
         {
             DroneManager.Instance.SaveData(data);
@@ -594,6 +531,7 @@ public class GameManager : MonoBehaviour
         {
             InitializeGameState();
             ScientificNodes = 0;
+            QuantumManipulators = 0; // Reset Manipolatori
             RawIridium = 0; 
             PureIridium = 0; 
             StoredSunRotation = 0f;
@@ -614,7 +552,6 @@ public class GameManager : MonoBehaviour
         {
             if (EmitterCount > 0 || LifetimeEarnings > 0)
             {
-                Debug.LogWarning("[GameManager] Rilevata incongruenza: IsFirstSession era TRUE ma ci sono risorse. Forzo a FALSE per abilitare l'offline.");
                 IsFirstSession = false;
             }
         }
@@ -624,6 +561,8 @@ public class GameManager : MonoBehaviour
         ScientificNodes = !string.IsNullOrEmpty(data.scientificNodes) ? BigDouble.Parse(data.scientificNodes) : 0;
         RawIridium = !string.IsNullOrEmpty(data.rawIridium) ? BigDouble.Parse(data.rawIridium) : 0;
         PureIridium = !string.IsNullOrEmpty(data.pureIridium) ? BigDouble.Parse(data.pureIridium) : 0;
+        // NUOVO: Caricamento Manipolatori
+        QuantumManipulators = !string.IsNullOrEmpty(data.quantumManipulators) ? BigDouble.Parse(data.quantumManipulators) : 0;
         
         StoredSunRotation = data.sunRotationY;
 
@@ -652,7 +591,6 @@ public class GameManager : MonoBehaviour
                 string currentSceneName = SceneManager.GetActiveScene().name;
                 if (!PlanetManager.Instance.isTraveling && currentSceneName != savedPlanet.sceneName)
                 {
-                    Debug.Log($"LoadGame: Scene mismatch. Current: {currentSceneName}, Saved: {savedPlanet.sceneName}. Loading correct scene...");
                     SceneManager.LoadScene(savedPlanet.sceneName);
                 }
             }
@@ -667,7 +605,6 @@ public class GameManager : MonoBehaviour
         if (planetVisuals != null && data.cityLightPositions != null)
             planetVisuals.LoadEncodedPositions(data.cityLightPositions);
 
-        // --- CARICAMENTO DRONI E ARTEFATTI ---
         if (DroneManager.Instance != null)
         {
             DroneManager.Instance.LoadData(data);
@@ -725,7 +662,6 @@ public class GameManager : MonoBehaviour
         if (secondsAway > 1) 
         {
             double actualSeconds = Math.Min(secondsAway, MaxOfflineSeconds);
-            // Per l'offline usiamo la Stable Income (senza il boost del bottone)
             BigDouble actualEarnings = EffectiveStableIncomePerSec * actualSeconds * offlineProductionRatio;
 
             if (actualEarnings > 0) 
@@ -853,6 +789,14 @@ public class GameManager : MonoBehaviour
         SaveGame(); 
         OnEconomyUpdated?.Invoke();
     }
+    
+    // NUOVO: Aggiungere Manipolatori
+    public void AddQuantumManipulator(BigDouble amount)
+    {
+        QuantumManipulators += amount;
+        SaveGame();
+        OnEconomyUpdated?.Invoke();
+    }
 
     public bool TrySpendPureIridium(BigDouble amount)
     {
@@ -880,10 +824,10 @@ public class GameManager : MonoBehaviour
 
     public void PerformFullHardReset()
     {
-        Debug.LogWarning("HARD RESET INIZIATO.");
         SaveManager.DeleteSaveFile();
         
         ScientificNodes = 0; 
+        QuantumManipulators = 0; // NUOVO
         LifetimeEarnings = 0; 
         CurrentEnergy = 0; 
         RawIridium = 0; 

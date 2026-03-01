@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "com.unity.2d.sprite": "1.0.0",
+    "com.unity.ads": "4.16.4",
     "com.unity.ai.inference": "2.4.1",
     "com.unity.ai.navigation": "2.0.9",
     "com.unity.collab-proxy": "2.10.2",
@@ -10,6 +11,8 @@
     "com.unity.inputsystem": "1.17.0",
     "com.unity.mobile.notifications": "2.4.2",
     "com.unity.multiplayer.center": "1.0.1",
+    "com.unity.probuilder": "6.0.9",
+    "com.unity.purchasing": "5.1.2",
     "com.unity.render-pipelines.universal": "17.3.0",
     "com.unity.test-framework": "1.6.0",
     "com.unity.timeline": "1.8.9",

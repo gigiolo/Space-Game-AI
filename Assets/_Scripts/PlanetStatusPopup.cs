@@ -1,72 +1,88 @@
 // --- File: _Scripts\PlanetStatusPopup.cs ---
 using UnityEngine;
 using TMPro;
-using BreakInfinity; 
+using BreakInfinity;
 using UnityEngine.UI;
+using System;
 
 public class PlanetStatusPopup : MonoBehaviour
 {
-    [Header("--- UI References ---")]
+    [Header("--- UI References (Base) ---")]
     public GameObject contentPanel;
-    public TextMeshProUGUI planetNameText;
-    public TextMeshProUGUI planetValueText; 
-    public TextMeshProUGUI multiplierText;
-    public TextMeshProUGUI descriptionText;
-    public Image planetIcon;
+    public Animator popupAnimator;
 
-    [Header("--- Buttons & Progress ---")]
-    public Button startPreparationButton;
-    public Button startTravelButton;
+    [Header("--- 1. Carousel Zone ---")]
+    public Button prevButton;
+    public Button nextButton;
+    public Image planetIcon;
+    public TextMeshProUGUI planetNameText;
+    public TextMeshProUGUI descriptionText;
+
+    [Header("--- 2. Intel Zone ---")]
+    public TextMeshProUGUI planetValueText;
+    public TextMeshProUGUI multiplierText;
+    public TextMeshProUGUI distanceText;
+
+    [Header("--- 3. Fleet Zone ---")]
+    public Image bestShipIcon;
+    public TextMeshProUGUI fleetSpeedText;
+    public TextMeshProUGUI fleetEtaText;
+
+    [Header("--- 4. Action Zone ---")]
+    public Button mainActionButton; 
+    public TextMeshProUGUI mainActionText; 
     public Slider launchProgressBar;
     public TextMeshProUGUI progressText;
 
-    [Header("--- Settings ---")]
-    public Animator popupAnimator; 
-
+    // STATO INTERNO
     private bool _isOpenedByClick = false;
+    private int _viewedPlanetIndex = 0;
 
     private void Start()
     {
         if(contentPanel != null) 
         {
-            // Fix Start() Sabotaggio
             if (!_isOpenedByClick) contentPanel.SetActive(false);
-            
-            if (UIManager.Instance != null)
-                UIManager.Instance.RegisterMenu(contentPanel);
+            if (UIManager.Instance != null) UIManager.Instance.RegisterMenu(contentPanel);
         }
 
-        if (startPreparationButton != null)
-        {
-            startPreparationButton.onClick.RemoveAllListeners();
-            startPreparationButton.onClick.AddListener(() => 
-            {
-                if (PlanetManager.Instance != null) 
-                    PlanetManager.Instance.StartLaunchPreparation();
-            });
-        }
+        if (prevButton) prevButton.onClick.AddListener(() => ChangeViewedPlanet(-1));
+        if (nextButton) nextButton.onClick.AddListener(() => ChangeViewedPlanet(1));
 
-        if (startTravelButton != null)
+        if (mainActionButton != null)
         {
-            startTravelButton.onClick.RemoveAllListeners();
-            startTravelButton.onClick.AddListener(() => 
-            {
-                if (PlanetManager.Instance != null) 
-                {
-                    PlanetManager.Instance.StartInterplanetaryTravel();
-                    ClosePopup();
-                }
-            });
+            mainActionButton.onClick.RemoveAllListeners();
+            mainActionButton.onClick.AddListener(OnMainActionClicked);
+        }
+    }
+
+    private void OnMainActionClicked()
+    {
+        if (PlanetManager.Instance == null) return;
+
+        bool isPrep = PlanetManager.Instance.isPreparingForLaunch;
+        bool isTravel = PlanetManager.Instance.isTraveling;
+        BigDouble currentProgress = PlanetManager.Instance.launchPreparationProgress;
+        BigDouble requiredEnergy = PlanetManager.Instance.GetLaunchEnergyRequirement();
+        
+        bool isFinished = !isPrep && !isTravel && currentProgress >= requiredEnergy && requiredEnergy > 0;
+
+        if (isFinished)
+        {
+            PlanetManager.Instance.StartInterplanetaryTravel();
+            ClosePopup();
+        }
+        else if (!isPrep && !isTravel)
+        {
+            PlanetManager.Instance.StartLaunchPreparation();
         }
     }
 
     private void Update()
     {
-        if ((contentPanel != null && contentPanel.activeSelf) || 
-            (PlanetManager.Instance != null && PlanetManager.Instance.isPreparingForLaunch))
+        if (contentPanel != null && contentPanel.activeSelf)
         {
-            UpdatePlanetValue();
-            UpdateLaunchStatus();
+            RefreshAllUI();
         }
     }
 
@@ -87,10 +103,13 @@ public class PlanetStatusPopup : MonoBehaviour
             {
                 if (UIManager.Instance != null) UIManager.Instance.CloseAllMenusExcept(contentPanel);
                 contentPanel.SetActive(true);
+
+                if (PlanetManager.Instance != null)
+                {
+                    _viewedPlanetIndex = Mathf.Min(PlanetManager.Instance.currentPlanetIndex + 1, PlanetManager.Instance.planets.Count - 1);
+                }
                 
-                UpdateStaticInfo();
-                UpdatePlanetValue();
-                UpdateLaunchStatus(); 
+                RefreshAllUI(); 
                 
                 if (popupAnimator != null && contentPanel.GetComponent<UIPopupEffect>() == null) 
                     popupAnimator.Play("PopupOpen");
@@ -98,88 +117,206 @@ public class PlanetStatusPopup : MonoBehaviour
         }
     }
 
-    public void OpenPopup()
-    {
-        if (contentPanel != null && !contentPanel.activeSelf) ToggleMenu();
-    }
+    public void OpenPopup() { if (contentPanel != null && !contentPanel.activeSelf) ToggleMenu(); }
+    public void ClosePopup() { if (contentPanel != null && contentPanel.activeSelf) ToggleMenu(); }
 
-    public void ClosePopup()
-    {
-        if (contentPanel != null && contentPanel.activeSelf) ToggleMenu();
-    }
-
-    private void UpdateStaticInfo()
+    private void ChangeViewedPlanet(int direction)
     {
         if (PlanetManager.Instance == null) return;
-        var planetData = PlanetManager.Instance.GetCurrentPlanetData();
-        int currentIndex = PlanetManager.Instance.currentPlanetIndex;
-        if (planetData != null)
+        
+        _viewedPlanetIndex += direction;
+        _viewedPlanetIndex = Mathf.Clamp(_viewedPlanetIndex, 0, PlanetManager.Instance.planets.Count - 1);
+        
+        RefreshAllUI();
+    }
+
+    private void RefreshAllUI()
+    {
+        if (PlanetManager.Instance == null || PlanetManager.Instance.planets.Count == 0) return;
+
+        PlanetData viewedData = PlanetManager.Instance.planets[_viewedPlanetIndex];
+        int actualCurrentPlanet = PlanetManager.Instance.currentPlanetIndex;
+
+        UpdateCarousel(viewedData);
+        UpdateIntel(viewedData, actualCurrentPlanet);
+        UpdateFleet(viewedData);
+        UpdateActionZone(viewedData, actualCurrentPlanet);
+    }
+
+    private void UpdateCarousel(PlanetData data)
+    {
+        if (planetNameText) planetNameText.text = $"{data.planetName} ({_viewedPlanetIndex + 1}/{PlanetManager.Instance.planets.Count})";
+        if (planetIcon && data.planetIcon) planetIcon.sprite = data.planetIcon;
+
+        if (prevButton) prevButton.interactable = _viewedPlanetIndex > 0;
+        if (nextButton) nextButton.interactable = _viewedPlanetIndex < PlanetManager.Instance.planets.Count - 1;
+    }
+
+    private void UpdateIntel(PlanetData data, int actualCurrentPlanet)
+    {
+        if (descriptionText)
         {
-            if (planetNameText != null) planetNameText.text = planetData.planetName;
-            if (multiplierText != null) multiplierText.text = $"Multi: x{FormatMultiplier(planetData.productionMultiplier)}";
-            if (descriptionText != null) descriptionText.text = $"Planet #{currentIndex + 1}\nGravity: Stable";
+            if (_viewedPlanetIndex < actualCurrentPlanet) descriptionText.text = "<color=#00FF00>STATUS: COLONIZZATO</color>";
+            else if (_viewedPlanetIndex == actualCurrentPlanet) descriptionText.text = "<color=#00FFFF>STATUS: ATTUALE</color>";
+            else descriptionText.text = "<color=orange>STATUS: INESPLORATO</color>";
+        }
+
+        if (multiplierText) multiplierText.text = $"Bonus Economico: x{FormatMultiplier(data.productionMultiplier)}";
+
+        if (distanceText) distanceText.text = $"Distanza: {FormatNumber(data.travelDistance)} km";
+
+        if (planetValueText)
+        {
+            // LOGICA CORRETTA: Il valore per raggiungere il pianeta _viewedPlanetIndex 
+            // è definito nel pianeta PRECEDENTE.
+            if (_viewedPlanetIndex == 0)
+            {
+                planetValueText.text = "Valore Richiesto: Nessuno (Pianeta Madre)";
+            }
+            else
+            {
+                // Prendiamo il requisito dal pianeta precedente
+                BigDouble costToReach = PlanetManager.Instance.planets[_viewedPlanetIndex - 1].requiredPlanetValue;
+
+                if (_viewedPlanetIndex <= actualCurrentPlanet)
+                {
+                    // Lo abbiamo già raggiunto
+                    planetValueText.text = $"Valore Richiesto: Sbloccato ({FormatNumber(costToReach)})";
+                }
+                else if (_viewedPlanetIndex == actualCurrentPlanet + 1)
+                {
+                    // È il prossimo pianeta, mostriamo la barra di avanzamento
+                    BigDouble currentVal = PlanetManager.Instance.CalculatePlanetValue();
+                    planetValueText.text = $"Valore Richiesto: {FormatNumber(currentVal)} / {FormatNumber(costToReach)}";
+                }
+                else
+                {
+                    // Pianeta futuro
+                    planetValueText.text = $"Valore Richiesto: {FormatNumber(costToReach)}";
+                }
+            }
         }
     }
 
-    private void UpdatePlanetValue()
+    private void UpdateFleet(PlanetData targetPlanetData)
     {
-        if (PlanetManager.Instance == null) return;
-        var planetData = PlanetManager.Instance.GetCurrentPlanetData();
-        if (planetData != null)
+        if (SpaceshipManager.Instance == null || SpaceshipManager.Instance.fleet.Count == 0) return;
+
+        SpaceshipItem bestShip = null;
+        BigDouble highestSpeed = 0;
+
+        foreach (var ship in SpaceshipManager.Instance.fleet)
         {
-            BigDouble currentVal = PlanetManager.Instance.CalculatePlanetValue();
-            BigDouble requiredVal = planetData.requiredPlanetValue;
-            if (planetValueText != null)
-                planetValueText.text = $"Value: {FormatNumber(currentVal)} / {FormatNumber(requiredVal)}";
+            if (ship.currentLevel > 0 && ship.GetCurrentSpeed() > highestSpeed)
+            {
+                highestSpeed = ship.GetCurrentSpeed();
+                bestShip = ship;
+            }
+        }
+
+        if (bestShip != null)
+        {
+            if (bestShipIcon && bestShip.info.icon) bestShipIcon.sprite = bestShip.info.icon;
+            if (fleetSpeedText) fleetSpeedText.text = $"Velocità Flotta: {FormatNumber(highestSpeed)} Km/s";
+
+            if (fleetEtaText)
+            {
+                BigDouble dist = targetPlanetData.travelDistance;
+                double seconds = (dist / highestSpeed).ToDouble();
+                TimeSpan time = TimeSpan.FromSeconds(seconds);
+                fleetEtaText.text = $"ETA: {FormatTimeSpan(time)}";
+            }
+        }
+        else
+        {
+            if (fleetSpeedText) fleetSpeedText.text = "Velocità Flotta: N/A";
+            if (fleetEtaText) fleetEtaText.text = "ETA: N/A";
         }
     }
 
-    private void UpdateLaunchStatus()
+    private void UpdateActionZone(PlanetData data, int actualCurrentPlanet)
     {
-        if (PlanetManager.Instance == null) return;
-
+        bool isNextPlanet = (_viewedPlanetIndex == actualCurrentPlanet + 1);
+        
         bool isPrep = PlanetManager.Instance.isPreparingForLaunch;
         bool isTravel = PlanetManager.Instance.isTraveling;
         BigDouble currentProgress = PlanetManager.Instance.launchPreparationProgress;
         BigDouble requiredEnergy = PlanetManager.Instance.GetLaunchEnergyRequirement();
-        bool isFinished = !isPrep && !isTravel && currentProgress > 10;
+        
+        bool isFinished = !isPrep && !isTravel && currentProgress >= requiredEnergy && requiredEnergy > 0;
+
+        if (!isNextPlanet)
+        {
+            if (mainActionButton) mainActionButton.gameObject.SetActive(false);
+            if (launchProgressBar) launchProgressBar.gameObject.SetActive(false);
+            return;
+        }
+
+        if (mainActionButton) mainActionButton.gameObject.SetActive(true);
 
         if (launchProgressBar != null)
         {
             bool showBar = isPrep || isFinished;
             launchProgressBar.gameObject.SetActive(showBar);
+            
             if (showBar && requiredEnergy > 0)
             {
-                if (isFinished)
+                float progress = (float)(currentProgress / requiredEnergy).ToDouble();
+                launchProgressBar.value = Mathf.Clamp01(progress);
+                
+                if (progressText != null) 
                 {
-                    launchProgressBar.value = 1.0f;
-                    if (progressText != null) progressText.text = "READY";
+                    if (isFinished) progressText.text = "100%";
+                    else progressText.text = $"{progress * 100:F0}%";
+                }
+            }
+        }
+
+        if (mainActionButton && mainActionText)
+        {
+            if (isTravel)
+            {
+                mainActionButton.interactable = false;
+                mainActionText.text = "IN VIAGGIO...";
+            }
+            else if (isFinished)
+            {
+                mainActionButton.interactable = true;
+                mainActionText.text = "LANCIA FLOTTA";
+                mainActionText.color = Color.white;
+            }
+            else if (isPrep)
+            {
+                mainActionButton.interactable = false; 
+                mainActionText.text = "CARICAMENTO...";
+                mainActionText.color = Color.yellow;
+            }
+            else
+            {
+                // LOGICA CORRETTA: Usiamo il costo per uscire dal pianeta ATTUALE
+                BigDouble costToLaunch = PlanetManager.Instance.planets[actualCurrentPlanet].requiredPlanetValue;
+                bool canAfford = PlanetManager.Instance.CalculatePlanetValue() >= costToLaunch;
+                
+                mainActionButton.interactable = canAfford;
+                
+                if (canAfford)
+                {
+                    mainActionText.text = "PIANIFICA MISSIONE";
+                    mainActionText.color = Color.white;
                 }
                 else
                 {
-                    float progress = (float)(currentProgress / requiredEnergy).ToDouble();
-                    launchProgressBar.value = progress;
-                    if (progressText != null) progressText.text = $"{progress * 100:F0}%";
+                    mainActionText.text = "VALORE INSUFFICIENTE";
+                    mainActionText.color = Color.gray;
                 }
             }
         }
+    }
 
-        if (startPreparationButton != null)
-        {
-            bool showPrepBtn = !isPrep && !isTravel && !isFinished;
-            startPreparationButton.gameObject.SetActive(showPrepBtn);
-            if (showPrepBtn)
-            {
-                var pData = PlanetManager.Instance.GetCurrentPlanetData();
-                bool canClick = pData != null && PlanetManager.Instance.CalculatePlanetValue() >= pData.requiredPlanetValue;
-                startPreparationButton.interactable = canClick;
-            }
-        }
-
-        if (startTravelButton != null)
-        {
-            startTravelButton.gameObject.SetActive(isFinished);
-        }
+    private string FormatTimeSpan(TimeSpan ts)
+    {
+        if (ts.TotalHours >= 1) return string.Format("{0:D2}h {1:D2}m", (int)ts.TotalHours, ts.Minutes);
+        return string.Format("{0:D2}m {1:D2}s", ts.Minutes, ts.Seconds);
     }
 
     private string FormatMultiplier(BigDouble number) => number < 1000 ? number.ToString("F2") : number.ToString("F0");

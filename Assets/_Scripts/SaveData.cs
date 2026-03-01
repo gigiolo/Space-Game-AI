@@ -30,6 +30,7 @@ public class SaveData
     // --- VALUTE SPECIALI ---
     public string rawIridium;
     public string pureIridium;
+    public string quantumManipulators; // <--- NUOVO: Aggiunto per il salvataggio
 
     // --- VISUALS ---
     public List<string> cityLightPositions = new List<string>();
@@ -50,9 +51,9 @@ public class SaveData
     // --- LAUNCH SITE ---
     public string launchSitePosition; 
 
-    // --- NUOVO: DRONE EXPEDITIONS E ARTEFATTI ---
+    // --- DRONE EXPEDITIONS E ARTEFATTI ---
     public List<string> discoveredArtifacts = new List<string>();
-    public List<string> equippedArtifacts = new List<string>(); // Salva gli artefatti attivi
+    public List<string> equippedArtifacts = new List<string>(); 
     public List<DroneSaveData> activeDrones = new List<DroneSaveData>();
 }
 
@@ -63,12 +64,11 @@ public class ResearchSaveData
     public int level;   
 }
 
-// Struttura dati per ricordare un drone mentre il gioco è chiuso
 [Serializable]
 public class DroneSaveData
 {
     public int slotIndex;
     public string missionID; 
-    public string launchTimeBinary; // <--- NUOVO: Ricorda quando è partito
+    public string launchTimeBinary; 
     public string returnTimeBinary; 
 }

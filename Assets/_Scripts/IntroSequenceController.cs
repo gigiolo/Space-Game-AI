@@ -11,7 +11,7 @@ public class IntroSequenceController : MonoBehaviour
     public TextMeshProUGUI introText;
 
     [Header("Terminal Prompt")]
-    [Tooltip("Il testo che apparirà nel terminale alla fine dell'intro.")]
+    [Tooltip("Il testo che apparirà nel terminale alla fine dell'intro (se TutorialManager non è presente).")]
     [TextArea(2,4)]
     public string promptTerminalMessage = "INIZIALIZZAZIONE SISTEMA COMPLETATA. TOCCARE [ENERGY] PER AVVIARE I NANOBOT."; 
     
@@ -39,8 +39,8 @@ public class IntroSequenceController : MonoBehaviour
 
     [Header("Timing Sequenza")]
     public float titleFadeInDuration = 2.0f; 
-    public float stayTime = 2.0f;             
-    public float fadeOutTime = 1.0f;          
+    public float stayTime = 2.0f;              
+    public float fadeOutTime = 1.0f;           
     public float delayBetweenTexts = 0.5f;
 
     [Header("Cinematic Camera")]
@@ -73,8 +73,10 @@ public class IntroSequenceController : MonoBehaviour
         if (titleText) titleText.alpha = 0f; 
         if (introText) introText.alpha = 0f;
 
+        // MODIFICA: Ora lasciamo l'HUD padre visibile (true) in modo che il TutorialManager 
+        // possa gestire la dissolvenza dei singoli elementi.
         if (UIManager.Instance != null)
-            UIManager.Instance.SetHUDVisibility(false, 0f);
+            UIManager.Instance.SetHUDVisibility(true, 0f);
 
         if (fakeBottomPanel) fakeBottomPanel.gameObject.SetActive(true);
     }
@@ -107,9 +109,14 @@ public class IntroSequenceController : MonoBehaviour
         yield return new WaitForSeconds(1.5f);
         blackScreen.blocksRaycasts = false; 
 
-        // Rende il terminale visibile sopra l'oscuramento e lancia il messaggio
-        if (ShipTerminalController.Instance != null)
+        // --- MODIFICA: Passiamo il controllo al TutorialManager ---
+        if (TutorialManager.Instance != null)
         {
+            TutorialManager.Instance.StartTutorialSequence();
+        }
+        else if (ShipTerminalController.Instance != null)
+        {
+            // Fallback: Se non c'è il TutorialManager, facciamo il comportamento di prima
             ShipTerminalController.Instance.SetOverrideVisibility(true);
             ShipTerminalController.Instance.ShowLog(promptTerminalMessage, promptCategory, true);
         }
@@ -208,17 +215,14 @@ public class IntroSequenceController : MonoBehaviour
             GameManager.Instance.SaveGame();
         }
 
-        if (UIManager.Instance != null)
-            UIManager.Instance.SetHUDVisibility(true, 1.0f);
-
         ReparentButtonNow();
 
-        if (ShipTerminalController.Instance != null)
-        {
-            // --- CHIUSURA IMMEDIATA AL CLICK ---
-            ShipTerminalController.Instance.CloseTerminal();
-            ShipTerminalController.Instance.SetOverrideVisibility(false); 
-        }
+        // --- MODIFICA: Ora è il TutorialManager che decide quando mostrare l'HUD e chiudere il log ---
+        // if (UIManager.Instance != null) UIManager.Instance.SetHUDVisibility(true, 1.0f);
+        // if (ShipTerminalController.Instance != null) {
+        //     ShipTerminalController.Instance.CloseTerminal();
+        //     ShipTerminalController.Instance.SetOverrideVisibility(false); 
+        // }
 
         StartCoroutine(FocusCameraOnFirstEmitter());
         Destroy(gameObject, 2.0f);
