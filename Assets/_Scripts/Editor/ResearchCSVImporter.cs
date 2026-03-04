@@ -112,11 +112,12 @@ public class ResearchCSVImporter : EditorWindow
                 if (int.TryParse(data[12].Trim(), out int lvl)) research.maxLevel = lvl;
                 else research.maxLevel = 0;
 
+                // --- NUOVA COLONNA TIER (Colonna N, Indice 13) ---
+                if (data.Length > 13 && int.TryParse(data[13].Trim(), out int t)) research.tier = t;
+                else research.tier = 1; // Default di sicurezza
+
                 // DEFAULT AGGIUNTIVI
                 research.costType = CurrencyType.Energy;
-                // Qui impostiamo la curva in base al tipo di ricerca per sicurezza, 
-                // oppure puoi aggiungere una colonna nel CSV se vuoi controllarlo da lì.
-                // Per ora defaultiamo a Exponential come da tua richiesta precedente.
                 research.costCurve = CostCurve.Exponential; 
                 research.icon = null; 
 

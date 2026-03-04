@@ -22,12 +22,17 @@ public class ArtifactsMenuUI : MonoBehaviour
 
     private CosmicArtifactSO _selectedArtifact;
     private List<ArtifactSlotUI> _spawnedSlots = new List<ArtifactSlotUI>();
+    
+    // FIX: Flag per evitare la chiusura istantanea al primo avvio
+    private bool _isOpenedByClick = false; 
 
     private void Start()
     {
         if (panelRoot != null)
         {
-            panelRoot.SetActive(false);
+            // Se non è stato appena aperto dal bottone, allora spegnilo
+            if (!_isOpenedByClick) panelRoot.SetActive(false);
+            
             if (UIManager.Instance != null) UIManager.Instance.RegisterMenu(panelRoot);
         }
 
@@ -38,6 +43,10 @@ public class ArtifactsMenuUI : MonoBehaviour
     public void ToggleMenu()
     {
         if (panelRoot == null) return;
+        
+        // Segnaliamo allo Start che stiamo aprendo il menu volontariamente!
+        _isOpenedByClick = true; 
+        
         bool opening = !panelRoot.activeSelf;
 
         if (opening)

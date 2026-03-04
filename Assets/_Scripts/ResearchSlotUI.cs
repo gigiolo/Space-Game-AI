@@ -14,6 +14,9 @@ public class ResearchSlotUI : MonoBehaviour
     public Button buyButton;
     public Slider progressBar;
     public Image iconImage;
+    
+    [Header("Gestione Blocco")]
+    public CanvasGroup mainCanvasGroup; // Trascinalo se vuoi che tutta la riga si scurisca quando bloccata
 
     private ResearchItem _myData;
     private System.Action<ResearchItem> _buyAction;
@@ -29,6 +32,8 @@ public class ResearchSlotUI : MonoBehaviour
         _myData = item;
         _buyAction = onBuyClick;
         _buttonBg = buyButton.GetComponent<Image>();
+
+        if (mainCanvasGroup == null) mainCanvasGroup = GetComponent<CanvasGroup>();
 
         if (titleText) titleText.text = item.title;
         if (descText) descText.text = item.description;
@@ -83,24 +88,43 @@ public class ResearchSlotUI : MonoBehaviour
 
     private void TryBuy()
     {
-        if (_myData.IsMaxed()) { _isHolding = false; return; }
+        if (_myData.IsMaxed() || ResearchManager.Instance == null) { _isHolding = false; return; }
+        
+        // Verifica se il tier è sbloccato prima di comprare
+        if (!ResearchManager.Instance.IsTierUnlocked(_myData.tier)) { _isHolding = false; return; }
+
         if (GameManager.Instance.CurrentEnergy >= _myData.GetCost())
             _buyAction(_myData);
     }
 
     public void RefreshUI()
     {
-        if (_myData == null || GameManager.Instance == null) return;
+        if (_myData == null || GameManager.Instance == null || ResearchManager.Instance == null) return;
 
         BigDouble cost = _myData.GetCost();
         bool isMaxed = _myData.IsMaxed();
         bool canAfford = GameManager.Instance.CurrentEnergy >= cost;
+        
+        // Chiediamo al Manager se il Tier di questa specifica ricerca è sbloccato
+        bool isTierUnlocked = ResearchManager.Instance.IsTierUnlocked(_myData.tier);
+
+        // Effetto grafico: se bloccato, diventa semitrasparente
+        if (mainCanvasGroup != null) mainCanvasGroup.alpha = isTierUnlocked ? 1f : 0.5f;
 
         if (costText != null) 
         {
-            if (isMaxed) {
+            if (!isTierUnlocked)
+            {
+                costText.text = "BLOCCATO";
+                costText.color = Color.red;
+            }
+            else if (isMaxed) 
+            {
                 if (costText.text != "MAX") costText.text = "MAX"; 
-            } else {
+                costText.color = Color.black;
+            } 
+            else 
+            {
                 costText.text = FormatNumber(cost) + " Energy";
                 costText.color = canAfford ? Color.black : new Color(0.4f, 0.4f, 0.4f, 1f);
             }
@@ -108,10 +132,11 @@ public class ResearchSlotUI : MonoBehaviour
         
         if (buyButton != null)
         {
-            buyButton.interactable = !isMaxed && canAfford;
+            buyButton.interactable = !isMaxed && canAfford && isTierUnlocked;
+            
             if (_buttonBg != null && GameManager.Instance.activeTheme != null)
             {
-                Color targetCol = isMaxed ? Color.gray : 
+                Color targetCol = (isMaxed || !isTierUnlocked) ? Color.gray : 
                                  (canAfford ? GameManager.Instance.activeTheme.primaryAction : new Color(0.25f, 0.25f, 0.25f, 1f));
                 if(_buttonBg.color != targetCol) _buttonBg.color = targetCol;
             }
@@ -124,7 +149,6 @@ public class ResearchSlotUI : MonoBehaviour
             levelText.text = $"Level <color=white>{_myData.currentLevel}</color>/{_myData.maxLevel}";
     }
 
-    // --- METODO CORRETTO ---
     private string FormatNumber(BigDouble number)
     {
         if (number < 10) return number.ToString("F2");
@@ -136,7 +160,6 @@ public class ResearchSlotUI : MonoBehaviour
         if (exponent < 12) return (number / 1e9).ToString("F2") + "B";
         if (exponent < 15) return (number / 1e12).ToString("F2") + "T";
         
-        // CORREZIONE QUI: Costruzione manuale della stringa scientifica
         return $"{number.Mantissa:F2}e{number.Exponent}";
     }
 }

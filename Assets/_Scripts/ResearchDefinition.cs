@@ -11,8 +11,12 @@ public class ResearchDefinition : ScriptableObject
     [TextArea] public string description;
     
     // Icona e Tipo Valuta
-    public Sprite icon;             
+    public Sprite icon;              
     public CurrencyType costType;   // Che valuta usa? (Energy, Iridium...)
+
+    [Header("Progressione")]
+    [Tooltip("Il livello del Tier a cui appartiene questa ricerca (1, 2, 3...)")]
+    public int tier = 1; // <--- NUOVO CAMPO
 
     [Header("Logica Effetto")]
     public ResearchType type;
@@ -20,7 +24,7 @@ public class ResearchDefinition : ScriptableObject
     public double bonusValue; 
 
     [Tooltip("SE VERO: Il bonus si moltiplica esponenzialmente (es. Bonus 10 al liv 3 = 1000x).\nSE FALSO (Default): Il bonus si somma (es. Bonus 0.10 al liv 3 = +30% ovvero 1.3x).")]
-    public bool isExponentialBonus = false; // <--- NUOVO CAMPO
+    public bool isExponentialBonus = false; 
 
     [Header("Logica Costi")]
     public CostCurve costCurve = CostCurve.Exponential; // Default Esponenziale

@@ -1,3 +1,4 @@
+// --- File: _Scripts\NotificationManager.cs ---
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -6,9 +7,9 @@ public class NotificationManager : MonoBehaviour
     public static NotificationManager Instance;
 
     [Header("Configurazione UI")]
-    public Transform notificationContainer; // L'area verticale a destra dove finiscono i bottoni
-    public NotificationButtonUI buttonPrefab; // Il prefab del bottone rotondo
-    public NotificationPopup popupWindow;     // Il popup generico
+    public Transform notificationContainer; 
+    public NotificationButtonUI buttonPrefab; 
+    public NotificationPopup popupWindow;     
 
     [Header("Icone Standard")]
     public Sprite giftIcon;
@@ -25,39 +26,26 @@ public class NotificationManager : MonoBehaviour
         if (popupWindow) popupWindow.Close();
     }
 
-    // --- AGGIUNTO PER IL TEST RAPIDO DELLE ADS ---
     private void Update()
     {
-        // Premi "A" sulla tastiera in Play Mode per generare la notifica del video
         if (Input.GetKeyDown(KeyCode.A))
         {
             SpawnRadioSignalAd();
         }
     }
-    // --------------------------------------------
 
-    // --- FUNZIONE PRINCIPALE DA CHIAMARE DA OVUNQUE ---
     public void SpawnNotification(NotificationData data)
     {
-        // 1. Crea il bottone dentro il container (Vertical Layout Group)
         GameObject newBtnObj = Instantiate(buttonPrefab.gameObject, notificationContainer);
-        
-        // 2. Configura il bottone con i dati
         NotificationButtonUI script = newBtnObj.GetComponent<NotificationButtonUI>();
         script.Setup(data);
-
-        // Opzionale: Aggiungi un suono o un'animazione di "pop" qui
     }
 
-    // Usata dal bottone stesso
     public void OpenPopup(NotificationData data)
     {
         if (popupWindow) popupWindow.Show(data);
     }
 
-    // --- ESEMPI E TRIGGER SPECIFICI ---
-
-    // 1. Test standard (Energia)
     public void TestSpawnGift()
     {
         SpawnNotification(new NotificationData(
@@ -69,7 +57,6 @@ public class NotificationManager : MonoBehaviour
         ));
     }
     
-    // 2. Regalo misterioso (Energia)
     public void SpawnRandomReward()
     {
         SpawnNotification(new NotificationData(
@@ -81,23 +68,27 @@ public class NotificationManager : MonoBehaviour
         ));
     }
 
-    // --- NUOVO: EVENTO ADS (Segnale Radio / Iridio Puro) ---
     public void SpawnRadioSignalAd()
     {
-        // Quantità di premio
+        // --- NUOVO: CONTROLLO IMPOSTAZIONI ---
+        // Se le pubblicità sono spente, impediamo la generazione del segnale radio
+        if (PlayerPrefs.GetInt("Setting_Ads", 1) == 0)
+        {
+            return;
+        }
+        // ------------------------------------
+
         int iridiumRewardAmount = 2;
 
         SpawnNotification(new NotificationData(
             "Trasmissione Sconosciuta", 
             "Segnale radio di origine terrestre intercettato.\nDecodificare la trasmissione visiva?\n\n<color=#FF00FF>Ricompensa: +" + iridiumRewardAmount + " Iridio Puro</color>", 
-            adsIcon, // Usa l'icona video/TV
+            adsIcon, 
             () => {
-                // AZIONE QUANDO IL GIOCATORE CLICCA "CLAIM" SUL POPUP
                 if (AdsManager.Instance != null)
                 {
                     AdsManager.Instance.ShowRewardedAd(() => 
                     {
-                        // QUESTA PARTE VIENE ESEGUITA SOLO SE IL VIDEO VIENE VISTO FINO ALLA FINE
                         if (GameManager.Instance != null)
                         {
                             GameManager.Instance.AddPureIridium(iridiumRewardAmount);
@@ -114,7 +105,7 @@ public class NotificationManager : MonoBehaviour
                     Debug.LogError("[NotificationManager] AdsManager non trovato! Assicurati di aver messo il prefab nella scena.");
                 }
             }, 
-            true // isAds = true (mostra il badge "Video" sul bottone della notifica)
+            true
         ));
     }
 }

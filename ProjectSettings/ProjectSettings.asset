@@ -845,8 +845,9 @@ PlayerSettings:
   webWasm2023: 0
   webEnableSubmoduleStrippingCompatibility: 0
   scriptingDefineSymbols:
-    Android: APP_UI_EDITOR_ONLY
-    Standalone: APP_UI_EDITOR_ONLY
+    Android: APP_UI_EDITOR_ONLY;PROBUILDER_EXPERIMENTAL_FEATURES
+    Standalone: APP_UI_EDITOR_ONLY;PROBUILDER_EXPERIMENTAL_FEATURES
+    WebGL: PROBUILDER_EXPERIMENTAL_FEATURES
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:

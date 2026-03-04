@@ -219,8 +219,9 @@ public class UIManager : MonoBehaviour
                 UIPopupEffect effect = menu.GetComponent<UIPopupEffect>();
                 if (effect != null) 
                 {
-                    // effect.Close() adesso registrerà automaticamente il tempo di chiusura globale
-                    effect.Close(); 
+                    // Passiamo FALSE. Questo dice: "Chiuditi perché sto aprendo un'altra cosa, 
+                    // NON perché l'utente ha premuto Indietro. Ignora gli eventi OnMenuClosed!"
+                    effect.Close(false); 
                 }
                 else 
                 {

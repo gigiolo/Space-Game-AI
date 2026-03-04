@@ -15,6 +15,7 @@ public class ResearchItem
     public string title => info != null ? info.title : "Error";
     public string description => info != null ? info.description : "";
     public Sprite icon => info != null ? info.icon : null;
+    public int tier => info != null ? info.tier : 1; // <--- NUOVO HELPER
     public ResearchType type => info != null ? info.type : ResearchType.Additive;
     public ResearchTarget target => info != null ? info.target : ResearchTarget.GlobalProduction;
     public double bonusValue => info != null ? info.bonusValue : 0;
@@ -44,29 +45,21 @@ public class ResearchItem
 
         if (info.manualCosts != null && info.manualCosts.Count > 0)
         {
-            // Partiamo dall'ultimo prezzo noto della lista manuale
             startValue = info.manualCosts[info.manualCosts.Count - 1];
-            // Contiamo quanti livelli extra abbiamo fatto
             levelsBeyondManual = currentLevel - (info.manualCosts.Count - 1);
         }
         else
         {
-            // Se non c'è lista manuale, usiamo il baseCost standard
             startValue = info.baseCost;
             levelsBeyondManual = currentLevel;
         }
 
-        // --- FIX ERRORE CS0019 ---
-        // Prima controllavi "info.costType" (che è CurrencyType) contro CostCurve.
-        // Ora controlliamo la nuova variabile "info.costCurve".
         if (info.costCurve == CostCurve.Exponential)
         {
-            // Formula Esponenziale: UltimoPrezzo * Fattore ^ LivelliExtra
             return startValue * BigDouble.Pow(info.costFactor, levelsBeyondManual);
         }
         else 
         {
-            // Formula Lineare: UltimoPrezzo + (Fattore * LivelliExtra)
             return startValue + (info.costFactor * levelsBeyondManual);
         }
     }

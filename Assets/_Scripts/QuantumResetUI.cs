@@ -33,12 +33,16 @@ public class QuantumResetUI : MonoBehaviour
     [Tooltip("Bottone per chiudere la finestra")]
     [SerializeField] private Button closeButton;
 
+    // FIX: Flag per evitare la chiusura istantanea al primo avvio
+    private bool _isOpenedByClick = false;
+
     private void Start()
     {
         // 1. Inizializzazione Pannello
         if (menuPanel != null)
         {
-            menuPanel.SetActive(false);
+            if (!_isOpenedByClick) menuPanel.SetActive(false); // La modifica è qui!
+            
             if (UIManager.Instance != null) UIManager.Instance.RegisterMenu(menuPanel);
         }
 
@@ -79,6 +83,8 @@ public class QuantumResetUI : MonoBehaviour
     {
         if (menuPanel == null) return;
         
+        _isOpenedByClick = true; // Segnaliamo che stiamo forzando l'apertura
+
         bool opening = !menuPanel.activeSelf;
 
         if (opening)

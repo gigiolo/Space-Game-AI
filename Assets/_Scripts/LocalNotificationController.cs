@@ -1,3 +1,4 @@
+// --- File: _Scripts\LocalNotificationController.cs ---
 using System;
 using UnityEngine;
 
@@ -17,30 +18,18 @@ public class LocalNotificationController : MonoBehaviour
 
     private void Awake()
     {
-        // Se esiste già un'istanza (quella persistente), e io non sono lei...
         if (Instance != null && Instance != this) 
         {
-            // Non faccio nulla. Aspetto che il GameManager (o il padre) mi distrugga 
-            // insieme a tutto il prefab duplicato.
-            // Non devo toccare Instance, altrimenti rompo il riferimento globale!
             return;
         }
 
-        // Se sono io il prescelto:
         Instance = this;
-        
-        // RIMOSSO: DontDestroyOnLoad(gameObject); 
-        // MOTIVO: Sono figlio di Core_Systems, ci pensa lui a salvarmi.
-
-        // FONDAMENTALE: Assicura che Unity metta in pausa il gioco quando premi Home.
         Application.runInBackground = false;
     }
 
     private void Start()
     {
-        // Se non sono l'istanza ufficiale, mi fermo qui.
         if (Instance != this) return;
-
         if (Application.isEditor) return;
 
         try 
@@ -61,7 +50,7 @@ public class LocalNotificationController : MonoBehaviour
         {
             Id = AndroidChannelId,
             Name = "Eventi di Gioco",
-            Importance = Importance.High, // High = Suona e Vibra
+            Importance = Importance.High, 
             Description = "Notifiche per viaggi e ricompense",
         };
         AndroidNotificationCenter.RegisterNotificationChannel(channel);
@@ -98,6 +87,14 @@ public class LocalNotificationController : MonoBehaviour
 
     public void ScheduleNotification(string title, string body, DateTime deliveryTime, int id)
     {
+        // --- NUOVO: CONTROLLO IMPOSTAZIONI ---
+        // Se il giocatore ha spento le notifiche (valore 0), blocchiamo tutto subito!
+        if (PlayerPrefs.GetInt("Setting_Notifications", 1) == 0)
+        {
+            return; 
+        }
+        // ------------------------------------
+
         if (Application.isEditor)
         {
             Debug.Log($"[EDITOR MOCK] Notifica '{title}' programmata per: {deliveryTime} (ID: {id})");
