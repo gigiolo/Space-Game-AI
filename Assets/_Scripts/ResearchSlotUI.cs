@@ -16,7 +16,7 @@ public class ResearchSlotUI : MonoBehaviour
     public Image iconImage;
     
     [Header("Gestione Blocco")]
-    public CanvasGroup mainCanvasGroup; // Trascinalo se vuoi che tutta la riga si scurisca quando bloccata
+    public CanvasGroup mainCanvasGroup; 
 
     private ResearchItem _myData;
     private System.Action<ResearchItem> _buyAction;
@@ -90,7 +90,7 @@ public class ResearchSlotUI : MonoBehaviour
     {
         if (_myData.IsMaxed() || ResearchManager.Instance == null) { _isHolding = false; return; }
         
-        // Verifica se il tier è sbloccato prima di comprare
+        // Verifica di sicurezza (sebbene il bottone sia invisibile, meglio lasciarlo)
         if (!ResearchManager.Instance.IsTierUnlocked(_myData.tier)) { _isHolding = false; return; }
 
         if (GameManager.Instance.CurrentEnergy >= _myData.GetCost())
@@ -101,24 +101,29 @@ public class ResearchSlotUI : MonoBehaviour
     {
         if (_myData == null || GameManager.Instance == null || ResearchManager.Instance == null) return;
 
+        // --- 1. VERIFICA DELLO SBLOCCO TIER ---
+        bool isTierUnlocked = ResearchManager.Instance.IsTierUnlocked(_myData.tier);
+
+        // Se il tier è bloccato, spegniamo questo GameObject.
+        // Questo dirà al Vertical Layout Group di collassare lo spazio, nascondendo la ricerca!
+        if (gameObject.activeSelf != isTierUnlocked)
+        {
+            gameObject.SetActive(isTierUnlocked);
+        }
+
+        // Se è invisibile, non ha senso sprecare CPU per aggiornare testi e colori. Usciamo.
+        if (!isTierUnlocked) return;
+
+        // --- 2. AGGIORNAMENTO NORMALE (Se visibile) ---
         BigDouble cost = _myData.GetCost();
         bool isMaxed = _myData.IsMaxed();
         bool canAfford = GameManager.Instance.CurrentEnergy >= cost;
-        
-        // Chiediamo al Manager se il Tier di questa specifica ricerca è sbloccato
-        bool isTierUnlocked = ResearchManager.Instance.IsTierUnlocked(_myData.tier);
 
-        // Effetto grafico: se bloccato, diventa semitrasparente
-        if (mainCanvasGroup != null) mainCanvasGroup.alpha = isTierUnlocked ? 1f : 0.5f;
+        if (mainCanvasGroup != null) mainCanvasGroup.alpha = 1f; // Assicuriamoci che sia opaco
 
         if (costText != null) 
         {
-            if (!isTierUnlocked)
-            {
-                costText.text = "BLOCCATO";
-                costText.color = Color.red;
-            }
-            else if (isMaxed) 
+            if (isMaxed) 
             {
                 if (costText.text != "MAX") costText.text = "MAX"; 
                 costText.color = Color.black;
@@ -132,11 +137,11 @@ public class ResearchSlotUI : MonoBehaviour
         
         if (buyButton != null)
         {
-            buyButton.interactable = !isMaxed && canAfford && isTierUnlocked;
+            buyButton.interactable = !isMaxed && canAfford;
             
             if (_buttonBg != null && GameManager.Instance.activeTheme != null)
             {
-                Color targetCol = (isMaxed || !isTierUnlocked) ? Color.gray : 
+                Color targetCol = isMaxed ? Color.gray : 
                                  (canAfford ? GameManager.Instance.activeTheme.primaryAction : new Color(0.25f, 0.25f, 0.25f, 1f));
                 if(_buttonBg.color != targetCol) _buttonBg.color = targetCol;
             }

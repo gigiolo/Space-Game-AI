@@ -238,7 +238,6 @@ GameObject:
   - component: {fileID: 880847806467549392}
   - component: {fileID: 1363135601045245019}
   - component: {fileID: 2823937300949692573}
-  - component: {fileID: 6352446947259748810}
   m_Layer: 5
   m_Name: Icon_Img
   m_TagString: Untagged
@@ -286,7 +285,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.05482948, g: 1, b: 0, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -323,19 +322,6 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
---- !u!114 &6352446947259748810
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1429199544442999127}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fd4b54da7804a3e47bc302fdae12f000, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ThemedUIElement
-  type: 2
 --- !u!1 &2902442654557794623
 GameObject:
   m_ObjectHideFlags: 0
@@ -781,6 +767,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3944977043175873056}
   - component: {fileID: 3508274243702833319}
+  - component: {fileID: 9022690372079506994}
   m_Layer: 5
   m_Name: TextContainer
   m_TagString: Untagged
@@ -837,6 +824,26 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &9022690372079506994
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6054488805120629513}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 306cc8c2b49d7114eaa3623786fc2126, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.LayoutElement
+  m_IgnoreLayout: 0
+  m_MinWidth: -1
+  m_MinHeight: -1
+  m_PreferredWidth: -1
+  m_PreferredHeight: -1
+  m_FlexibleWidth: 0
+  m_FlexibleHeight: -1
+  m_LayoutPriority: 1
 --- !u!1 &6150992784310928275
 GameObject:
   m_ObjectHideFlags: 0
@@ -1226,6 +1233,7 @@ MonoBehaviour:
   buyButton: {fileID: 4059479955159158005}
   progressBar: {fileID: 1126184337262315685}
   iconImage: {fileID: 1363135601045245019}
+  mainCanvasGroup: {fileID: 0}
 --- !u!114 &3891810156498395818
 MonoBehaviour:
   m_ObjectHideFlags: 0

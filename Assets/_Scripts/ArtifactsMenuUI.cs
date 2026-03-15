@@ -7,10 +7,10 @@ public class ArtifactsMenuUI : MonoBehaviour
 {
     [Header("Riferimenti UI")]
     public GameObject panelRoot;
-    public TextMeshProUGUI slotCountText; // Mostra "Slot: 1/3"
+    public TextMeshProUGUI slotCountText; 
 
     [Header("Area Archivio (Tutti quelli scoperti)")]
-    public Transform archiveGridContent; // Un GridLayoutGroup
+    public Transform archiveGridContent; 
     public ArtifactSlotUI artifactSlotPrefab;
 
     [Header("Dettagli (Pannello laterale o basso)")]
@@ -23,28 +23,37 @@ public class ArtifactsMenuUI : MonoBehaviour
     private CosmicArtifactSO _selectedArtifact;
     private List<ArtifactSlotUI> _spawnedSlots = new List<ArtifactSlotUI>();
     
-    // FIX: Flag per evitare la chiusura istantanea al primo avvio
     private bool _isOpenedByClick = false; 
+
+    // --- NUOVA VARIABILE: La "Memoria" di navigazione ---
+    private bool _returnToOptionsOnClose = false;
 
     private void Start()
     {
         if (panelRoot != null)
         {
-            // Se non è stato appena aperto dal bottone, allora spegnilo
             if (!_isOpenedByClick) panelRoot.SetActive(false);
             
             if (UIManager.Instance != null) UIManager.Instance.RegisterMenu(panelRoot);
         }
 
-        // Pulisce la descrizione all'avvio
         ClearDetails();
+    }
+
+    // --- NUOVO METODO: Chiamato SOLO dal menù Opzioni ---
+    public void OpenFromOptions()
+    {
+        _returnToOptionsOnClose = true; // Imposta il biglietto di ritorno
+        if (!panelRoot.activeSelf)
+        {
+            ToggleMenu(); // Lo apre normalmente
+        }
     }
 
     public void ToggleMenu()
     {
         if (panelRoot == null) return;
         
-        // Segnaliamo allo Start che stiamo aprendo il menu volontariamente!
         _isOpenedByClick = true; 
         
         bool opening = !panelRoot.activeSelf;
@@ -59,8 +68,32 @@ public class ArtifactsMenuUI : MonoBehaviour
         else
         {
             UIPopupEffect effect = panelRoot.GetComponent<UIPopupEffect>();
-            if (effect != null) effect.Close();
-            else panelRoot.SetActive(false);
+            if (effect != null) 
+            {
+                effect.Close();
+                // L'evento OnMenuClosed nell'Inspector chiamerà OnFullyClosed() alla fine dell'animazione
+            }
+            else 
+            {
+                panelRoot.SetActive(false);
+                OnFullyClosed(); // Se non c'è l'animazione, lo chiamiamo subito
+            }
+        }
+    }
+
+    // --- NUOVO METODO: Controlla se deve riaprire le opzioni alla chiusura ---
+    public void OnFullyClosed()
+    {
+        if (_returnToOptionsOnClose)
+        {
+            _returnToOptionsOnClose = false; // Brucia il biglietto di ritorno
+
+            // Cerca il menù opzioni anche se è spento e lo riapre
+            OptionsMenu optionsMenu = FindFirstObjectByType<OptionsMenu>(FindObjectsInactive.Include);
+            if (optionsMenu != null)
+            {
+                optionsMenu.ToggleMenu();
+            }
         }
     }
 
@@ -68,16 +101,13 @@ public class ArtifactsMenuUI : MonoBehaviour
     {
         if (DroneManager.Instance == null) return;
 
-        // Aggiorna Testo Slot
         int equippedCount = DroneManager.Instance.equippedArtifactIDs.Count;
         int maxSlots = DroneManager.Instance.maxEquippedArtifacts;
         if (slotCountText) slotCountText.text = $"Slot Matrix: {equippedCount} / {maxSlots}";
 
-        // Pulisce vecchi bottoni
         foreach (var slot in _spawnedSlots) Destroy(slot.gameObject);
         _spawnedSlots.Clear();
 
-        // Genera un bottone per ogni artefatto SCOPERTO
         foreach (string id in DroneManager.Instance.discoveredArtifactIDs)
         {
             CosmicArtifactSO art = DroneManager.Instance.allArtifacts.Find(a => a.id == id);
@@ -92,7 +122,6 @@ public class ArtifactsMenuUI : MonoBehaviour
             }
         }
         
-        // Se avevamo qualcosa selezionato, aggiorniamo i dettagli
         if (_selectedArtifact != null) UpdateDetails(_selectedArtifact);
     }
 
@@ -113,7 +142,6 @@ public class ArtifactsMenuUI : MonoBehaviour
             detailsBonusText.text = $"Effetto: +{bonusString}% {artifact.bonusType.ToString()}";
         }
 
-        // Gestione Bottone Equipaggia
         if (equipButton != null)
         {
             equipButton.gameObject.SetActive(true);

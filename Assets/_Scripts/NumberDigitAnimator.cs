@@ -1,3 +1,4 @@
+// --- File: _Scripts\NumberDigitAnimator.cs ---
 using UnityEngine;
 using TMPro;
 using System.Collections.Generic;
@@ -16,8 +17,8 @@ public class NumberDigitAnimator : MonoBehaviour
     private TextMeshProUGUI _textComponent;
     private TMP_TextInfo _textInfo;
     
-    // Memorizza lo stato precedente per il confronto
-    private string _previousText = "";
+    // Memorizza lo stato PARSATO precedente per il confronto (Ignora HTML Tags)
+    private string _previousParsedText = "";
     
     // Memorizza il "calore" di ogni carattere (1.0 = transitionColor, 0.0 = colore originale)
     private float[] _charHeat;
@@ -34,41 +35,43 @@ public class NumberDigitAnimator : MonoBehaviour
 
     /// <summary>
     /// Usa questo metodo al posto di text.text = "..." per attivare l'animazione.
+    /// Completamente sicuro con i Rich Text Tags (es. <color>, <mspace>).
     /// </summary>
     public void SetText(string newText)
     {
-        // Se il testo è identico, non fare nulla (risparmia performance)
+        // Se il testo grezzo è identico, non fare nulla (risparmia performance)
         if (_textComponent.text == newText) return;
 
+        // 1. Applica il testo e forza TMP a generare la mesh
+        // In questo modo TextMeshPro elimina i tag e genera i caratteri visibili
+        _textComponent.text = newText;
+        _textComponent.ForceMeshUpdate();
+
+        // 2. Otteniamo SOLO il testo visibile (es. "<color=red>10</color>" diventa "10")
+        string parsedText = _textComponent.GetParsedText();
+
         // Gestione ridimensionamento array se il testo diventa molto lungo
-        if (newText.Length > _charHeat.Length)
+        if (parsedText.Length > _charHeat.Length)
         {
-            System.Array.Resize(ref _charHeat, newText.Length + 16);
+            System.Array.Resize(ref _charHeat, parsedText.Length + 16);
         }
 
-        // CONFRONTO: Trova quali caratteri sono cambiati
-        for (int i = 0; i < newText.Length; i++)
+        // 3. CONFRONTO: Trova quali caratteri (visibili) sono cambiati
+        for (int i = 0; i < parsedText.Length; i++)
         {
-            // Se siamo oltre la lunghezza del vecchio testo, è un carattere nuovo -> Anima
-            // Se il carattere è diverso dal precedente -> Anima
-            if (i >= _previousText.Length || newText[i] != _previousText[i])
+            if (i >= _previousParsedText.Length || parsedText[i] != _previousParsedText[i])
             {
                 // Ignoriamo spazi, virgole e punti per l'estetica, animiamo solo numeri e lettere
-                if (!char.IsWhiteSpace(newText[i]) && newText[i] != '.' && newText[i] != ',')
+                if (!char.IsWhiteSpace(parsedText[i]) && parsedText[i] != '.' && parsedText[i] != ',')
                 {
                     _charHeat[i] = 1.0f; // Imposta "calore" massimo
                     _isDirty = true;
                 }
             }
-            // NOTA: Se il carattere è uguale, lasciamo il _charHeat[i] com'è (così se stava svanendo, continua a svanire)
         }
 
-        // Applica il testo e aggiorna la memoria
-        _textComponent.text = newText;
-        _previousText = newText;
-        
-        // Forza TMP a generare la mesh subito, così possiamo colorarla in LateUpdate
-        _textComponent.ForceMeshUpdate();
+        // Aggiorna la memoria con il nuovo testo parsato
+        _previousParsedText = parsedText;
     }
 
     private void LateUpdate()
@@ -88,7 +91,7 @@ public class NumberDigitAnimator : MonoBehaviour
 
         bool stillAnimating = false;
 
-        // Itera su tutti i caratteri visibili
+        // Itera su tutti i caratteri visibili (che ora combaciano perfettamente con _charHeat)
         for (int i = 0; i < charCount; i++)
         {
             // Skip se il carattere non è visibile
@@ -104,7 +107,6 @@ public class NumberDigitAnimator : MonoBehaviour
 
                 // Calcola colore (Lerp tra base e flash)
                 float t = _charHeat[i];
-                // Usiamo Color32.Lerp per performance
                 Color32 displayColor = Color32.Lerp(baseColor, targetFlashColor, t);
 
                 // Applica ai 4 vertici del carattere

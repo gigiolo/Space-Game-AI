@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dac902865c54b7e479540201146bfee3, type: 3}
+  m_Name: 16_res_t5_prod
+  m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
+  id: 16_res_t5_prod
+  title: Estrazione a Punti Zero
+  description: Triplica la produzione globale (x3).
+  icon: {fileID: 0}
+  costType: 0
+  tier: 5
+  type: 1
+  target: 0
+  bonusValue: 3
+  isExponentialBonus: 1
+  costCurve: 1
+  baseCost:
+    mantissa: 7
+    exponent: 17
+  costFactor: 4
+  maxLevel: 10
+  manualCosts: []

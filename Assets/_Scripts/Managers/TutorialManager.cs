@@ -42,7 +42,7 @@ public class TutorialManager : MonoBehaviour
     [Tooltip("L'icona temporanea per la prima fase (es. la fabbrica/emitter)")]
     public Sprite tutorialEmitterIcon;
     [Tooltip("L'icona originale dell'energia a cui tornare dopo il primo click")]
-    public Sprite defaultEnergyIcon; // <--- NUOVO CAMPO ESPLICITO
+    public Sprite defaultEnergyIcon; 
 
     [Header("--- TESTI DEL TUTORIAL ---")]
     [TextArea(2,3)] public string step1_ClickEnergy = "INIZIALIZZAZIONE COMPLETATA. TOCCARE [ENERGY] PER AVVIARE LA PRODUZIONE DI NANOBOT.";
@@ -178,7 +178,6 @@ public class TutorialManager : MonoBehaviour
         // FASE 1: PRIMO CLICK ENERGIA
         // ==========================================
         
-        // Assegniamo esplicitamente l'icona del tutorial
         if (energyButtonIcon != null && tutorialEmitterIcon != null)
         {
             energyButtonIcon.sprite = tutorialEmitterIcon;
@@ -197,7 +196,6 @@ public class TutorialManager : MonoBehaviour
         ShipTerminalController.Instance.CloseTerminal();
         if (energyPulseEffect) energyPulseEffect.SetActive(false);
         
-        // RIPRISTINO ESPLICITO ICONA ORIGINALE
         if (energyButtonIcon != null && defaultEnergyIcon != null) 
         {
             energyButtonIcon.sprite = defaultEnergyIcon;
@@ -209,11 +207,10 @@ public class TutorialManager : MonoBehaviour
         yield return new WaitForSeconds(0.6f); 
 
         // ==========================================
-        // FASE 2: BOTTONE RICERCA
+        // FASE 2: BOTTONE RICERCA (Modificato)
         // ==========================================
-        BigDouble cheapestResearchCost = GetCheapestResearchCost();
-        yield return new WaitUntil(() => GameManager.Instance.CurrentEnergy >= cheapestResearchCost);
         
+        // Rimosso il WaitUntil! Ora procede immediatamente senza aspettare.
         yield return new WaitForSeconds(0.8f);
 
         ShipTerminalController.Instance.ShowLog(step2_ClickResearch, LogCategory.Tutorial, true);

@@ -68,15 +68,15 @@ public class ResearchCSVImporter : EditorWindow
             string line = lines[i].Trim();
             if (string.IsNullOrWhiteSpace(line)) continue;
 
-            // Usa la virgola per Google Sheets
+            // Usa la virgola per Google Sheets e per i CSV standard
             string[] data = line.Split(','); 
 
-            // CONTROLLO COLONNE (Serve almeno fino alla colonna M = indice 12)
-            if (data.Length < 13) 
+            // CONTROLLO COLONNE (Serve almeno fino alla colonna N = indice 13, totale 14 colonne)
+            if (data.Length < 14) 
             {
                 // Se la riga è incompleta ma non vuota, avvisa
                 if (data.Length > 1) 
-                    Debug.LogWarning($"Riga {i + 1} saltata: Colonne insufficienti ({data.Length}/13).");
+                    Debug.LogWarning($"Riga {i + 1} saltata: Colonne insufficienti ({data.Length}/14). Controlla se mancano virgole alla fine della riga.");
                 continue;
             }
 
@@ -95,28 +95,34 @@ public class ResearchCSVImporter : EditorWindow
                 research.type = (ResearchType)System.Enum.Parse(typeof(ResearchType), data[3].Trim(), true);
                 research.target = (ResearchTarget)System.Enum.Parse(typeof(ResearchTarget), data[4].Trim(), true);
                 
-                // BONUS
+                // BONUS (Indice 5, Colonna F)
                 research.bonusValue = double.Parse(data[5].Trim(), CultureInfo.InvariantCulture);
 
-                // --- SALTIAMO COLONNE EXCEL CALCOLATE (6, 7, 8, 9) ---
+                // ESPONENZIALE (Indice 6, Colonna G)
+                if (bool.TryParse(data[6].Trim(), out bool isExp)) 
+                    research.isExponentialBonus = isExp;
+                else 
+                    research.isExponentialBonus = false;
 
-                // COSTO BASE (BigDouble)
+                // --- SALTIAMO COLONNE EXCEL CALCOLATE (Indici 7, 8, 9 - Colonne H, I, J) ---
+
+                // COSTO BASE (BigDouble) (Indice 10, Colonna K)
                 string costStr = data[10].Trim();
                 if (string.IsNullOrEmpty(costStr)) costStr = "0";
                 research.baseCost = BigDouble.Parse(costStr);
 
-                // COST FACTOR (Float)
+                // COST FACTOR (Float) (Indice 11, Colonna L)
                 research.costFactor = float.Parse(data[11].Trim(), CultureInfo.InvariantCulture);
 
-                // MAX LEVEL (Int)
+                // MAX LEVEL (Int) (Indice 12, Colonna M)
                 if (int.TryParse(data[12].Trim(), out int lvl)) research.maxLevel = lvl;
                 else research.maxLevel = 0;
 
-                // --- NUOVA COLONNA TIER (Colonna N, Indice 13) ---
-                if (data.Length > 13 && int.TryParse(data[13].Trim(), out int t)) research.tier = t;
+                // TIER (Int) (Indice 13, Colonna N)
+                if (int.TryParse(data[13].Trim(), out int t)) research.tier = t;
                 else research.tier = 1; // Default di sicurezza
 
-                // DEFAULT AGGIUNTIVI
+                // DEFAULT AGGIUNTIVI (non presenti nel CSV)
                 research.costType = CurrencyType.Energy;
                 research.costCurve = CostCurve.Exponential; 
                 research.icon = null; 

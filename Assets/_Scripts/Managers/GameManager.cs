@@ -238,7 +238,7 @@ public class GameManager : MonoBehaviour
                 int toAdd = (int)_emitterAccumulator; 
                 int spaceLeft = EmitterCap - EmitterCount;
                 int actualAdd = Mathf.Min(toAdd, spaceLeft);
-                _emitterAccumulator -= actualAdd;                                                                                                        
+                _emitterAccumulator -= actualAdd;                                                                                                                                              
                 if (actualAdd < toAdd) _emitterAccumulator = 0;
 
                 if (actualAdd > 0)
@@ -308,8 +308,14 @@ public class GameManager : MonoBehaviour
     public void RecalculateCaps()
     {
         double artifactStorageBonus = DroneManager.Instance != null ? DroneManager.Instance.GetArtifactBonus(ArtifactBonusType.StorageCapacity) : 0;
+        
+        // RECUPERIAMO IL MOLTIPLICATORE DEL PIANETA
+        BigDouble planetMultiplier = PlanetManager.Instance?.GetCurrentPlanetData()?.productionMultiplier ?? 1;
+
         BigDouble baseLogistics = initialLogisticsCap + (LogisticsLevel * 5) + LogisticsResearchBonus;
-        LogisticsCap = baseLogistics * LogisticsMultiplier;
+        
+        // APPLICHIAMO IL MOLTIPLICATORE ALLA LOGISTICA!
+        LogisticsCap = baseLogistics * LogisticsMultiplier * planetMultiplier;
 
         double researchSeconds = StorageResearchBonus.ToDouble() * 1800;
         MaxOfflineSeconds = (baseMaxOfflineSeconds + researchSeconds) * (1.0 + artifactStorageBonus); 
@@ -438,7 +444,7 @@ public class GameManager : MonoBehaviour
         CurrentEnergy = 0;
         LifetimeEarnings = 0;
         EmitterCount = 0; 
-        LogisticsLevel = 1; 
+        LogisticsLevel = 0; // <--- MODIFICA (Ora parte da 0 per i test della Logistica)
         ResearchMultiplier = 1;
         LogisticsResearchBonus = 0;
         LogisticsMultiplier = 1; 
@@ -452,7 +458,9 @@ public class GameManager : MonoBehaviour
         StoredLaunchSitePosition = ""; 
         StoredSunRotation = 0f; 
 
-        if (initialLogisticsCap <= 0) initialLogisticsCap = 10;
+        // <--- MODIFICA: Controllo di sicurezza commentato per permettere valori bassi come 1.5 o 2.0
+        // if (initialLogisticsCap <= 0) initialLogisticsCap = 10; 
+        
         if (baseEmissionPerUnit <= 0) baseEmissionPerUnit = 0.01;
         
         RecalculateCaps();
@@ -556,7 +564,8 @@ public class GameManager : MonoBehaviour
             }
         }
         
-        LogisticsLevel = data.logisticsLevel > 0 ? data.logisticsLevel : 1;
+        // <--- MODIFICA: Ora accetta liberamente anche il livello 0 se presente nel salvataggio
+        LogisticsLevel = data.logisticsLevel;
 
         ScientificNodes = !string.IsNullOrEmpty(data.scientificNodes) ? BigDouble.Parse(data.scientificNodes) : 0;
         RawIridium = !string.IsNullOrEmpty(data.rawIridium) ? BigDouble.Parse(data.rawIridium) : 0;
@@ -833,7 +842,7 @@ public class GameManager : MonoBehaviour
         RawIridium = 0; 
         PureIridium = 0; 
         EmitterCount = 0; 
-        LogisticsLevel = 1; 
+        LogisticsLevel = 0; // <--- MODIFICA (Sincronizzato a 0 anche qui)
         StoredLaunchSitePosition = "";
         StoredSunRotation = 0f;
         IsFirstSession = true; 

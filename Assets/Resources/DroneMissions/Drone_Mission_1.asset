@@ -15,13 +15,13 @@ MonoBehaviour:
   id: Drone_Mission_1
   missionName: Drone_Mission_1
   description: Lunar orbit
-  durationSeconds: 30
+  durationSeconds: 40
   energyCostMultiplier: 10
   minLightYears: 0.00001
   maxLightYears: 0.00005
-  minRewardMult: 2
-  maxRewardMult: 5
-  iridiumChance: 20
-  minIridium: 1
-  maxIridium: 5
-  artifactChance: 10
+  minRewardMult: 7
+  maxRewardMult: 15
+  iridiumChance: 0
+  minIridium: 0
+  maxIridium: 0
+  artifactChance: 0

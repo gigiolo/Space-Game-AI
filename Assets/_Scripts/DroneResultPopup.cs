@@ -7,10 +7,11 @@ public class DroneResultPopup : MonoBehaviour
 {
     [Header("UI References")]
     [SerializeField] private GameObject panelRoot;
+    [SerializeField] private RectTransform windowRect; // <--- NUOVO: Trascina qui l'oggetto "Window" (quello col Content Size Fitter)
     [SerializeField] private TextMeshProUGUI logText; 
     [SerializeField] private Button closeButton;
     [SerializeField] private Image artifactIcon; 
-    [SerializeField] private GameObject artifactContainer; // Un pannello/oggetto che contiene l'icona e la scritta "Nuovo Artefatto"
+    [SerializeField] private GameObject artifactContainer; 
 
     [Header("Animazione")]
     [SerializeField] private float charactersPerSecond = 60f;
@@ -18,7 +19,6 @@ public class DroneResultPopup : MonoBehaviour
 
     public void Show(string logContent, CosmicArtifactSO artifact)
     {
-        // Se il manager UI esiste, chiudiamo le altre finestre
         if (UIManager.Instance != null) UIManager.Instance.CloseAllMenusExcept(panelRoot);
         
         panelRoot.SetActive(true);
@@ -40,12 +40,25 @@ public class DroneResultPopup : MonoBehaviour
         closeButton.onClick.RemoveAllListeners();
         closeButton.onClick.AddListener(Close);
 
+        // --- MAGIA DEL LAYOUT ---
+        // Assegniamo il testo PRIMA dell'animazione, così TextMeshPro sa già quanto sarà alto
+        logText.text = logContent;
+        
+        // Forziamo Unity a ricalcolare immediatamente i Content Size Fitter.
+        // Così la finestra prende subito la sua dimensione finale massima.
+        Canvas.ForceUpdateCanvases();
+        if (windowRect != null)
+        {
+            LayoutRebuilder.ForceRebuildLayoutImmediate(windowRect);
+        }
+
+        // Ora avviamo l'animazione nascondendo i caratteri
         StartCoroutine(TypewriterEffect(logContent));
     }
 
     private IEnumerator TypewriterEffect(string fullText)
     {
-        logText.text = fullText;
+        // Nasconde tutti i caratteri, ma lo "spazio fisico" rimane allocato!
         logText.maxVisibleCharacters = 0;
 
         int totalChars = fullText.Length;
@@ -53,18 +66,15 @@ public class DroneResultPopup : MonoBehaviour
         
         while (logText.maxVisibleCharacters < totalChars)
         {
-            // SKIP: Se il giocatore tocca lo schermo, stampa tutto subito
             if (Input.GetMouseButtonDown(0))
             {
                 logText.maxVisibleCharacters = totalChars;
                 break; 
             }
 
-            // Usiamo unscaledDeltaTime così funziona anche se il gioco fosse in pausa
             timer += Time.unscaledDeltaTime * charactersPerSecond;
             logText.maxVisibleCharacters = (int)timer;
             
-            // Effetto sonoro stile terminale (suona randomicamente per non assordare)
             if (typingSound != null && AudioManager.Instance != null && UnityEngine.Random.value > 0.7f) 
             {
                 AudioManager.Instance.PlaySFX(typingSound, 0.2f, 0.1f);
@@ -74,7 +84,7 @@ public class DroneResultPopup : MonoBehaviour
         }
         
         logText.maxVisibleCharacters = totalChars;
-        closeButton.interactable = true; // Permetti la chiusura
+        closeButton.interactable = true; 
     }
 
     private void Close()

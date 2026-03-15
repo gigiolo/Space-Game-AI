@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dac902865c54b7e479540201146bfee3, type: 3}
+  m_Name: 05_res_t2_prod
+  m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
+  id: 05_res_t2_prod
+  title: Processori Quantici
+  description: Moltiplica esponenzialmente la produzione globale.
+  icon: {fileID: 0}
+  costType: 0
+  tier: 2
+  type: 1
+  target: 0
+  bonusValue: 1.5
+  isExponentialBonus: 1
+  costCurve: 1
+  baseCost:
+    mantissa: 8
+    exponent: 3
+  costFactor: 2.1
+  maxLevel: 15
+  manualCosts: []

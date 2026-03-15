@@ -1,7 +1,8 @@
+// --- File: _Scripts\Managers\ResearchManager.cs ---
 using UnityEngine;
 using UnityEngine.UI; 
 using System.Collections.Generic;
-using System.Linq; // NECESSARIO PER RAGGRUPPARE I TIER
+using System.Linq; 
 using BreakInfinity;
 
 [System.Serializable]
@@ -41,6 +42,7 @@ public class ResearchManager : MonoBehaviour
     {
         if (Instance != null && Instance != this) 
         {
+            Debug.LogWarning($"[ResearchManager] Rilevato duplicato su {gameObject.name}. Lo distruggo per mantenere il Singleton.");
             Destroy(gameObject);
             return;
         }
@@ -90,13 +92,23 @@ public class ResearchManager : MonoBehaviour
                 UIManager.Instance.CloseAllMenusExcept(menuPanel);
 
             menuPanel.SetActive(true);
+
+            if (_activeSlots.Count == 0 && allResearches != null && allResearches.Count > 0)
+            {
+                Debug.Log("<color=yellow>[ResearchManager] La UI era vuota, forzo la ricostruzione.</color>");
+                InitializeUI();
+            }
+
             UpdateAllSlots(); 
+
+            Canvas.ForceUpdateCanvases();
+            if (listContent != null)
+            {
+                LayoutRebuilder.ForceRebuildLayoutImmediate(listContent.GetComponent<RectTransform>());
+            }
         }
     }
 
-    // --- NUOVE FUNZIONI PER I TIER ---
-    
-    // Calcola il numero totale di acquisti effettuati (somma dei livelli)
     public int GetTotalUpgrades()
     {
         int total = 0;
@@ -105,39 +117,53 @@ public class ResearchManager : MonoBehaviour
         return total;
     }
 
-    // Verifica se un Tier specifico è sbloccato
     public bool IsTierUnlocked(int tier)
     {
-        if (tier <= 1) return true; // Il Tier 1 è sempre aperto
+        if (tier <= 1) return true; 
         
         var req = tierRequirements.Find(t => t.tierLevel == tier);
-        if (req != null)
-        {
-            return GetTotalUpgrades() >= req.requiredTotalUpgrades;
-        }
-        // Se ti scordi di configurare un requisito, lo lasciamo sbloccato per sicurezza
+        if (req != null) return GetTotalUpgrades() >= req.requiredTotalUpgrades;
         return true; 
     }
 
-    // Restituisce quanti upgrade mancano per sbloccare il Tier (utile per la UI)
     public int UpgradesNeededForTier(int tier)
     {
         var req = tierRequirements.Find(t => t.tierLevel == tier);
-        if (req != null)
-        {
-            return Mathf.Max(0, req.requiredTotalUpgrades - GetTotalUpgrades());
-        }
+        if (req != null) return Mathf.Max(0, req.requiredTotalUpgrades - GetTotalUpgrades());
         return 0;
     }
 
+    public int GetHighestUnlockedTier()
+    {
+        int maxTier = 1;
+        if (allResearches != null && allResearches.Count > 0)
+        {
+            maxTier = allResearches.Max(r => r.tier);
+        }
+
+        int highest = 1;
+        for (int i = 1; i <= maxTier; i++)
+        {
+            if (IsTierUnlocked(i)) highest = i;
+            else break; 
+        }
+        return highest;
+    }
+
+    // TASTO DESTRO SULLO SCRIPT IN EDITOR -> "Test: Carica Database"
+    [ContextMenu("Test: Carica Database")]
     public void InitializeDatabase()
     {
         if (allResearches == null) allResearches = new List<ResearchItem>();
-        
         allResearches.RemoveAll(x => x == null || x.info == null);
 
-        if (researchDatabase == null) return;
+        if (researchDatabase == null || researchDatabase.Count == 0) 
+        {
+            Debug.LogError("<color=red>[ResearchManager] ERRORE: La lista 'Research Database' è vuota! Trascina le ricerche nell'Inspector!</color>");
+            return;
+        }
 
+        int added = 0;
         foreach (var def in researchDatabase)
         {
             if (def == null) continue;
@@ -145,18 +171,16 @@ public class ResearchManager : MonoBehaviour
             if (!allResearches.Exists(r => r.id == def.id))
             {
                 allResearches.Add(new ResearchItem(def));
+                added++;
             }
         }
+        Debug.Log($"<color=green>[ResearchManager] Database caricato! Aggiunte {added} nuove ricerche. Totale in Runtime: {allResearches.Count}</color>");
     }
 
     public void LoadResearchLevels(List<ResearchSaveData> savedData)
     {
         InitializeDatabase(); 
-        
-        foreach(var res in allResearches) 
-        {
-            if (res != null) res.currentLevel = 0;
-        }
+        foreach(var res in allResearches) if (res != null) res.currentLevel = 0;
 
         if (savedData != null)
         {
@@ -169,24 +193,35 @@ public class ResearchManager : MonoBehaviour
         RecalculateAllResearches();
     }
 
+    // TASTO DESTRO SULLO SCRIPT IN EDITOR -> "Test: Costruisci UI"
+    [ContextMenu("Test: Costruisci UI")]
     void InitializeUI()
     {
-        foreach (Transform child in listContent) Destroy(child.gameObject);
+        if (slotPrefab == null)
+        {
+            Debug.LogError("<color=red>[ResearchManager] ERRORE: Manca lo 'Slot Prefab'!</color>");
+            return;
+        }
+
+        foreach (Transform child in listContent) DestroyImmediate(child.gameObject);
         _activeSlots.Clear();
         _activeHeaders.Clear();
 
-        // 1. Raggruppiamo tutte le ricerche per "Tier" e le ordiniamo dal Tier 1 in su
+        if (allResearches == null || allResearches.Count == 0)
+        {
+            Debug.LogWarning("[ResearchManager] Impossibile costruire la UI: nessuna ricerca nel database Runtime.");
+            return;
+        }
+
         var groupedResearches = allResearches
             .Where(r => r != null && r.info != null)
             .GroupBy(r => r.tier)
             .OrderBy(g => g.Key);
 
-        // 2. Creiamo l'interfaccia a blocchi
         foreach (var group in groupedResearches)
         {
             int currentTier = group.Key;
 
-            // Spawna l'Header del Tier (se hai assegnato il prefab)
             if (headerPrefab != null)
             {
                 ResearchTierHeaderUI header = Instantiate(headerPrefab, listContent);
@@ -195,7 +230,6 @@ public class ResearchManager : MonoBehaviour
                 _activeHeaders.Add(header);
             }
 
-            // Spawna tutti i bottoni di ricerca appartenenti a questo Tier
             foreach (var research in group)
             {
                 ResearchSlotUI newSlot = Instantiate(slotPrefab, listContent);
@@ -204,12 +238,13 @@ public class ResearchManager : MonoBehaviour
                 _activeSlots.Add(newSlot);
             }
         }
+        Debug.Log($"<color=cyan>[ResearchManager] UI Costruita con {_activeHeaders.Count} Titoli e {_activeSlots.Count} Slot.</color>");
     }
 
     void OnBuyResearch(ResearchItem item)
     {
         if (item.IsMaxed()) return;
-        if (!IsTierUnlocked(item.tier)) return; // Doppio controllo di sicurezza
+        if (!IsTierUnlocked(item.tier)) return; 
 
         if (GameManager.Instance.TrySpend(item.GetCost()))
         {
@@ -225,17 +260,8 @@ public class ResearchManager : MonoBehaviour
         _activeSlots.RemoveAll(s => s == null);
         _activeHeaders.RemoveAll(h => h == null);
 
-        // Aggiorniamo prima gli Headers (che mostrano i testi "LOCKED")
-        foreach (var header in _activeHeaders)
-        {
-            header.RefreshUI();
-        }
-
-        // Poi aggiorniamo le singole ricerche (che diventano grigie se il tier è locked)
-        foreach (var slot in _activeSlots)
-        {
-            slot.RefreshUI();
-        }
+        foreach (var header in _activeHeaders) header.RefreshUI();
+        foreach (var slot in _activeSlots) slot.RefreshUI();
     }
 
     public void RecalculateAllResearches()
@@ -257,7 +283,7 @@ public class ResearchManager : MonoBehaviour
         }
         
         GameManager.Instance.UpdateCapsFromResearch();
-        UpdateAllSlots(); // Aggiorna anche per mostrare l'eventuale sblocco di un nuovo Tier!
+        UpdateAllSlots(); 
     }
 
     void ApplyEffectBasedOnTotalLevel(ResearchItem item)

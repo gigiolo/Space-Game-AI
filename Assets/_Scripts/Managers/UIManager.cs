@@ -15,42 +15,35 @@ public class UIManager : MonoBehaviour
     [Header("--- INTRO & VISIBILITY ---")]
     public CanvasGroup mainHUDGroup; 
 
+    [Header("Formattazione Testo")]
+    [Tooltip("Spaziatura fissa per i numeri. Se i numeri sono troppo larghi, abbassa a 0.55 o 0.5. Se si sovrappongono, alza a 0.65.")]
+    [Range(0.4f, 1.0f)]
+    public float monospaceSize = 0.6f;
+
     [Header("Top HUD - Standard")]
     public TextMeshProUGUI scoreText;                                        
     public TextMeshProUGUI incomeText;
-    [Tooltip("Trascina qui l'icona dell'Income (Produzione)")]
     public Image incomeIcon; 
     public TextMeshProUGUI logisticsStatusText; 
     
     [Header("Multiplier UI")]
-    [Tooltip("Trascina qui l'OGGETTO PADRE 'MultiplierContainer' (NON quello della produzione)")]
     public GameObject multiplierContainer; 
-    [Tooltip("Trascina qui il TESTO dentro al container del moltiplicatore")]
     public TextMeshProUGUI energyMultiplierText;
-    
-    [Tooltip("Scegli qui il colore del testo del moltiplicatore")]
-    public Color multiplierTextColor = new Color(0f, 1f, 1f, 1f); // Default Ciano
+    public Color multiplierTextColor = new Color(0f, 1f, 1f, 1f);
 
-    [Tooltip("Collega qui il testo isolato per il conteggio Emitter")]
     public TextMeshProUGUI emitterCountText; 
-    [Tooltip("Collega qui l'IMMAGINE (Icona) accanto al conteggio Emitter")]
     public Image emitterIcon; 
 
     public TextMeshProUGUI storageText; 
 
     [Header("Top HUD - Special Currencies")]
     public TextMeshProUGUI pureIridiumText;
-    [Tooltip("Collega qui l'IMMAGINE (Icona) del Pure Iridium")]
     public Image pureIridiumIcon; 
-    [Tooltip("Scegli il colore dedicato per il Pure Iridium")]
     public Color pureIridiumColor = Color.magenta; 
-    
     public TextMeshProUGUI rawIridiumText;
 
     [Header("--- Nanobot Growth ---")]
     public TextMeshProUGUI emitterGrowthText;
-    
-    [Tooltip("L'immagine radiale che si riempie man mano che nasce un emitter.")]
     public Image emitterProgressPie; 
 
     [Header("Bottom Deck")]
@@ -79,22 +72,17 @@ public class UIManager : MonoBehaviour
     private Coroutine _iridiumFeedbackRoutine;
     private bool _isShowingIridiumFeedback = false; 
 
-    // Variabili per Animazione Multiplier
     private CanvasGroup _multCanvasGroup;
     private bool _isMultVisible = false;
     private Coroutine _multAnimRoutine;
 
-    // Variabili per Animazione Pie Chart (Torta)
     private CanvasGroup _pieCanvasGroup;
     private bool _isPieVisible = false;
     private Coroutine _pieAnimRoutine;
 
     private List<GameObject> _registeredMenus = new List<GameObject>();
-    
-    // --- NUOVO: Timer per sincronizzare i pannelli ---
     private float _closingEndTime = 0f; 
 
-    // --- Riferimenti agli Animatori dei Numeri ---
     private NumberDigitAnimator _scoreAnimator;
     private NumberDigitAnimator _incomeAnimator;
 
@@ -107,7 +95,6 @@ public class UIManager : MonoBehaviour
         }
         Instance = this;
 
-        // --- SETUP INIZIALE MOLTIPLICATORE ---
         if (multiplierContainer != null)
         {
             _multCanvasGroup = multiplierContainer.GetComponent<CanvasGroup>();
@@ -118,7 +105,6 @@ public class UIManager : MonoBehaviour
             multiplierContainer.SetActive(false);
         }
 
-        // --- SETUP INIZIALE PIE CHART ---
         if (emitterProgressPie != null)
         {
             _pieCanvasGroup = emitterProgressPie.GetComponent<CanvasGroup>();
@@ -185,9 +171,6 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    // --- NUOVI METODI PER SINCRONIZZARE I PANNELLI ---
-
-    // Chiamato dal UIPopupEffect quando inizia a chiudersi
     public void RegisterClosingMenu(float duration)
     {
         float newEndTime = Time.unscaledTime + duration;
@@ -197,7 +180,6 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    // Chiamato dal UIPopupEffect quando vuole aprirsi per sapere quanto aspettare
     public float GetClosingDelay()
     {
         if (Time.unscaledTime < _closingEndTime)
@@ -219,8 +201,6 @@ public class UIManager : MonoBehaviour
                 UIPopupEffect effect = menu.GetComponent<UIPopupEffect>();
                 if (effect != null) 
                 {
-                    // Passiamo FALSE. Questo dice: "Chiuditi perché sto aprendo un'altra cosa, 
-                    // NON perché l'utente ha premuto Indietro. Ignora gli eventi OnMenuClosed!"
                     effect.Close(false); 
                 }
                 else 
@@ -230,8 +210,6 @@ public class UIManager : MonoBehaviour
             }
         }
     }
-
-    // --------------------------------------------------
 
     private void SetupPlanetButtons()
     {
@@ -314,13 +292,30 @@ public class UIManager : MonoBehaviour
         RefreshUI();
     }
 
+    // =========================================================================
+    // NUOVA FUNZIONE: Applica il monospazio ma esclude punti e virgole
+    // =========================================================================
+    private string ApplyMonospaceFix(string rawText)
+    {
+        string mTag = $"<mspace={monospaceSize.ToString(System.Globalization.CultureInfo.InvariantCulture)}em>";
+        string mEnd = "</mspace>";
+        
+        // Spezza il tag al livello del punto e della virgola
+        string fixedText = rawText.Replace(".", $"{mEnd}.{mTag}")
+                                  .Replace(",", $"{mEnd},{mTag}");
+                                  
+        return $"{mTag}{fixedText}{mEnd}";
+    }
+    // =========================================================================
+
     public void RefreshUI()
     {
         if (gm == null) return;
 
+        // SCORE
         if (scoreText != null) 
         {
-            string val = FormatNumber(gm.CurrentEnergy);
+            string val = ApplyMonospaceFix(FormatNumber(gm.CurrentEnergy));
             if (_scoreAnimator != null) _scoreAnimator.SetText(val);
             else scoreText.text = val;
         }
@@ -332,9 +327,10 @@ public class UIManager : MonoBehaviour
             storageText.text = $"Offline: {formattedTime}";
         }
 
+        // INCOME
         if (incomeText != null) 
         {
-            string val = $"{FormatNumber(gm.EffectiveIncomePerSec)}/sec";
+            string val = $"{ApplyMonospaceFix(FormatNumber(gm.EffectiveIncomePerSec))}/sec";
             if (_incomeAnimator != null) _incomeAnimator.SetText(val);
             else incomeText.text = val;
         }
@@ -380,12 +376,15 @@ public class UIManager : MonoBehaviour
             if (emitterIcon != null && emitterIcon.color != finalColor) emitterIcon.color = finalColor;
         }
 
+        // MULTIPLIER
         if (multiplierContainer != null && energyMultiplierText != null)
         {
             float currentMult = gm.CurrentEnergyMultiplier;
             bool shouldBeVisible = currentMult > 1.01f; 
 
-            energyMultiplierText.text = $"< {currentMult:F2} x";
+            // Applichiamo il fix anche qui per sicurezza
+            string formattedMult = currentMult.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+            energyMultiplierText.text = $"< {ApplyMonospaceFix(formattedMult)} x";
             
             if (energyMultiplierText.color != multiplierTextColor)
                 energyMultiplierText.color = multiplierTextColor;

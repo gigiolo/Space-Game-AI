@@ -1,4 +1,3 @@
-// --- File: _Scripts\OptionsMenu.cs ---
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement; 
@@ -38,11 +37,11 @@ public class OptionsMenu : MonoBehaviour
             artifactsMenuButton.onClick.AddListener(() => 
             {
                 CloseMenu(); 
-                artifactsUIController.ToggleMenu();
+                // LA MODIFICA È QUI: Usiamo il nuovo metodo con "memoria"
+                artifactsUIController.OpenFromOptions();
             });
         }
 
-        // Fix Start() Sabotaggio
         if(panelVisuals && !_isOpenedByClick) panelVisuals.SetActive(false);
     }
 

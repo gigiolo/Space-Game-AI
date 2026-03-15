@@ -178,7 +178,6 @@ public class DroneManager : MonoBehaviour
         }
     }
 
-    // Metodo chiamato dalla UI per leggere il log. NON lancia più l'animazione.
     public void ClaimDrone(ActiveDrone drone, Action<string, CosmicArtifactSO> onLogReadyCallback)
     {
         if (!drone.isCompleted) return;
@@ -233,25 +232,69 @@ public class DroneManager : MonoBehaviour
         return null;
     }
 
+    // =========================================================================
+    // --- MODIFICA: LOGICA DI SPAWN VISUALE CON LO SPAZIOPORTO ---
+    // =========================================================================
+
     private void SpawnVisualDroneLaunch()
     {
-        if (droneLaunchPrefab == null || Camera.main == null) return;
-        Vector3 startPos = GetCameraForwardPointOnPlanet(); 
+        if (droneLaunchPrefab == null) return;
+        
+        Vector3 startPos;
+        Vector3 startDir;
+
+        // Cerca lo Spazioporto in scena
+        SpaceportHub spaceport = UnityEngine.Object.FindFirstObjectByType<SpaceportHub>();
+        
+        if (spaceport != null)
+        {
+            // Se c'è lo spazioporto, partiamo dal suo Slot
+            Transform pad = spaceport.GetRandomPad();
+            startPos = pad.position;
+            startDir = pad.forward; // La freccia BLU dello slot (indica la direzione di uscita)
+        }
+        else
+        {
+            // Fallback: Vecchio sistema (Superficie del pianeta)
+            if (Camera.main == null) return;
+            startPos = GetCameraForwardPointOnPlanet(); 
+            startDir = startPos.normalized;
+        }
+
         var drone = Instantiate(droneLaunchPrefab);
         drone.transform.localScale = Vector3.one * droneScale;
-        drone.Launch(startPos, startPos.normalized);
+        drone.Launch(startPos, startDir);
     }
 
     private void SpawnVisualDroneLanding(Action onLandedCallback)
     {
-        if (droneLandingPrefab == null || Camera.main == null)
+        if (droneLandingPrefab == null)
         {
             onLandedCallback?.Invoke();
             return;
         }
 
-        Vector3 landPos = GetCameraForwardPointOnPlanet();
-        Vector3 spacePos = Camera.main.transform.position + (Camera.main.transform.up * 8f) - (Camera.main.transform.forward * 2f);
+        Vector3 landPos;
+        Vector3 spacePos;
+
+        // Cerca lo Spazioporto in scena
+        SpaceportHub spaceport = UnityEngine.Object.FindFirstObjectByType<SpaceportHub>();
+        
+        if (spaceport != null)
+        {
+            // Atterra sullo slot
+            Transform pad = spaceport.GetRandomPad();
+            landPos = pad.position;
+            // Calcoliamo una posizione nello spazio profondo allineata con l'ingresso dell'esagono
+            spacePos = landPos + (pad.forward * 15f); 
+        }
+        else
+        {
+            // Fallback: Vecchio sistema
+            if (Camera.main == null) return;
+            landPos = GetCameraForwardPointOnPlanet();
+            spacePos = Camera.main.transform.position + (Camera.main.transform.up * 8f) - (Camera.main.transform.forward * 2f);
+        }
 
         var drone = Instantiate(droneLandingPrefab);
         drone.transform.localScale = Vector3.one * droneScale;
@@ -268,6 +311,8 @@ public class DroneManager : MonoBehaviour
         if (Physics.Raycast(ray, out RaycastHit hit)) return hit.point;
         return (Camera.main.transform.position + Camera.main.transform.forward * 10f).normalized * 1.6f; 
     }
+
+    // =========================================================================
 
     private string GenerateFlightLog(ActiveDrone drone, CosmicArtifactSO artifact, BigDouble energyGained)
     {
