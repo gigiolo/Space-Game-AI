@@ -89,8 +89,8 @@ public class GameManager : MonoBehaviour
     {
         get 
         {
-            double artifactGrowthBonus = DroneManager.Instance != null ? DroneManager.Instance.GetArtifactBonus(ArtifactBonusType.EmitterGrowthSpeed) : 0;
-            return (BaseAutoGrowthSpeed + EmitterSpeedResearchBonus) * (1.0 + artifactGrowthBonus);
+            double theoryGrowthBonus = DroneManager.Instance != null ? DroneManager.Instance.GetTheoryBonus(TheoryBonusType.EmitterGrowthSpeed) : 0;
+            return (BaseAutoGrowthSpeed + EmitterSpeedResearchBonus) * (1.0 + theoryGrowthBonus);
         }
     }
     
@@ -125,8 +125,8 @@ public class GameManager : MonoBehaviour
         {
             BigDouble baseProd = EmitterCount * BaseEmissionPerUnit;
             BigDouble planetMultiplier = PlanetManager.Instance?.GetCurrentPlanetData()?.productionMultiplier ?? 1;
-            double artifactIncomeBonus = DroneManager.Instance != null ? DroneManager.Instance.GetArtifactBonus(ArtifactBonusType.GlobalIncome) : 0;
-            BigDouble finalMultiplier = ResearchMultiplier * EarningsBonus * planetMultiplier * (1.0 + artifactIncomeBonus);
+            double theoryIncomeBonus = DroneManager.Instance != null ? DroneManager.Instance.GetTheoryBonus(TheoryBonusType.GlobalIncome) : 0;
+            BigDouble finalMultiplier = ResearchMultiplier * EarningsBonus * planetMultiplier * (1.0 + theoryIncomeBonus);
             return baseProd * finalMultiplier;
         }
     }
@@ -238,7 +238,7 @@ public class GameManager : MonoBehaviour
                 int toAdd = (int)_emitterAccumulator; 
                 int spaceLeft = EmitterCap - EmitterCount;
                 int actualAdd = Mathf.Min(toAdd, spaceLeft);
-                _emitterAccumulator -= actualAdd;                                                                                                                                              
+                _emitterAccumulator -= actualAdd;                                                                                                                                           
                 if (actualAdd < toAdd) _emitterAccumulator = 0;
 
                 if (actualAdd > 0)
@@ -307,18 +307,19 @@ public class GameManager : MonoBehaviour
 
     public void RecalculateCaps()
     {
-        double artifactStorageBonus = DroneManager.Instance != null ? DroneManager.Instance.GetArtifactBonus(ArtifactBonusType.StorageCapacity) : 0;
+        double theoryStorageBonus = DroneManager.Instance != null ? DroneManager.Instance.GetTheoryBonus(TheoryBonusType.StorageCapacity) : 0;
         
         // RECUPERIAMO IL MOLTIPLICATORE DEL PIANETA
         BigDouble planetMultiplier = PlanetManager.Instance?.GetCurrentPlanetData()?.productionMultiplier ?? 1;
 
         BigDouble baseLogistics = initialLogisticsCap + (LogisticsLevel * 5) + LogisticsResearchBonus;
         
-        // APPLICHIAMO IL MOLTIPLICATORE ALLA LOGISTICA!
-        LogisticsCap = baseLogistics * LogisticsMultiplier * planetMultiplier;
+        // APPLICHIAMO IL BONUS TEORIE ALLA LOGISTICA
+        double theoryLogisticsBonus = DroneManager.Instance != null ? DroneManager.Instance.GetTheoryBonus(TheoryBonusType.LogisticsCap) : 0;
+        LogisticsCap = baseLogistics * LogisticsMultiplier * planetMultiplier * (1.0 + theoryLogisticsBonus);
 
         double researchSeconds = StorageResearchBonus.ToDouble() * 1800;
-        MaxOfflineSeconds = (baseMaxOfflineSeconds + researchSeconds) * (1.0 + artifactStorageBonus); 
+        MaxOfflineSeconds = (baseMaxOfflineSeconds + researchSeconds) * (1.0 + theoryStorageBonus); 
         
         EmitterCap = 1 + EmitterCapResearchBonus;
     }
@@ -444,7 +445,7 @@ public class GameManager : MonoBehaviour
         CurrentEnergy = 0;
         LifetimeEarnings = 0;
         EmitterCount = 0; 
-        LogisticsLevel = 0; // <--- MODIFICA (Ora parte da 0 per i test della Logistica)
+        LogisticsLevel = 0; 
         ResearchMultiplier = 1;
         LogisticsResearchBonus = 0;
         LogisticsMultiplier = 1; 
@@ -458,9 +459,6 @@ public class GameManager : MonoBehaviour
         StoredLaunchSitePosition = ""; 
         StoredSunRotation = 0f; 
 
-        // <--- MODIFICA: Controllo di sicurezza commentato per permettere valori bassi come 1.5 o 2.0
-        // if (initialLogisticsCap <= 0) initialLogisticsCap = 10; 
-        
         if (baseEmissionPerUnit <= 0) baseEmissionPerUnit = 0.01;
         
         RecalculateCaps();
@@ -479,7 +477,6 @@ public class GameManager : MonoBehaviour
         data.scientificNodes = ScientificNodes.ToString();
         data.rawIridium = RawIridium.ToString();
         data.pureIridium = PureIridium.ToString();
-        // NUOVO: Salvataggio Manipolatori
         data.quantumManipulators = QuantumManipulators.ToString();
 
         if (PlanetSunRotator.Instance != null)
@@ -539,7 +536,7 @@ public class GameManager : MonoBehaviour
         {
             InitializeGameState();
             ScientificNodes = 0;
-            QuantumManipulators = 0; // Reset Manipolatori
+            QuantumManipulators = 0; 
             RawIridium = 0; 
             PureIridium = 0; 
             StoredSunRotation = 0f;
@@ -564,13 +561,11 @@ public class GameManager : MonoBehaviour
             }
         }
         
-        // <--- MODIFICA: Ora accetta liberamente anche il livello 0 se presente nel salvataggio
         LogisticsLevel = data.logisticsLevel;
 
         ScientificNodes = !string.IsNullOrEmpty(data.scientificNodes) ? BigDouble.Parse(data.scientificNodes) : 0;
         RawIridium = !string.IsNullOrEmpty(data.rawIridium) ? BigDouble.Parse(data.rawIridium) : 0;
         PureIridium = !string.IsNullOrEmpty(data.pureIridium) ? BigDouble.Parse(data.pureIridium) : 0;
-        // NUOVO: Caricamento Manipolatori
         QuantumManipulators = !string.IsNullOrEmpty(data.quantumManipulators) ? BigDouble.Parse(data.quantumManipulators) : 0;
         
         StoredSunRotation = data.sunRotationY;
@@ -799,7 +794,6 @@ public class GameManager : MonoBehaviour
         OnEconomyUpdated?.Invoke();
     }
     
-    // NUOVO: Aggiungere Manipolatori
     public void AddQuantumManipulator(BigDouble amount)
     {
         QuantumManipulators += amount;
@@ -836,13 +830,13 @@ public class GameManager : MonoBehaviour
         SaveManager.DeleteSaveFile();
         
         ScientificNodes = 0; 
-        QuantumManipulators = 0; // NUOVO
+        QuantumManipulators = 0; 
         LifetimeEarnings = 0; 
         CurrentEnergy = 0; 
         RawIridium = 0; 
         PureIridium = 0; 
         EmitterCount = 0; 
-        LogisticsLevel = 0; // <--- MODIFICA (Sincronizzato a 0 anche qui)
+        LogisticsLevel = 0; 
         StoredLaunchSitePosition = "";
         StoredSunRotation = 0f;
         IsFirstSession = true; 

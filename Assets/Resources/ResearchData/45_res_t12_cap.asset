@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dac902865c54b7e479540201146bfee3, type: 3}
+  m_Name: 45_res_t12_cap
+  m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
+  id: 45_res_t12_cap
+  title: Espansione Oltre-Mondo
+  description: Aumenta il limite di Emitter (+125 per livello).
+  icon: {fileID: 0}
+  costType: 0
+  tier: 12
+  type: 0
+  target: 2
+  bonusValue: 125
+  isExponentialBonus: 0
+  costCurve: 1
+  baseCost:
+    mantissa: 8
+    exponent: 51
+  costFactor: 2.7
+  maxLevel: 10
+  manualCosts: []

@@ -27,7 +27,7 @@ public class DroneMissionSlotUI : MonoBehaviour
         _onClaimClick = onClaim;
 
         if (titleText != null) titleText.text = mission.missionName;
-        if (descText != null) descText.text = mission.description;
+        if (descText != null) descText.text = mission.description; // Potresti voler aggiungere 'cargoCapacity' nella descrizione testuale
 
         RefreshState();
     }
@@ -101,12 +101,18 @@ public class DroneMissionSlotUI : MonoBehaviour
         }
         else
         {
-            // --- STATO: DISPONIBILE PER IL LANCIO ---
-            BigDouble cost = GameManager.Instance.EffectiveIncomePerSec * _mission.energyCostMultiplier;
+            // --- STATO: DISPONIBILE PER IL LANCIO (MODIFICATO PER IL COSTO FISSO) ---
+            
+            // 1. Legge la stringa dal SO e la converte nel numero gigante
+            BigDouble cost = BigDouble.Parse(_mission.fixedEnergyCost);
+            
             bool canAfford = GameManager.Instance.CurrentEnergy >= cost;
             bool hasFreeDrones = DroneManager.Instance.activeDrones.Count < DroneManager.Instance.unlockedSlots;
 
+            // 2. Mostra il numero usando il tuo metodo di formattazione
             statusText.text = $"Costo Lancio: {FormatNumber(cost)} Energy";
+            
+            // Colora il testo (Bianco se hai i soldi, Rosso se sei povero)
             statusText.color = canAfford ? Color.white : Color.red;
             
             if (speedText != null) speedText.gameObject.SetActive(false); 

@@ -14,18 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
   id: 22_res_t6_log
   title: Fasce di Trasporto
-  description: "Quintuplica la capacit\xE0 logistica (x5)."
+  description: "Aumenta la capacit\xE0 logistica (+800% per livello)."
   icon: {fileID: 0}
   costType: 0
   tier: 6
   type: 1
   target: 3
-  bonusValue: 5
-  isExponentialBonus: 1
+  bonusValue: 8
+  isExponentialBonus: 0
   costCurve: 1
   baseCost:
-    mantissa: 2
-    exponent: 24
-  costFactor: 4.5
-  maxLevel: 10
+    mantissa: 8
+    exponent: 12
+  costFactor: 1.6
+  maxLevel: 50
   manualCosts: []

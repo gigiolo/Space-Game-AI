@@ -14,18 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
   id: 16_res_t5_prod
   title: Estrazione a Punti Zero
-  description: Triplica la produzione globale (x3).
+  description: Moltiplica ESPONENZIALMENTE la produzione (x2).
   icon: {fileID: 0}
   costType: 0
   tier: 5
   type: 1
   target: 0
-  bonusValue: 3
+  bonusValue: 2
   isExponentialBonus: 1
   costCurve: 1
   baseCost:
-    mantissa: 7
-    exponent: 17
-  costFactor: 4
-  maxLevel: 10
+    mantissa: 5
+    exponent: 9
+  costFactor: 3.5
+  maxLevel: 5
   manualCosts: []

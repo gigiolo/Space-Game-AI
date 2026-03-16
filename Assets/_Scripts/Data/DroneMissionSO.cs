@@ -1,36 +1,34 @@
+// --- File: _Scripts\Data\DroneMissionSO.cs ---
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "NewDroneMission", menuName = "Aetheris/Drone Mission")]
 public class DroneMissionSO : ScriptableObject
 {
-    [Header("Identità")]
-    public string id; // Es: "miss_moon_01"
+    public string id;
     public string missionName;
-    [TextArea(2, 4)] public string description;
-
-    [Header("Parametri Viaggio")]
-    [Tooltip("Durata in secondi (es. 300 = 5 minuti)")]
-    public double durationSeconds;
     
-    [Tooltip("Moltiplicatore sul guadagno al secondo attuale per definire il costo. Es: 60 = costa 1 minuto di produzione.")]
-    public double energyCostMultiplier;
-
-    [Header("Senso di Enormità (Distanza)")]
-    [Tooltip("Distanza minima in Anni Luce (es. 0.00001 per milioni di km, 4.2 per Alpha Centauri)")]
-    public float minLightYears = 0.00001f;
-    public float maxLightYears = 0.00005f;
-
-    [Header("Ricompense (Energia)")]
-    [Tooltip("Moltiplicatore minimo del premio (Es: se il costo era 60s, e minReward è 2, vinci almeno 120s di energia)")]
-    public float minRewardMult = 2.0f;
-    public float maxRewardMult = 5.0f;
-
-    [Header("Ricompense (Speciali)")]
-    [Tooltip("Percentuale (0-100) di trovare Iridio Grezzo")]
-    public int iridiumChance = 20;
+    [TextArea(2,4)]
+    public string description; // <--- ECCOLA QUI! Era lei la grande assente!
+    
+    [Header("Costi e Tempi")]
+    [Tooltip("Costo fisso in Energia. Usa stringhe per numeri enormi, es: 50000 o 1.5e6")]
+    public string fixedEnergyCost = "1000"; 
+    public int durationSeconds = 60;
+    
+    [Header("Ricompense")]
+    public float minRewardMult = 0.5f;
+    public float maxRewardMult = 1.5f;
+    
+    public float artifactChance = 20f;
+    public float iridiumChance = 10f;
     public int minIridium = 1;
     public int maxIridium = 5;
+    
+    [Header("Log di Viaggio")]
+    public float minLightYears = 0.1f;
+    public float maxLightYears = 1.5f;
 
-    [Tooltip("Percentuale (0-100) di trovare un Artefatto Cosmico")]
-    public float artifactChance = 10f;
+    [Header("Logistica e Carico")]
+    [Tooltip("Quanti pacchetti dati indipendenti può estrarre al massimo questa sonda?")]
+    public int cargoCapacity = 1; 
 }

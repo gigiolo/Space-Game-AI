@@ -19,12 +19,12 @@ MonoBehaviour:
   visualData: {fileID: 11400000, guid: 38721a27d97d4e84689297ada2853005, type: 2}
   travelDistance:
     mantissa: 1
-    exponent: 3
+    exponent: 0
   requiredPlanetValue:
     mantissa: 1
-    exponent: 12
+    exponent: 17
   productionMultiplier:
-    mantissa: 5.4
+    mantissa: 5
     exponent: 2
   balanceFactor:
     mantissa: 1

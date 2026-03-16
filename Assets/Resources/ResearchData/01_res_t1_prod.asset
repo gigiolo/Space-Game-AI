@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
   id: 01_res_t1_prod
   title: Efficienza Nanobot
-  description: Aumenta la produzione base di energia.
+  description: Aumenta la produzione base (+25% per livello).
   icon: {fileID: 0}
   costType: 0
   tier: 1

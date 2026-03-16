@@ -14,18 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
   id: 09_res_t3_prod
   title: Reattori a Materia Oscura
-  description: Raddoppia tutta la produzione di energia.
+  description: Aumenta la produzione globale (+100% per livello).
   icon: {fileID: 0}
   costType: 0
   tier: 3
   type: 1
   target: 0
-  bonusValue: 2
-  isExponentialBonus: 1
+  bonusValue: 1
+  isExponentialBonus: 0
   costCurve: 1
   baseCost:
-    mantissa: 6
+    mantissa: 3.5
     exponent: 4
-  costFactor: 3
-  maxLevel: 10
+  costFactor: 1.55
+  maxLevel: 40
   manualCosts: []

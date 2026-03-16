@@ -16984,7 +16984,7 @@ MonoBehaviour:
   cityBasePS: {fileID: 558382827}
   cityBaseSize: 0.15
   cityBaseColor: {r: 0.16981131, g: 0.16981131, b: 0.16981131, a: 1}
-  citySpawnChance: 1
+  citySpawnChance: 0.2
   guaranteedCityCount: 5
   citySizeMultiplier: 1
   idleColor: {r: 1, g: 0.6, b: 0.2, a: 1}

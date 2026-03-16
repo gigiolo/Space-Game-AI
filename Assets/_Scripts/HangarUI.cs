@@ -107,15 +107,16 @@ public class HangarUI : MonoBehaviour
         ToggleMenu(); // Chiude il pannello
     }
 
+    // --- MODIFICA: Aggiornato per ricevere il Dizionario di Teorie (Capacità di Carico Multiplo) ---
     private void OnClaimClicked(DroneManager.ActiveDrone droneData)
     {
-        ToggleMenu(); // Chiude il pannello per mostrare il log
+        ToggleMenu(); 
 
-        DroneManager.Instance.ClaimDrone(droneData, (logText, artifact) => 
+        DroneManager.Instance.ClaimDrone(droneData, (logText, theoriesDict) => 
         {
             if (resultPopup != null)
             {
-                resultPopup.Show(logText, artifact);
+                resultPopup.Show(logText, theoriesDict);
             }
         });
     }

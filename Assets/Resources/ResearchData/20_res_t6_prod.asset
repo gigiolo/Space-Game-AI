@@ -14,18 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
   id: 20_res_t6_prod
   title: Dyson Swarm
-  description: Quadruplica la produzione globale (x4).
+  description: Aumenta la produzione globale (+500% per livello).
   icon: {fileID: 0}
   costType: 0
   tier: 6
   type: 1
   target: 0
-  bonusValue: 4
-  isExponentialBonus: 1
+  bonusValue: 5
+  isExponentialBonus: 0
   costCurve: 1
   baseCost:
-    mantissa: 2
-    exponent: 24
-  costFactor: 4.5
-  maxLevel: 10
+    mantissa: 1
+    exponent: 13
+  costFactor: 1.65
+  maxLevel: 50
   manualCosts: []

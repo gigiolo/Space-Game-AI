@@ -25,7 +25,7 @@ MonoBehaviour:
   costCurve: 1
   baseCost:
     mantissa: 5
-    exponent: 11
+    exponent: 6
   costFactor: 2
   maxLevel: 10
   manualCosts: []

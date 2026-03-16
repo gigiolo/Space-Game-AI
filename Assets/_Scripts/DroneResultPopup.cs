@@ -1,66 +1,73 @@
+// --- File: _Scripts\DroneResultPopup.cs ---
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using System.Collections;
+using System.Collections.Generic;
 
 public class DroneResultPopup : MonoBehaviour
 {
     [Header("UI References")]
-    [SerializeField] private GameObject panelRoot;
-    [SerializeField] private RectTransform windowRect; // <--- NUOVO: Trascina qui l'oggetto "Window" (quello col Content Size Fitter)
-    [SerializeField] private TextMeshProUGUI logText; 
-    [SerializeField] private Button closeButton;
-    [SerializeField] private Image artifactIcon; 
-    [SerializeField] private GameObject artifactContainer; 
+    public GameObject panelRoot;
+    public RectTransform windowRect; 
+    public TextMeshProUGUI logText; 
+    public Button closeButton;
+    public Image artifactIcon; 
+    public GameObject artifactContainer; 
+    public TextMeshProUGUI dataAmountText; 
 
     [Header("Animazione")]
-    [SerializeField] private float charactersPerSecond = 60f;
-    [SerializeField] private AudioClip typingSound; 
+    public float charactersPerSecond = 60f;
+    public AudioClip typingSound; 
 
-    public void Show(string logContent, CosmicArtifactSO artifact)
+    // MODIFICA: La firma ora accetta il Dictionary
+    public void Show(string logContent, Dictionary<PhysicalTheorySO, int> foundTheories)
     {
         if (UIManager.Instance != null) UIManager.Instance.CloseAllMenusExcept(panelRoot);
         
         panelRoot.SetActive(true);
         
-        // Setup Grafica Artefatto
         if (artifactContainer != null)
         {
-            bool hasArtifact = artifact != null;
-            artifactContainer.SetActive(hasArtifact);
+            bool hasAnyTheory = foundTheories != null && foundTheories.Count > 0;
+            artifactContainer.SetActive(hasAnyTheory);
 
-            if (hasArtifact && artifactIcon != null) 
+            if (hasAnyTheory) 
             {
-                artifactIcon.sprite = artifact.icon;
+                // Se c'è una sola teoria, mostriamo l'icona. Altrimenti nascondiamo l'immagine singola.
+                if (foundTheories.Count == 1)
+                {
+                    var firstTheory = new List<PhysicalTheorySO>(foundTheories.Keys)[0];
+                    if (artifactIcon != null) 
+                    {
+                        artifactIcon.gameObject.SetActive(true);
+                        artifactIcon.sprite = firstTheory.icon;
+                    }
+                    if (dataAmountText != null) dataAmountText.text = $"+{foundTheories[firstTheory]} TB";
+                }
+                else
+                {
+                    if (artifactIcon != null) artifactIcon.gameObject.SetActive(false); // Troppe da mostrare in una sola icona
+                    if (dataAmountText != null) dataAmountText.text = "DATI MULTIPLI";
+                }
             }
         }
 
-        // Blocca il bottone di chiusura finché non finisce di scrivere
         closeButton.interactable = false;
         closeButton.onClick.RemoveAllListeners();
         closeButton.onClick.AddListener(Close);
 
-        // --- MAGIA DEL LAYOUT ---
-        // Assegniamo il testo PRIMA dell'animazione, così TextMeshPro sa già quanto sarà alto
         logText.text = logContent;
         
-        // Forziamo Unity a ricalcolare immediatamente i Content Size Fitter.
-        // Così la finestra prende subito la sua dimensione finale massima.
         Canvas.ForceUpdateCanvases();
-        if (windowRect != null)
-        {
-            LayoutRebuilder.ForceRebuildLayoutImmediate(windowRect);
-        }
+        if (windowRect != null) LayoutRebuilder.ForceRebuildLayoutImmediate(windowRect);
 
-        // Ora avviamo l'animazione nascondendo i caratteri
         StartCoroutine(TypewriterEffect(logContent));
     }
 
     private IEnumerator TypewriterEffect(string fullText)
     {
-        // Nasconde tutti i caratteri, ma lo "spazio fisico" rimane allocato!
         logText.maxVisibleCharacters = 0;
-
         int totalChars = fullText.Length;
         float timer = 0f;
         

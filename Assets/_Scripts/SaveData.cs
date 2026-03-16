@@ -30,7 +30,7 @@ public class SaveData
     // --- VALUTE SPECIALI ---
     public string rawIridium;
     public string pureIridium;
-    public string quantumManipulators; // <--- NUOVO: Aggiunto per il salvataggio
+    public string quantumManipulators; 
 
     // --- VISUALS ---
     public List<string> cityLightPositions = new List<string>();
@@ -51,9 +51,9 @@ public class SaveData
     // --- LAUNCH SITE ---
     public string launchSitePosition; 
 
-    // --- DRONE EXPEDITIONS E ARTEFATTI ---
-    public List<string> discoveredArtifacts = new List<string>();
-    public List<string> equippedArtifacts = new List<string>(); 
+    // --- TEORIE FISICHE ED ESPLORAZIONE ---
+    public List<TheorySaveData> discoveredTheories = new List<TheorySaveData>();
+    public List<string> activeTheories = new List<string>(); 
     public List<DroneSaveData> activeDrones = new List<DroneSaveData>();
 }
 
@@ -71,4 +71,12 @@ public class DroneSaveData
     public string missionID; 
     public string launchTimeBinary; 
     public string returnTimeBinary; 
+}
+
+[Serializable]
+public class TheorySaveData
+{
+    public string id;
+    public int level;
+    public int accumulatedData; 
 }

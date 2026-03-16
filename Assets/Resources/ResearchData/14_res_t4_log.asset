@@ -14,18 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
   id: 14_res_t4_log
   title: "Logistica a Singolarit\xE0"
-  description: "Triplica la capacit\xE0 logistica (x3)."
+  description: "Aumenta la capacit\xE0 logistica (+350% per livello)."
   icon: {fileID: 0}
   costType: 0
   tier: 4
   type: 1
   target: 3
-  bonusValue: 3
-  isExponentialBonus: 1
+  bonusValue: 3.5
+  isExponentialBonus: 0
   costCurve: 1
   baseCost:
-    mantissa: 1
-    exponent: 11
-  costFactor: 3.5
-  maxLevel: 10
+    mantissa: 1.5
+    exponent: 6
+  costFactor: 1.55
+  maxLevel: 50
   manualCosts: []

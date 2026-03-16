@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dac902865c54b7e479540201146bfee3, type: 3}
+  m_Name: 35_res_t9_click
+  m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
+  id: 35_res_t9_click
+  title: Piegatura del Tessuto Spaziale
+  description: Potenzia massicciamente il click (+5.0x per liv).
+  icon: {fileID: 0}
+  costType: 0
+  tier: 9
+  type: 0
+  target: 1
+  bonusValue: 5
+  isExponentialBonus: 0
+  costCurve: 1
+  baseCost:
+    mantissa: 1
+    exponent: 30
+  costFactor: 2.7
+  maxLevel: 10
+  manualCosts: []

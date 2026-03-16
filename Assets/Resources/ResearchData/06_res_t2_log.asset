@@ -14,18 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
   id: 06_res_t2_log
   title: Iper-Condotti
-  description: "Raddoppia esponenzialmente la capacit\xE0 logistica (x2)."
+  description: "Aumenta la capacit\xE0 logistica (+150% per livello)."
   icon: {fileID: 0}
   costType: 0
   tier: 2
   type: 1
   target: 3
-  bonusValue: 2
-  isExponentialBonus: 1
+  bonusValue: 1.5
+  isExponentialBonus: 0
   costCurve: 1
   baseCost:
-    mantissa: 8
+    mantissa: 1.2
     exponent: 3
-  costFactor: 2.1
-  maxLevel: 15
+  costFactor: 1.4
+  maxLevel: 40
   manualCosts: []

@@ -14,18 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
   id: 10_res_t3_log
   title: Logistica a Wormhole
-  description: "Triplica tutta la capacit\xE0 logistica (x3)."
+  description: "Aumenta la capacit\xE0 logistica (+200% per livello)."
   icon: {fileID: 0}
   costType: 0
   tier: 3
   type: 1
   target: 3
-  bonusValue: 3
-  isExponentialBonus: 1
+  bonusValue: 2
+  isExponentialBonus: 0
   costCurve: 1
   baseCost:
-    mantissa: 6
+    mantissa: 3
     exponent: 4
-  costFactor: 3
-  maxLevel: 10
+  costFactor: 1.5
+  maxLevel: 40
   manualCosts: []

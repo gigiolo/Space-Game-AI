@@ -1,24 +1,56 @@
 ID,Titolo,Descrizione,Tipo,Target,Bonus,IsExponential,Calc2,Calc3,Calc4,CostoBase,Fattore,LivMax,Tier
-01_res_t1_prod,Efficienza Nanobot,Aumenta la produzione base di energia.,Multiplier,GlobalProduction,0.25,FALSE,-,-,-,0.20,1.35,30,1
+01_res_t1_prod,Efficienza Nanobot,Aumenta la produzione base (+25% per livello).,Multiplier,GlobalProduction,0.25,FALSE,-,-,-,0.20,1.35,30,1
 02_res_t1_cap,Protocolli di Espansione,Aumenta il numero massimo di Emitter costruibili.,Additive,EmitterMaxCap,2,FALSE,-,-,-,0.50,1.40,30,1
 03_res_t1_click,Sovraccarico Manuale,Potenzia l'Energy Button fino a 10x (+0.5x per livello).,Additive,ClickPower,0.50,FALSE,-,-,-,5.0,1.60,14,1
-04_res_t2_cap,Cupole Geodetiche,Aumenta massicciamente il limite degli Emitter.,Additive,EmitterMaxCap,5,FALSE,-,-,-,4000,1.50,25,2
-05_res_t2_prod,Processori Quantici,Moltiplica esponenzialmente la produzione globale.,Multiplier,GlobalProduction,1.50,TRUE,-,-,-,8000,2.10,15,2
-06_res_t2_log,Iper-Condotti,Raddoppia esponenzialmente la capacità logistica (x2).,Multiplier,LogisticsCapacity,2.00,TRUE,-,-,-,8000,2.10,15,2
-07_res_t2_speed,Sciame Replicante,Aumenta la velocità con cui si generano nuovi Emitter.,Additive,EmitterProductionSpeed,0.20,FALSE,-,-,-,3000,1.90,10,2
-08_res_t3_cap,Anelli Orbitali,Espande lo spazio per decine di nuovi Emitter.,Additive,EmitterMaxCap,20,FALSE,-,-,-,25000,1.60,25,3
-09_res_t3_prod,Reattori a Materia Oscura,Raddoppia tutta la produzione di energia.,Multiplier,GlobalProduction,2.0,TRUE,-,-,-,60000,3.00,10,3
-10_res_t3_log,Logistica a Wormhole,Triplica tutta la capacità logistica (x3).,Multiplier,LogisticsCapacity,3.0,TRUE,-,-,-,60000,3.00,10,3
-11_res_t3_off,Celle Criogeniche,Aumenta il tempo di accumulo offline (+30 min per livello).,Additive,StorageCapacity,1.0,FALSE,-,-,-,35000,2.00,10,3
-12_res_t4_prod,Sintesi Antimateria,Raddoppia la produzione globale (x2).,Multiplier,GlobalProduction,2.0,TRUE,-,-,-,1e11,3.50,10,4
-13_res_t4_cap,Ingegneria Planetaria,Aumenta il limite di Emitter (+10 per livello).,Additive,EmitterMaxCap,10,FALSE,-,-,-,1.5e11,1.80,15,4
-14_res_t4_log,Logistica a Singolarità,Triplica la capacità logistica (x3).,Multiplier,LogisticsCapacity,3.0,TRUE,-,-,-,1e11,3.50,10,4
-15_res_t4_click,Sovraccarico Neurale,Potenzia massicciamente l'Energy Button (+2.0x per livello).,Additive,ClickPower,2.0,FALSE,-,-,-,5e11,2.00,10,4
-16_res_t5_prod,Estrazione a Punti Zero,Triplica la produzione globale (x3).,Multiplier,GlobalProduction,3.0,TRUE,-,-,-,7e17,4.00,10,5
-17_res_t5_cap,Megastrutture,Aumenta il limite di Emitter (+25 per livello).,Additive,EmitterMaxCap,25,FALSE,-,-,-,1e18,2.00,10,5
-18_res_t5_log,Condotti Entangled,Quadruplica la capacità logistica (x4).,Multiplier,LogisticsCapacity,4.0,TRUE,-,-,-,7e17,4.00,10,5
-19_res_t5_speed,Matrici Auto-Replicanti,Accelera la generazione passiva di nuovi Emitter.,Additive,EmitterProductionSpeed,0.5,FALSE,-,-,-,3e18,2.50,10,5
-20_res_t6_prod,Dyson Swarm,Quadruplica la produzione globale (x4).,Multiplier,GlobalProduction,4.0,TRUE,-,-,-,2e24,4.50,10,6
-21_res_t6_cap,Colonizzazione Crostale,Aumenta il limite di Emitter (+50 per livello).,Additive,EmitterMaxCap,50,FALSE,-,-,-,3e24,2.20,10,6
-22_res_t6_log,Fasce di Trasporto,Quintuplica la capacità logistica (x5).,Multiplier,LogisticsCapacity,5.0,TRUE,-,-,-,2e24,4.50,10,6
-23_res_t6_off,Stasi Temporale,Aumenta il tempo massimo di accumulo offline (+2 ore per livello).,Additive,StorageCapacity,2.0,FALSE,-,-,-,1e25,2.00,10,6
+04_res_t2_cap,Cupole Geodetiche,Aumenta massicciamente il limite degli Emitter.,Additive,EmitterMaxCap,5,FALSE,-,-,-,1000,1.50,25,2
+05_res_t2_prod,Processori Quantici,Aumenta la produzione globale (+50% per livello).,Multiplier,GlobalProduction,0.50,FALSE,-,-,-,1500,1.45,40,2
+06_res_t2_log,Iper-Condotti,Aumenta la capacità logistica (+60% per livello).,Multiplier,LogisticsCapacity,0.60,FALSE,-,-,-,1200,1.40,40,2
+07_res_t2_speed,Sciame Replicante,Aumenta la velocità con cui si generano nuovi Emitter.,Additive,EmitterProductionSpeed,0.20,FALSE,-,-,-,800,1.90,10,2
+08_res_t3_cap,Anelli Orbitali,Espande lo spazio per decine di nuovi Emitter.,Additive,EmitterMaxCap,20,FALSE,-,-,-,20000,1.60,25,3
+09_res_t3_prod,Reattori a Materia Oscura,Aumenta la produzione globale (+100% per livello).,Multiplier,GlobalProduction,1.0,FALSE,-,-,-,35000,1.55,40,3
+10_res_t3_log,Logistica a Wormhole,Aumenta la capacità logistica (+120% per livello).,Multiplier,LogisticsCapacity,1.20,FALSE,-,-,-,30000,1.50,40,3
+11_res_t3_off,Celle Criogeniche,Aumenta il tempo di accumulo offline (+30 min per livello).,Additive,StorageCapacity,1.0,FALSE,-,-,-,25000,2.00,10,3
+12_res_t4_prod,Sintesi Antimateria,Aumenta la produzione globale (+200% per livello).,Multiplier,GlobalProduction,2.0,FALSE,-,-,-,2e6,1.60,50,4
+13_res_t4_cap,Ingegneria Planetaria,Aumenta il limite di Emitter (+10 per livello).,Additive,EmitterMaxCap,10,FALSE,-,-,-,3e6,1.80,15,4
+14_res_t4_log,Logistica a Singolarità,Aumenta la capacità logistica (+250% per livello).,Multiplier,LogisticsCapacity,2.50,FALSE,-,-,-,1.5e6,1.55,50,4
+15_res_t4_click,Sovraccarico Neurale,Potenzia massicciamente l'Energy Button (+2.0x per livello).,Additive,ClickPower,2.0,FALSE,-,-,-,5e6,2.00,10,4
+16_res_t5_prod,Estrazione a Punti Zero,Moltiplica ESPONENZIALMENTE la produzione (x2).,Multiplier,GlobalProduction,2.0,TRUE,-,-,-,5e9,3.50,5,5
+17_res_t5_cap,Megastrutture,Aumenta il limite di Emitter (+25 per livello).,Additive,EmitterMaxCap,25,FALSE,-,-,-,8e9,2.00,10,5
+18_res_t5_log,Condotti Entangled,Moltiplica ESPONENZIALMENTE la logistica (x2.5).,Multiplier,LogisticsCapacity,2.5,TRUE,-,-,-,4e9,3.40,5,5
+19_res_t5_speed,Matrici Auto-Replicanti,Accelera la generazione passiva di nuovi Emitter.,Additive,EmitterProductionSpeed,0.5,FALSE,-,-,-,2e9,2.50,10,5
+20_res_t6_prod,Dyson Swarm,Aumenta la produzione globale (+500% per livello).,Multiplier,GlobalProduction,5.0,FALSE,-,-,-,1e13,1.65,50,6
+21_res_t6_cap,Colonizzazione Crostale,Aumenta il limite di Emitter (+50 per livello).,Additive,EmitterMaxCap,50,FALSE,-,-,-,3e13,2.20,10,6
+22_res_t6_log,Fasce di Trasporto,Aumenta la capacità logistica (+600% per livello).,Multiplier,LogisticsCapacity,6.0,FALSE,-,-,-,8e12,1.60,50,6
+23_res_t6_off,Stasi Temporale,Aumenta il tempo massimo di accumulo offline (+2 ore per livello).,Additive,StorageCapacity,2.0,FALSE,-,-,-,1e13,2.00,10,6
+24_res_t7_prod,Reattori a Stringhe Cosmiche,Aumenta la produzione globale (+1000% per livello).,Multiplier,GlobalProduction,10.0,FALSE,-,-,-,5e17,1.70,50,7
+25_res_t7_cap,Ingegneria Galattica,Aumenta il limite di Emitter (+75 per livello).,Additive,EmitterMaxCap,75,FALSE,-,-,-,8e17,2.20,20,7
+26_res_t7_log,Ponti di Einstein-Rosen,Aumenta la capacità logistica (+1200% per livello).,Multiplier,LogisticsCapacity,12.0,FALSE,-,-,-,4e17,1.65,50,7
+27_res_t7_speed,Forgia di Materia Oscura,Accelera la generazione passiva di Emitter.,Additive,EmitterProductionSpeed,1.0,FALSE,-,-,-,2e17,2.50,10,7
+28_res_t8_prod,Estrai-Buchi Neri,Aumenta la produzione globale (+2500% per livello).,Multiplier,GlobalProduction,25.0,FALSE,-,-,-,1e23,1.75,50,8
+29_res_t8_cap,Colonizzazione di Ammassi,Aumenta il limite di Emitter (+100 per livello).,Additive,EmitterMaxCap,100,FALSE,-,-,-,3e23,2.30,13,8
+30_res_t8_log,Logistica Interdimensionale,Aumenta la capacità logistica (+3000% per livello).,Multiplier,LogisticsCapacity,30.0,FALSE,-,-,-,8e22,1.70,50,8
+31_res_t8_off,Condensatori di Stasi,Aumenta il tempo di accumulo offline (+4 ore per liv).,Additive,StorageCapacity,4.0,FALSE,-,-,-,5e23,2.60,10,8
+32_res_t9_prod,Raccolto a Falso Vuoto,Aumenta la produzione globale (+5000% per livello).,Multiplier,GlobalProduction,50.0,FALSE,-,-,-,5e29,1.80,50,9
+33_res_t9_cap,Imperio Universale,Aumenta il limite di Emitter (+100 per livello).,Additive,EmitterMaxCap,100,FALSE,-,-,-,8e29,2.40,12,9
+34_res_t9_log,Warp Multi-Versale,Aumenta la capacità logistica (+6000% per livello).,Multiplier,LogisticsCapacity,60.0,FALSE,-,-,-,4e29,1.75,50,9
+35_res_t9_click,Piegatura del Tessuto Spaziale,Potenzia massicciamente il click (+5.0x per liv).,Additive,ClickPower,5.0,FALSE,-,-,-,1e30,2.70,10,9
+36_res_t10_prod,Generatore di Entropia,Moltiplica ESPONENZIALMENTE la produzione (x3).,Multiplier,GlobalProduction,3.0,TRUE,-,-,-,1e37,4.00,5,10
+37_res_t10_cap,Punto Omega,Aumenta il limite di Emitter (+125 per livello).,Additive,EmitterMaxCap,125,FALSE,-,-,-,3e37,2.50,10,10
+38_res_t10_log,Rete Logistica Divina,Moltiplica ESPONENZIALMENTE la logistica (x4).,Multiplier,LogisticsCapacity,4.0,TRUE,-,-,-,8e36,3.80,5,10
+39_res_t10_speed,Creazione Ex Nihilo,Velocità di generazione Emitter estrema.,Additive,EmitterProductionSpeed,2.0,FALSE,-,-,-,5e37,2.80,10,10
+40_res_t11_prod,Sintesi di Universi Paralleli,Aumenta la produzione globale (+10000% per livello).,Multiplier,GlobalProduction,100.0,FALSE,-,-,-,1e43,1.85,50,11
+41_res_t11_cap,Dominio del Multiverso,Aumenta il limite di Emitter (+125 per livello).,Additive,EmitterMaxCap,125,FALSE,-,-,-,4e43,2.60,10,11
+42_res_t11_log,Condotti a N-Dimensioni,Aumenta la capacità logistica (+12000% per livello).,Multiplier,LogisticsCapacity,120.0,FALSE,-,-,-,8e42,1.80,50,11
+43_res_t11_off,Congelamento del Tempo,Accumulo offline potenziato (+6 ore per liv).,Additive,StorageCapacity,6.0,FALSE,-,-,-,6e43,2.90,10,11
+44_res_t12_prod,Assimilazione della Realtà,Aumenta la produzione globale (+25000% per livello).,Multiplier,GlobalProduction,250.0,FALSE,-,-,-,5e51,1.90,50,12
+45_res_t12_cap,Espansione Oltre-Mondo,Aumenta il limite di Emitter (+125 per livello).,Additive,EmitterMaxCap,125,FALSE,-,-,-,8e51,2.70,10,12
+46_res_t12_log,Flusso Onnipresente,Aumenta la capacità logistica (+30000% per livello).,Multiplier,LogisticsCapacity,300.0,FALSE,-,-,-,4e51,1.85,50,12
+47_res_t12_click,Intervento del Creatore,Il tuo tocco plasma l'energia (+10.0x per liv).,Additive,ClickPower,10.0,FALSE,-,-,-,1e52,3.00,10,12
+48_res_t13_prod,Ascensione Energetica,Aumenta la produzione globale (+50000% per livello).,Multiplier,GlobalProduction,500.0,FALSE,-,-,-,1e61,1.95,50,13
+49_res_t13_cap,Densità Infinita,Aumenta il limite di Emitter (+125 per livello).,Additive,EmitterMaxCap,125,FALSE,-,-,-,3e61,2.80,10,13
+50_res_t13_log,Onniveggenza Logistica,Aumenta la capacità logistica (+60000% per livello).,Multiplier,LogisticsCapacity,600.0,FALSE,-,-,-,8e60,1.90,50,13
+51_res_t13_speed,Evoluzione Spontanea,Gli Emitter nascono dal nulla (+5.0 velocità/liv).,Additive,EmitterProductionSpeed,5.0,FALSE,-,-,-,6e61,3.10,10,13
+52_res_t14_prod,Il Fine Ultimo,Moltiplica ESPONENZIALMENTE la produzione (x5).,Multiplier,GlobalProduction,5.0,TRUE,-,-,-,1e72,4.50,5,14
+53_res_t14_cap,Orizzonte degli Eventi,Aumenta il limite di Emitter (+250 per livello).,Additive,EmitterMaxCap,250,FALSE,-,-,-,4e72,2.90,10,14
+54_res_t14_log,Singolarità Perfetta,Moltiplica ESPONENZIALMENTE la logistica (x6).,Multiplier,LogisticsCapacity,6.0,TRUE,-,-,-,8e71,4.20,5,14
+55_res_t14_off,Eternità,Accumulo offline titanico (+12 ore per liv).,Additive,StorageCapacity,12.0,FALSE,-,-,-,6e72,3.20,10,14

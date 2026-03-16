@@ -11,33 +11,37 @@ public class DroneManager : MonoBehaviour
 
     [Header("Database (Assegna da Editor)")]
     public List<DroneMissionSO> allMissions;
-    public List<CosmicArtifactSO> allArtifacts;
+    public List<PhysicalTheorySO> allTheories;
 
     [Header("Visuals (Assegna da Editor)")]
     public SpaceshipFlight droneLaunchPrefab;
     public SpaceshipLanding droneLandingPrefab;
     public float droneScale = 0.3f;
 
-    [Header("Impostazioni Hangar & Artefatti")]
+    [Header("Impostazioni Hangar & Teorie")]
     public int unlockedSlots = 1; 
-    public int maxEquippedArtifacts = 3; 
+    public int maxActiveTheories = 3; 
 
-    // --- CLASSE RUNTIME ---
     public class ActiveDrone
     {
         public int slotIndex;
         public DroneMissionSO missionData;
         public DateTime launchTime; 
         public DateTime returnTime;
-        public bool isCompleted; // True se è a terra e pronto per essere letto
+        public bool isCompleted; 
         
-        [NonSerialized] public bool isLanding; // True mentre si sta riproducendo l'animazione di atterraggio
+        [NonSerialized] public bool isLanding; 
     }
 
-    // Stato Runtime
+    public class RuntimeTheory
+    {
+        public int level = 0; 
+        public int accumulatedData = 0;
+    }
+
     public List<ActiveDrone> activeDrones = new List<ActiveDrone>();
-    public List<string> discoveredArtifactIDs = new List<string>();
-    public List<string> equippedArtifactIDs = new List<string>(); 
+    public Dictionary<string, RuntimeTheory> theoryDatabase = new Dictionary<string, RuntimeTheory>();
+    public List<string> activeTheoryIDs = new List<string>(); 
 
     private void Awake()
     {
@@ -52,33 +56,33 @@ public class DroneManager : MonoBehaviour
         for (int i = 0; i < activeDrones.Count; i++)
         {
             var drone = activeDrones[i];
-            
-            // Se il timer è scaduto, NON ha ancora completato l'atterraggio e NON sta già atterrando...
             if (!drone.isCompleted && !drone.isLanding && DateTime.UtcNow >= drone.returnTime)
             {
                 drone.isLanding = true;
-                
-                // Avvia automaticamente l'animazione visiva
                 SpawnVisualDroneLanding(() => 
                 {
-                    // Quando tocca terra fisicamente, diventa "Pronto al recupero"
                     drone.isCompleted = true;
                     drone.isLanding = false;
-                    Debug.Log($"[DroneManager] Drone {drone.slotIndex} atterrato! In attesa di lettura log.");
                 });
             }
         }
     }
 
-    // --- GESTIONE SALVATAGGIO ---
     public void LoadData(SaveData data)
     {
         activeDrones.Clear();
-        discoveredArtifactIDs.Clear();
-        equippedArtifactIDs.Clear();
+        theoryDatabase.Clear();
+        activeTheoryIDs.Clear();
 
-        if (data.discoveredArtifacts != null) discoveredArtifactIDs.AddRange(data.discoveredArtifacts);
-        if (data.equippedArtifacts != null) equippedArtifactIDs.AddRange(data.equippedArtifacts); 
+        if (data.discoveredTheories != null)
+        {
+            foreach (var t in data.discoveredTheories)
+            {
+                theoryDatabase[t.id] = new RuntimeTheory { level = t.level, accumulatedData = t.accumulatedData };
+            }
+        }
+        
+        if (data.activeTheories != null) activeTheoryIDs.AddRange(data.activeTheories); 
 
         if (data.activeDrones != null)
         {
@@ -89,7 +93,6 @@ public class DroneManager : MonoBehaviour
                 {
                     long returnBin = long.Parse(savedDrone.returnTimeBinary);
                     long launchBin = string.IsNullOrEmpty(savedDrone.launchTimeBinary) ? returnBin : long.Parse(savedDrone.launchTimeBinary); 
-                    
                     bool timeIsUp = DateTime.UtcNow >= DateTime.FromBinary(returnBin);
 
                     activeDrones.Add(new ActiveDrone
@@ -98,7 +101,6 @@ public class DroneManager : MonoBehaviour
                         missionData = mission,
                         launchTime = DateTime.FromBinary(launchBin), 
                         returnTime = DateTime.FromBinary(returnBin),
-                        // Se eravamo offline e il tempo è scaduto, consideriamolo già atterrato e completato
                         isCompleted = timeIsUp, 
                         isLanding = false
                     });
@@ -109,8 +111,13 @@ public class DroneManager : MonoBehaviour
 
     public void SaveData(SaveData data)
     {
-        data.discoveredArtifacts = new List<string>(discoveredArtifactIDs);
-        data.equippedArtifacts = new List<string>(equippedArtifactIDs); 
+        data.discoveredTheories = new List<TheorySaveData>();
+        foreach (var kvp in theoryDatabase)
+        {
+            data.discoveredTheories.Add(new TheorySaveData { id = kvp.Key, level = kvp.Value.level, accumulatedData = kvp.Value.accumulatedData });
+        }
+
+        data.activeTheories = new List<string>(activeTheoryIDs); 
         data.activeDrones = new List<DroneSaveData>();
 
         foreach (var drone in activeDrones)
@@ -125,32 +132,37 @@ public class DroneManager : MonoBehaviour
         }
     }
 
-    // --- LOGICA EQUIPAGGIAMENTO ARTEFATTI ---
-    public bool EquipArtifact(string artifactId)
+    public bool TryUpgradeTheory(string theoryId)
     {
-        if (!discoveredArtifactIDs.Contains(artifactId)) return false; 
-        if (equippedArtifactIDs.Contains(artifactId)) return false; 
-        if (equippedArtifactIDs.Count >= maxEquippedArtifacts) return false; 
+        if (!theoryDatabase.ContainsKey(theoryId)) return false;
 
-        equippedArtifactIDs.Add(artifactId);
-        if (GameManager.Instance != null) GameManager.Instance.RecalculateCaps();
-        return true;
-    }
+        PhysicalTheorySO info = allTheories.Find(t => t.id == theoryId);
+        RuntimeTheory state = theoryDatabase[theoryId];
 
-    public void UnequipArtifact(string artifactId)
-    {
-        if (equippedArtifactIDs.Contains(artifactId))
+        int requiredData = info.GetDataRequiredForLevel(state.level);
+        BigDouble requiredIridium = info.GetIridiumCostForLevel(state.level);
+
+        if (state.accumulatedData >= requiredData && GameManager.Instance.PureIridium >= requiredIridium)
         {
-            equippedArtifactIDs.Remove(artifactId);
-            if (GameManager.Instance != null) GameManager.Instance.RecalculateCaps();
+            state.accumulatedData -= requiredData;
+            GameManager.Instance.TrySpendPureIridium(requiredIridium); 
+            state.level++;
+            GameManager.Instance.SaveGame();
+            GameManager.Instance.RecalculateCaps();
+            return true;
         }
+        return false;
     }
 
-    // --- CORE LOGIC ---
+    // --- METODO AGGIORNATO: LANCIO A COSTO FISSO ---
     public void LaunchDrone(int slotIndex, DroneMissionSO mission)
     {
         if (GameManager.Instance == null) return;
-        BigDouble cost = GameManager.Instance.EffectiveIncomePerSec * mission.energyCostMultiplier;
+        
+        // 1. Legge il costo fisso dal SO e lo converte in BigDouble
+        BigDouble cost = BigDouble.Parse(mission.fixedEnergyCost);
+        
+        // 2. Tenta di spendere l'energia
         if (!GameManager.Instance.TrySpend(cost)) return;
 
         ActiveDrone newDrone = new ActiveDrone
@@ -178,13 +190,15 @@ public class DroneManager : MonoBehaviour
         }
     }
 
-    public void ClaimDrone(ActiveDrone drone, Action<string, CosmicArtifactSO> onLogReadyCallback)
+    // --- MODIFICA: Ora restituisce un DIZIONARIO di risultati ---
+    public void ClaimDrone(ActiveDrone drone, Action<string, Dictionary<PhysicalTheorySO, int>> onLogReadyCallback)
     {
         if (!drone.isCompleted) return;
 
-        BigDouble income = GameManager.Instance.EffectiveIncomePerSec;
+        // La ricompensa in energia è basata sul costo fisso della missione
+        BigDouble investedEnergy = BigDouble.Parse(drone.missionData.fixedEnergyCost);
         float mult = UnityEngine.Random.Range(drone.missionData.minRewardMult, drone.missionData.maxRewardMult);
-        BigDouble energyReward = income * drone.missionData.energyCostMultiplier * mult;
+        BigDouble energyReward = investedEnergy * mult;
 
         GameManager.Instance.AddEnergy(energyReward);
 
@@ -194,70 +208,87 @@ public class DroneManager : MonoBehaviour
             GameManager.Instance.AddRawIridium(iridium);
         }
 
-        CosmicArtifactSO foundArtifact = null;
-        if (UnityEngine.Random.Range(0, 100f) <= drone.missionData.artifactChance)
+        // Il "Bagagliaio" della sonda
+        Dictionary<PhysicalTheorySO, int> foundTheories = new Dictionary<PhysicalTheorySO, int>();
+        
+        int capacity = drone.missionData.cargoCapacity > 0 ? drone.missionData.cargoCapacity : 1;
+        for (int i = 0; i < capacity; i++)
         {
-            foundArtifact = TryGetNewArtifact();
+            if (UnityEngine.Random.Range(0, 100f) <= drone.missionData.artifactChance)
+            {
+                PhysicalTheorySO extracted = ExtractTheoryData(out int amount);
+                if (extracted != null)
+                {
+                    if (foundTheories.ContainsKey(extracted))
+                        foundTheories[extracted] += amount;
+                    else
+                        foundTheories[extracted] = amount;
+                }
+            }
         }
 
         activeDrones.Remove(drone);
         GameManager.Instance.SaveGame();
 
-        string logText = GenerateFlightLog(drone, foundArtifact, energyReward);
-
-        // Restituisce subito il testo, la nave è già atterrata in background!
-        onLogReadyCallback?.Invoke(logText, foundArtifact);
+        string logText = GenerateFlightLog(drone, foundTheories, energyReward);
+        onLogReadyCallback?.Invoke(logText, foundTheories);
     }
 
-    private CosmicArtifactSO TryGetNewArtifact()
+    private PhysicalTheorySO ExtractTheoryData(out int dataAmountObtained)
     {
-        if (allArtifacts == null || allArtifacts.Count == 0) return null;
-
-        List<CosmicArtifactSO> shuffled = new List<CosmicArtifactSO>(allArtifacts);
-        for (int i = 0; i < shuffled.Count; i++) {
-            CosmicArtifactSO temp = shuffled[i];
-            int randomIndex = UnityEngine.Random.Range(i, shuffled.Count);
-            shuffled[i] = shuffled[randomIndex];
-            shuffled[randomIndex] = temp;
+        if (allTheories == null || allTheories.Count == 0) 
+        {
+            dataAmountObtained = 0;
+            return null;
         }
 
-        foreach (var art in shuffled)
+        int totalWeight = 0;
+        foreach (var t in allTheories) totalWeight += t.dropWeight;
+
+        int randomVal = UnityEngine.Random.Range(0, totalWeight);
+        int currentWeight = 0;
+        PhysicalTheorySO chosenTheory = null;
+
+        foreach (var t in allTheories)
         {
-            if (!discoveredArtifactIDs.Contains(art.id))
+            currentWeight += t.dropWeight;
+            if (randomVal < currentWeight)
             {
-                discoveredArtifactIDs.Add(art.id);
-                return art; 
+                chosenTheory = t;
+                break;
             }
         }
-        return null;
-    }
 
-    // =========================================================================
-    // --- MODIFICA: LOGICA DI SPAWN VISUALE CON LO SPAZIOPORTO ---
-    // =========================================================================
+        dataAmountObtained = UnityEngine.Random.Range(1, 4);
+
+        if (chosenTheory != null)
+        {
+            if (!theoryDatabase.ContainsKey(chosenTheory.id))
+            {
+                theoryDatabase[chosenTheory.id] = new RuntimeTheory();
+            }
+            theoryDatabase[chosenTheory.id].accumulatedData += dataAmountObtained;
+        }
+        return chosenTheory;
+    }
 
     private void SpawnVisualDroneLaunch()
     {
         if (droneLaunchPrefab == null) return;
-        
         Vector3 startPos;
         Vector3 startDir;
 
-        // Cerca lo Spazioporto in scena
         SpaceportHub spaceport = UnityEngine.Object.FindFirstObjectByType<SpaceportHub>();
-        
         if (spaceport != null)
         {
-            // Se c'è lo spazioporto, partiamo dal suo Slot
             Transform pad = spaceport.GetRandomPad();
             startPos = pad.position;
-            startDir = pad.forward; // La freccia BLU dello slot (indica la direzione di uscita)
+            startDir = pad.forward;
         }
         else
         {
-            // Fallback: Vecchio sistema (Superficie del pianeta)
             if (Camera.main == null) return;
-            startPos = GetCameraForwardPointOnPlanet(); 
+            startPos = (Camera.main.transform.position + Camera.main.transform.forward * 10f).normalized * 1.6f; 
             startDir = startPos.normalized;
         }
 
@@ -268,53 +299,32 @@ public class DroneManager : MonoBehaviour
 
     private void SpawnVisualDroneLanding(Action onLandedCallback)
     {
-        if (droneLandingPrefab == null)
-        {
-            onLandedCallback?.Invoke();
-            return;
-        }
+        if (droneLandingPrefab == null) { onLandedCallback?.Invoke(); return; }
 
         Vector3 landPos;
         Vector3 spacePos;
 
-        // Cerca lo Spazioporto in scena
         SpaceportHub spaceport = UnityEngine.Object.FindFirstObjectByType<SpaceportHub>();
-        
         if (spaceport != null)
         {
-            // Atterra sullo slot
             Transform pad = spaceport.GetRandomPad();
             landPos = pad.position;
-            // Calcoliamo una posizione nello spazio profondo allineata con l'ingresso dell'esagono
             spacePos = landPos + (pad.forward * 15f); 
         }
         else
         {
-            // Fallback: Vecchio sistema
             if (Camera.main == null) return;
-            landPos = GetCameraForwardPointOnPlanet();
+            landPos = (Camera.main.transform.position + Camera.main.transform.forward * 10f).normalized * 1.6f;
             spacePos = Camera.main.transform.position + (Camera.main.transform.up * 8f) - (Camera.main.transform.forward * 2f);
         }
 
         var drone = Instantiate(droneLandingPrefab);
         drone.transform.localScale = Vector3.one * droneScale;
-        
-        drone.BeginLanding(spacePos, landPos, (pos) => 
-        {
-            onLandedCallback?.Invoke();
-        });
+        drone.BeginLanding(spacePos, landPos, (pos) => { onLandedCallback?.Invoke(); });
     }
 
-    private Vector3 GetCameraForwardPointOnPlanet()
-    {
-        Ray ray = new Ray(Camera.main.transform.position, Camera.main.transform.forward);
-        if (Physics.Raycast(ray, out RaycastHit hit)) return hit.point;
-        return (Camera.main.transform.position + Camera.main.transform.forward * 10f).normalized * 1.6f; 
-    }
-
-    // =========================================================================
-
-    private string GenerateFlightLog(ActiveDrone drone, CosmicArtifactSO artifact, BigDouble energyGained)
+    // --- MODIFICA: Il log genera uno scontrino se ci sono più dati ---
+    private string GenerateFlightLog(ActiveDrone drone, Dictionary<PhysicalTheorySO, int> foundTheories, BigDouble energyGained)
     {
         float distLY = UnityEngine.Random.Range(drone.missionData.minLightYears, drone.missionData.maxLightYears);
         string distanceString = distLY < 0.0001f ? $"{(distLY * 9460730.0):F1} Million km" : $"{distLY:F4} Light Years";
@@ -327,35 +337,50 @@ public class DroneManager : MonoBehaviour
         sb.AppendLine($"<color=#00FFFF>> MAX DISTANCE:</color> <b>{distanceString}</b>");
         sb.AppendLine($"<color=#888888>> VOID EXPOSURE:</color> {(drone.missionData.durationSeconds / 60):F0} CYCLES\n");
         
-        if (artifact != null)
+        if (foundTheories != null && foundTheories.Count > 0)
         {
-            sb.AppendLine($"<color=red>> ALERT: GRAVITATIONAL ANOMALY DETECTED.</color>");
-            sb.AppendLine($"<color=#FFaa00>> OBJECT RECOVERED:</color> {artifact.artifactName}");
-            sb.AppendLine($"<i>\"{artifact.discoveryLog}\"</i>\n");
+            sb.AppendLine($"<color=#00FF00>> CARICO DATI DECIFRATO:</color>");
+            foreach (var kvp in foundTheories)
+            {
+                PhysicalTheorySO theory = kvp.Key;
+                int amount = kvp.Value;
+                
+                string rarityColor = "#FFFFFF";
+                if (theory.rarity == TheoryRarity.Avanzata) rarityColor = "#00FFFF";
+                if (theory.rarity == TheoryRarity.Rivoluzionaria) rarityColor = "#A020F0";
+                if (theory.rarity == TheoryRarity.Unificata) rarityColor = "#FFD700";
+
+                sb.AppendLine($"<color={rarityColor}>  [+] {amount} TB: {theory.theoryName}</color>");
+            }
+            sb.AppendLine();
         }
         else
         {
             string[] standardLogs = {
                 "> Scansione completata. Silenzio assoluto rilevato.",
                 "> Tracce di radiazione cosmica di fondo nei filtri.",
-                "> Nessuna forma di vita. Parametri orbitali stabili.",
-                "> I sensori ottici hanno registrato solo oscurità."
+                "> Nessuna anomalia strutturale. Dati insufficienti."
             };
             sb.AppendLine(standardLogs[UnityEngine.Random.Range(0, standardLogs.Length)] + "\n");
         }
 
         sb.AppendLine($"<color=#00FF00>> RESOURCES EXTRACTED: +{FormatNumber(energyGained)} Energy</color>"); 
-        
         return sb.ToString();
     }
     
-    public double GetArtifactBonus(ArtifactBonusType type)
+    public double GetTheoryBonus(TheoryBonusType type)
     {
         double total = 0;
-        foreach (string id in equippedArtifactIDs) 
+        foreach (string id in activeTheoryIDs) 
         {
-            var art = allArtifacts.Find(a => a.id == id);
-            if (art != null && art.bonusType == type) total += art.bonusValue;
+            if (theoryDatabase.TryGetValue(id, out RuntimeTheory state))
+            {
+                var theory = allTheories.Find(t => t.id == id);
+                if (theory != null && theory.bonusType == type) 
+                {
+                    total += theory.GetBonusAtLevel(state.level);
+                }
+            }
         }
         return total;
     }

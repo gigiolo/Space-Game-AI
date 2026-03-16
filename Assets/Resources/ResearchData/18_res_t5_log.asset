@@ -14,18 +14,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ResearchDefinition
   id: 18_res_t5_log
   title: Condotti Entangled
-  description: "Quadruplica la capacit\xE0 logistica (x4)."
+  description: Moltiplica ESPONENZIALMENTE la logistica (x2.5).
   icon: {fileID: 0}
   costType: 0
   tier: 5
   type: 1
   target: 3
-  bonusValue: 4
+  bonusValue: 2.5
   isExponentialBonus: 1
   costCurve: 1
   baseCost:
-    mantissa: 7
-    exponent: 17
-  costFactor: 4
-  maxLevel: 10
+    mantissa: 4
+    exponent: 9
+  costFactor: 3.4
+  maxLevel: 5
   manualCosts: []

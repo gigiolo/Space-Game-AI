@@ -24,8 +24,8 @@ MonoBehaviour:
   isExponentialBonus: 0
   costCurve: 1
   baseCost:
-    mantissa: 1
-    exponent: 18
+    mantissa: 8
+    exponent: 9
   costFactor: 2
   maxLevel: 10
   manualCosts: []
