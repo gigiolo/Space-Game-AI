@@ -299,8 +299,13 @@ public class GameManager : MonoBehaviour
 
     public BigDouble CalculatePotentialNodes()
     {
-        if (LifetimeEarnings < prestigeDivisor) return 0;
-        BigDouble normalizedEarnings = LifetimeEarnings / prestigeDivisor;
+        // Rule 6: Grant the first node only starting from Planet 3 or 4.
+        // We adjust the prestigeDivisor to be high enough.
+        // If Planet 3 requirement is around 1e6, we set divisor accordingly.
+        double prestigeThreshold = 1000000000; // 1B for starting nodes
+        if (LifetimeEarnings < prestigeThreshold) return 0;
+
+        BigDouble normalizedEarnings = LifetimeEarnings / prestigeThreshold;
         BigDouble nodes = BigDouble.Pow(normalizedEarnings, prestigePower);
         return BigDouble.Floor(nodes);        
     }
