@@ -16,12 +16,13 @@ public class AetherisBalancer : EditorWindow
 
     private List<PlanetData> _planets = new List<PlanetData>();
     private List<ResearchDefinition> _researches = new List<ResearchDefinition>();
+    private GameManager _gameManager;
 
-    // Target times in minutes to reach the NEXT planet
     private float[] _targetMinutes = new float[] { 30, 90, 270, 810, 2430 };
 
     private const double TIER_JUMP_FACTOR = 9.5;
     private const double MULTIPLIER_PERCENTAGE = 0.15;
+    private const double BUFFER_FACTOR = 0.5; // Adjusted down to 50% to be very conservative for playability
 
     private Vector2 _scrollPos;
     private string _statusMessage = "Ready";
@@ -41,6 +42,22 @@ public class AetherisBalancer : EditorWindow
         _researches = AssetDatabase.FindAssets("t:ResearchDefinition")
             .Select(guid => AssetDatabase.LoadAssetAtPath<ResearchDefinition>(AssetDatabase.GUIDToAssetPath(guid)))
             .ToList();
+
+        _gameManager = FindFirstObjectByType<GameManager>();
+        if (_gameManager == null)
+        {
+            // Try to find the prefab if not in scene
+            string[] gmGuids = AssetDatabase.FindAssets("GameManager t:GameObject");
+            foreach (var guid in gmGuids)
+            {
+                GameObject gmObj = AssetDatabase.LoadAssetAtPath<GameObject>(AssetDatabase.GUIDToAssetPath(guid));
+                if (gmObj != null && gmObj.GetComponent<GameManager>() != null)
+                {
+                    _gameManager = gmObj.GetComponent<GameManager>();
+                    break;
+                }
+            }
+        }
     }
 
     private int ExtractNumber(string name)
@@ -57,6 +74,13 @@ public class AetherisBalancer : EditorWindow
         EditorGUILayout.Space();
 
         if (GUILayout.Button("Reload Data")) LoadData();
+
+        EditorGUILayout.Space();
+        _gameManager = (GameManager)EditorGUILayout.ObjectField("Game Manager Reference", _gameManager, typeof(GameManager), true);
+        if (_gameManager == null)
+        {
+            EditorGUILayout.HelpBox("Please assign a GameManager (from Scene or Prefab) to sync base values!", MessageType.Warning);
+        }
 
         EditorGUILayout.Space();
         GUILayout.Label("Target Times (Minutes to reach next planet)", EditorStyles.boldLabel);
@@ -77,6 +101,12 @@ public class AetherisBalancer : EditorWindow
         }
 
         EditorGUILayout.Space();
+        if (GUILayout.Button("Create Basic Research Structure (T1-T6)"))
+        {
+            CreateBasicResearches();
+        }
+
+        EditorGUILayout.Space();
         GUILayout.Label("Simulation Status", EditorStyles.boldLabel);
         GUILayout.Label(_statusMessage);
 
@@ -86,11 +116,12 @@ public class AetherisBalancer : EditorWindow
     private void RunBalance()
     {
         _statusMessage = "Balancing...";
+        LoadData();
 
         try {
             PerformMathematicalBalancing();
             AssetDatabase.SaveAssets();
-            _statusMessage = "Balance Complete! Check Console for simulation logs.";
+            _statusMessage = "Balance Complete!";
         } catch (Exception e) {
             _statusMessage = "Error: " + e.Message;
             Debug.LogError(e);
@@ -99,14 +130,14 @@ public class AetherisBalancer : EditorWindow
 
     private void PerformMathematicalBalancing()
     {
-        // 1. Setup Initial Environment
-        BigDouble currentIncome = 0.1;
+        // SYNC BASE VALUES FROM GAMEMANAGER
+        BigDouble currentBaseIncomePerEmitter = (_gameManager != null) ? _gameManager.baseEmissionPerUnit : 0.01;
+        int currentEmitters = 1;
+        BigDouble currentIncomePerSec = currentBaseIncomePerEmitter * currentEmitters;
+        BigDouble lastTierMaxCost = 0.01;
         BigDouble cumulativeEarnings = 0;
-        BigDouble lastTierMaxCost = 0.05;
 
         var researchesByTier = _researches.GroupBy(r => r.tier).OrderBy(g => g.Key).ToList();
-
-        Debug.Log("<color=cyan>[Aetheris Balancer] Starting Deterministic Simulation</color>");
 
         for (int i = 0; i < _planets.Count; i++)
         {
@@ -114,33 +145,39 @@ public class AetherisBalancer : EditorWindow
             int tierLevel = i + 1;
             var tierResearches = researchesByTier.FirstOrDefault(g => g.Key == tierLevel)?.ToList() ?? new List<ResearchDefinition>();
 
+            BigDouble planetAdjustedIncome = currentIncomePerSec * planet.productionMultiplier;
+
             double targetSeconds = ((i < _targetMinutes.Length) ? _targetMinutes[i] : _targetMinutes[_targetMinutes.Length - 1] * 3) * 60;
 
-            // Deterministic growth factor for this planet phase
-            double growthFactor = 15.0;
+            // Growth factor: T1 needs a big boost to overcome the initial hurdle
+            double growthFactor = (i == 0) ? 25.0 : 15.0;
             double k = Math.Log(growthFactor) / targetSeconds;
 
-            // Phase budget calculation (Integral of P0 * e^kt)
-            BigDouble phaseEnergy = (currentIncome / k) * (Math.Exp(k * targetSeconds) - 1);
-            cumulativeEarnings += phaseEnergy;
+            BigDouble phaseEnergyBudget = (planetAdjustedIncome / k) * (Math.Exp(k * targetSeconds) - 1) * BUFFER_FACTOR;
+            cumulativeEarnings += phaseEnergyBudget;
 
-            // Balance Researches for this Tier
-            BalanceTier(tierResearches, ref currentIncome, ref lastTierMaxCost, growthFactor, phaseEnergy);
+            BalanceTier(tierResearches, ref currentIncomePerSec, ref lastTierMaxCost, growthFactor, phaseEnergyBudget);
 
-            // Set Planet Data
             if (i < _planets.Count - 1)
             {
-                int estimatedEmitters = 10 + (i * 20);
-                planet.requiredPlanetValue = currentIncome * estimatedEmitters;
+                int maxEmitters = 10 + (i * 25);
+                planet.requiredPlanetValue = (currentIncomePerSec * planet.productionMultiplier) * maxEmitters;
                 EditorUtility.SetDirty(planet);
 
                 if (i + 1 < _planets.Count) {
-                    _planets[i+1].productionMultiplier = planet.productionMultiplier * 4;
+                    _planets[i+1].productionMultiplier = planet.productionMultiplier * 5;
                     EditorUtility.SetDirty(_planets[i+1]);
                 }
             }
 
-            Debug.Log($"<b>Planet {i+1}</b> | Time: {targetSeconds/60}m | Phase Earnings: {phaseEnergy.ToString()} | Cumulative: {cumulativeEarnings.ToString()} | Income: {currentIncome.ToString()}/s");
+            // PERSISTENT PRESTIGE DIVISOR UPDATE
+            if (i == 2 && _gameManager != null) {
+                Undo.RecordObject(_gameManager, "Update Prestige Divisor");
+                _gameManager.prestigeDivisor = cumulativeEarnings.ToDouble();
+                EditorUtility.SetDirty(_gameManager);
+            }
+
+            Debug.Log($"Planet {i+1} balanced. Time: {targetSeconds/60}m. Final Income (Base): {currentIncomePerSec.ToString()}/s");
         }
     }
 
@@ -156,13 +193,16 @@ public class AetherisBalancer : EditorWindow
 
         BigDouble tierStartCost = lastTierMaxCost * TIER_JUMP_FACTOR;
 
-        // --- PRODUCTION ---
+        BigDouble prodBudgetTotal = energyBudget * 0.6;
+        BigDouble logBudgetTotal = energyBudget * 0.3;
+
+        BigDouble researchBudget = prodBudgetTotal / Math.Max(1, prodRes.Count);
         foreach (var res in prodRes.OrderBy(r => r.type == ResearchType.Multiplier))
         {
             res.baseCost = tierStartCost;
             res.costCurve = CostCurve.Exponential;
-            res.costFactor = 1.15f + (res.tier * 0.01f);
             res.maxLevel = (res.type == ResearchType.Additive) ? 40 : 15;
+            res.costFactor = CalculateAffordableFactor(res.baseCost, res.maxLevel, researchBudget);
 
             if (res.type == ResearchType.Additive) {
                 double bonusPerLevel = (additiveGrowth / Math.Max(1, prodRes.Count(r => r.target == ResearchTarget.GlobalProduction && r.type == ResearchType.Additive))) / res.maxLevel;
@@ -180,16 +220,62 @@ public class AetherisBalancer : EditorWindow
 
         currentIncome *= growthFactor;
 
-        // --- LOGISTICS ---
+        BigDouble logResearchBudget = logBudgetTotal / Math.Max(1, logRes.Count);
         foreach (var res in logRes)
         {
-            res.baseCost = tierStartCost * 0.9;
+            res.baseCost = tierStartCost * 0.8;
             res.costCurve = CostCurve.Exponential;
-            res.costFactor = 1.12f;
             res.maxLevel = 50;
+            res.costFactor = CalculateAffordableFactor(res.baseCost, res.maxLevel, logResearchBudget);
             res.bonusValue = (currentIncome.ToDouble() * 1.1) / res.maxLevel;
             EditorUtility.SetDirty(res);
         }
+    }
+
+    private float CalculateAffordableFactor(BigDouble baseCost, int levels, BigDouble budget)
+    {
+        float r = 1.01f;
+        while (r < 2.5f)
+        {
+            BigDouble total = baseCost * (Math.Pow(r, levels + 1) - 1) / (r - 1);
+            if (total > budget) break;
+            r += 0.01f;
+        }
+        return Math.Max(1.05f, r - 0.01f);
+    }
+
+    private void CreateBasicResearches()
+    {
+        string folderPath = "Assets/Resources/ResearchData";
+        if (!Directory.Exists(folderPath)) Directory.CreateDirectory(folderPath);
+
+        for (int t = 1; t <= 6; t++)
+        {
+            CreateRes(t, "Prod", ResearchTarget.GlobalProduction, ResearchType.Additive);
+            CreateRes(t, "Mult", ResearchTarget.GlobalProduction, ResearchType.Multiplier);
+            CreateRes(t, "Log", ResearchTarget.LogisticsCapacity, ResearchType.Additive);
+        }
+        AssetDatabase.Refresh();
+        LoadData();
+        _statusMessage = "Basic Research structure created!";
+    }
+
+    private void CreateRes(int tier, string suffix, ResearchTarget target, ResearchType type)
+    {
+        string id = $"T{tier}_{suffix}";
+        string path = $"Assets/Resources/ResearchData/{id}.asset";
+        if (File.Exists(path)) return;
+
+        ResearchDefinition res = ScriptableObject.CreateInstance<ResearchDefinition>();
+        res.id = id;
+        res.title = $"{target} T{tier}";
+        res.tier = tier;
+        res.target = target;
+        res.type = type;
+        res.costType = CurrencyType.Energy;
+        res.costCurve = CostCurve.Exponential;
+
+        AssetDatabase.CreateAsset(res, path);
     }
 
     private void ExportToCSV()
