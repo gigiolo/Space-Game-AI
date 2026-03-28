@@ -49953,9 +49953,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LogisticDrone
   beamPrefab: {fileID: 3801752906627835939, guid: 4e96f16fcdf72b44e8bae71ad1b991b4, type: 3}
   collectionCore: {fileID: 5377185912923179644}
-  collectionRange: 3
+  collectionRange: 2
   maxBeams: 3
-  textureScrollSpeed: -2
+  textureScrollSpeed: -1
 --- !u!1 &8282941192529974166
 GameObject:
   m_ObjectHideFlags: 0

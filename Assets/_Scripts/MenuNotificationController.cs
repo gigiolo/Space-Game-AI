@@ -1,3 +1,4 @@
+// --- File: _Scripts\MenuNotificationController.cs ---
 using UnityEngine;
 using BreakInfinity;
 using System.Collections;
@@ -12,11 +13,14 @@ public class MenuNotificationController : MonoBehaviour
     public AttentionPulseEffect spaceshipButtonEffect;
 
     [Tooltip("Trascina qui l'oggetto con lo script AttentionPulseEffect del bottone Planet Status (in alto a sinistra).")]
-    public AttentionPulseEffect planetButtonEffect; // <--- NUOVO
+    public AttentionPulseEffect planetButtonEffect; 
+
+    [Tooltip("Trascina qui l'oggetto con lo script AttentionPulseEffect del bottone Hangar.")]
+    public AttentionPulseEffect hangarButtonEffect; // <--- NUOVO
 
     [Header("Riferimenti UI per Stop")]
     [Tooltip("Trascina qui il pannello del PlanetStatusPopup. Se è aperto, smettiamo di pulsare.")]
-    public GameObject planetPopupPanel; // <--- NUOVO
+    public GameObject planetPopupPanel; 
 
     [Header("Configurazione Controllo")]
     [Tooltip("Ogni quanti secondi controllare se ci sono notifiche (per performance).")]
@@ -36,7 +40,8 @@ public class MenuNotificationController : MonoBehaviour
         {
             CheckResearchAvailability();
             CheckSpaceshipAvailability();
-            CheckPlanetAvailability(); // <--- NUOVO
+            CheckPlanetAvailability(); 
+            CheckHangarAvailability(); // <--- NUOVO
             yield return wait;
         }
     }
@@ -109,7 +114,7 @@ public class MenuNotificationController : MonoBehaviour
         spaceshipButtonEffect.SetActive(canAffordAny);
     }
 
-    // --- NUOVA LOGICA PIANETA ---
+    // --- LOGICA PIANETA ---
     private void CheckPlanetAvailability()
     {
         // Se non abbiamo assegnato l'effetto, usciamo
@@ -140,5 +145,27 @@ public class MenuNotificationController : MonoBehaviour
         bool isReadyToLaunch = currentValue >= requiredValue;
 
         planetButtonEffect.SetActive(isReadyToLaunch);
+    }
+
+    // --- NUOVO: LOGICA HANGAR ---
+    private void CheckHangarAvailability()
+    {
+        // Se manca il riferimento o il manager, usciamo
+        if (hangarButtonEffect == null || DroneManager.Instance == null) return;
+
+        bool hasCompletedDrones = false;
+
+        // Controlliamo se c'è almeno un drone con la missione completata (pronto per essere letto)
+        foreach (var drone in DroneManager.Instance.activeDrones)
+        {
+            if (drone.isCompleted)
+            {
+                hasCompletedDrones = true;
+                break;
+            }
+        }
+
+        // Accende o spegne l'effetto in base al risultato
+        hangarButtonEffect.SetActive(hasCompletedDrones);
     }
 }

@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PhysicalTheorySO
   id: Theory_01
   theoryName: Termodinamica Stellare
-  discoveryLog: L'energia non muore nel vuoto, si trasforma. L'osservazione delle
-    nane brune ha rivelato pattern di dispersione termica ottimizzabili.
-  icon: {fileID: 0}
+  discoveryLog: L'osservazione delle nane brune ha rivelato pattern di dispersione
+    termica ottimizzabili.
+  icon: {fileID: 21300000, guid: 788ab55ce3329e34bbb8582f24506beb, type: 3}
   rarity: 0
   dropWeight: 100
   baseDataRequired: 3

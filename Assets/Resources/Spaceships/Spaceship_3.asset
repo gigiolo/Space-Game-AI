@@ -15,7 +15,7 @@ MonoBehaviour:
   id: Spaceship_3
   title: Spaceship_3
   description: High level spaceship
-  icon: {fileID: 21300000, guid: 608b5b4865b0aff4aa18423c91949c66, type: 3}
+  icon: {fileID: 21300000, guid: 97eddd4f4dee7484b9cdba6c2dd5660b, type: 3}
   baseSpeed: 1000
   upgradeType: 0
   upgradeValue: 100

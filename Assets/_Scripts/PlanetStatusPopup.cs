@@ -34,6 +34,10 @@ public class PlanetStatusPopup : MonoBehaviour
     public Slider launchProgressBar;
     public TextMeshProUGUI progressText;
 
+    [Header("--- 5. Quantum Reset Zone ---")]
+    [Tooltip("Il bottone che apre il menu del Prestigio da questo pannello")]
+    public Button openQuantumResetButton;
+
     // STATO INTERNO
     private bool _isOpenedByClick = false;
     private int _viewedPlanetIndex = 0;
@@ -53,6 +57,28 @@ public class PlanetStatusPopup : MonoBehaviour
         {
             mainActionButton.onClick.RemoveAllListeners();
             mainActionButton.onClick.AddListener(OnMainActionClicked);
+        }
+
+        // --- NUOVO: Listener per il bottone del Reset Quantistico ---
+        if (openQuantumResetButton != null)
+        {
+            openQuantumResetButton.onClick.RemoveAllListeners();
+            openQuantumResetButton.onClick.AddListener(OnOpenQuantumResetClicked);
+        }
+    }
+
+    private void OnOpenQuantumResetClicked()
+    {
+        // Cerchiamo la UI del reset quantistico (anche se è disattivata)
+        QuantumResetUI quantumUI = FindFirstObjectByType<QuantumResetUI>(FindObjectsInactive.Include);
+        if (quantumUI != null)
+        {
+            ClosePopup(); // Prima chiudiamo questo pannello
+            quantumUI.OpenFromPlanetStatus(); // Diciamo all'altro pannello di aprirsi e di ricordarsi di noi!
+        }
+        else
+        {
+            Debug.LogWarning("[PlanetStatusPopup] Impossibile trovare la QuantumResetUI nella scena!");
         }
     }
 
@@ -156,43 +182,37 @@ public class PlanetStatusPopup : MonoBehaviour
     {
         if (descriptionText)
         {
-            if (_viewedPlanetIndex < actualCurrentPlanet) descriptionText.text = "<color=#00FF00>STATUS: COLONIZZATO</color>";
-            else if (_viewedPlanetIndex == actualCurrentPlanet) descriptionText.text = "<color=#00FFFF>STATUS: ATTUALE</color>";
-            else descriptionText.text = "<color=orange>STATUS: INESPLORATO</color>";
+            if (_viewedPlanetIndex < actualCurrentPlanet) descriptionText.text = "<color=#00FF00>Status: Pre-colonized planet</color>";
+            else if (_viewedPlanetIndex == actualCurrentPlanet) descriptionText.text = "<color=#00FFFF>STATUS: Actual Planet</color>";
+            else descriptionText.text = "<color=orange>Status: Unexplored</color>";
         }
 
-        if (multiplierText) multiplierText.text = $"Bonus Economico: x{FormatMultiplier(data.productionMultiplier)}";
+        if (multiplierText) multiplierText.text = $"Gravity bonus: x{FormatMultiplier(data.productionMultiplier)}";
 
-        if (distanceText) distanceText.text = $"Distanza: {FormatNumber(data.travelDistance)} km";
+        if (distanceText) distanceText.text = $"Distance: {FormatNumber(data.travelDistance)} km";
 
         if (planetValueText)
         {
-            // LOGICA CORRETTA: Il valore per raggiungere il pianeta _viewedPlanetIndex 
-            // è definito nel pianeta PRECEDENTE.
             if (_viewedPlanetIndex == 0)
             {
-                planetValueText.text = "Valore Richiesto: Nessuno (Pianeta Madre)";
+                planetValueText.text = "Actual Planet";
             }
             else
             {
-                // Prendiamo il requisito dal pianeta precedente
                 BigDouble costToReach = PlanetManager.Instance.planets[_viewedPlanetIndex - 1].requiredPlanetValue;
 
                 if (_viewedPlanetIndex <= actualCurrentPlanet)
                 {
-                    // Lo abbiamo già raggiunto
-                    planetValueText.text = $"Valore Richiesto: Sbloccato ({FormatNumber(costToReach)})";
+                    planetValueText.text = $"Discovered ({FormatNumber(costToReach)})";
                 }
                 else if (_viewedPlanetIndex == actualCurrentPlanet + 1)
                 {
-                    // È il prossimo pianeta, mostriamo la barra di avanzamento
                     BigDouble currentVal = PlanetManager.Instance.CalculatePlanetValue();
-                    planetValueText.text = $"Valore Richiesto: {FormatNumber(currentVal)} / {FormatNumber(costToReach)}";
+                    planetValueText.text = $"Planet Value needed: {FormatNumber(currentVal)} / {FormatNumber(costToReach)}";
                 }
                 else
                 {
-                    // Pianeta futuro
-                    planetValueText.text = $"Valore Richiesto: {FormatNumber(costToReach)}";
+                    planetValueText.text = $"Planet Value needed: {FormatNumber(costToReach)}";
                 }
             }
         }
@@ -217,20 +237,20 @@ public class PlanetStatusPopup : MonoBehaviour
         if (bestShip != null)
         {
             if (bestShipIcon && bestShip.info.icon) bestShipIcon.sprite = bestShip.info.icon;
-            if (fleetSpeedText) fleetSpeedText.text = $"Velocità Flotta: {FormatNumber(highestSpeed)} Km/s";
+            if (fleetSpeedText) fleetSpeedText.text = $"Spaceship speed: {FormatNumber(highestSpeed)} Km/s";
 
             if (fleetEtaText)
             {
                 BigDouble dist = targetPlanetData.travelDistance;
                 double seconds = (dist / highestSpeed).ToDouble();
                 TimeSpan time = TimeSpan.FromSeconds(seconds);
-                fleetEtaText.text = $"ETA: {FormatTimeSpan(time)}";
+                fleetEtaText.text = $"Estimated time of arrival: {FormatTimeSpan(time)}";
             }
         }
         else
         {
-            if (fleetSpeedText) fleetSpeedText.text = "Velocità Flotta: N/A";
-            if (fleetEtaText) fleetEtaText.text = "ETA: N/A";
+            if (fleetSpeedText) fleetSpeedText.text = "Spaceship speed: N/A";
+            if (fleetEtaText) fleetEtaText.text = "Estimated time of arrival: N/A";
         }
     }
 
@@ -245,18 +265,11 @@ public class PlanetStatusPopup : MonoBehaviour
         
         bool isFinished = !isPrep && !isTravel && currentProgress >= requiredEnergy && requiredEnergy > 0;
 
-        if (!isNextPlanet)
-        {
-            if (mainActionButton) mainActionButton.gameObject.SetActive(false);
-            if (launchProgressBar) launchProgressBar.gameObject.SetActive(false);
-            return;
-        }
-
         if (mainActionButton) mainActionButton.gameObject.SetActive(true);
 
         if (launchProgressBar != null)
         {
-            bool showBar = isPrep || isFinished;
+            bool showBar = isNextPlanet && (isPrep || isFinished);
             launchProgressBar.gameObject.SetActive(showBar);
             
             if (showBar && requiredEnergy > 0)
@@ -274,40 +287,61 @@ public class PlanetStatusPopup : MonoBehaviour
 
         if (mainActionButton && mainActionText)
         {
-            if (isTravel)
+            if (_viewedPlanetIndex < actualCurrentPlanet)
             {
                 mainActionButton.interactable = false;
-                mainActionText.text = "IN VIAGGIO...";
+                mainActionText.text = "Colonized";
+                mainActionText.color = Color.gray;
             }
-            else if (isFinished)
+            else if (_viewedPlanetIndex == actualCurrentPlanet)
             {
-                mainActionButton.interactable = true;
-                mainActionText.text = "LANCIA FLOTTA";
-                mainActionText.color = Color.white;
+                mainActionButton.interactable = false;
+                mainActionText.text = "Current Base";
+                mainActionText.color = Color.cyan;
             }
-            else if (isPrep)
+            else if (_viewedPlanetIndex > actualCurrentPlanet + 1)
             {
-                mainActionButton.interactable = false; 
-                mainActionText.text = "CARICAMENTO...";
-                mainActionText.color = Color.yellow;
+                mainActionButton.interactable = false;
+                mainActionText.text = "Sector Locked";
+                mainActionText.color = Color.gray;
             }
-            else
+            else if (isNextPlanet)
             {
-                // LOGICA CORRETTA: Usiamo il costo per uscire dal pianeta ATTUALE
-                BigDouble costToLaunch = PlanetManager.Instance.planets[actualCurrentPlanet].requiredPlanetValue;
-                bool canAfford = PlanetManager.Instance.CalculatePlanetValue() >= costToLaunch;
-                
-                mainActionButton.interactable = canAfford;
-                
-                if (canAfford)
+                if (isTravel)
                 {
-                    mainActionText.text = "PIANIFICA MISSIONE";
+                    mainActionButton.interactable = false;
+                    mainActionText.text = "In Travel...";
+                    mainActionText.color = Color.yellow;
+                }
+                else if (isFinished)
+                {
+                    mainActionButton.interactable = true;
+                    mainActionText.text = "Launch Spaceship";
                     mainActionText.color = Color.white;
+                }
+                else if (isPrep)
+                {
+                    mainActionButton.interactable = false; 
+                    mainActionText.text = "<Fueling>...";
+                    mainActionText.color = Color.yellow;
                 }
                 else
                 {
-                    mainActionText.text = "VALORE INSUFFICIENTE";
-                    mainActionText.color = Color.gray;
+                    BigDouble costToLaunch = PlanetManager.Instance.planets[actualCurrentPlanet].requiredPlanetValue;
+                    bool canAfford = PlanetManager.Instance.CalculatePlanetValue() >= costToLaunch;
+                    
+                    mainActionButton.interactable = canAfford;
+                    
+                    if (canAfford)
+                    {
+                        mainActionText.text = "Plan Mission";
+                        mainActionText.color = Color.white;
+                    }
+                    else
+                    {
+                        mainActionText.text = "Insufficient Value";
+                        mainActionText.color = Color.gray;
+                    }
                 }
             }
         }

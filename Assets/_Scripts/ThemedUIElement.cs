@@ -1,3 +1,4 @@
+// --- File: _Scripts\ThemedUIElement.cs ---
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;

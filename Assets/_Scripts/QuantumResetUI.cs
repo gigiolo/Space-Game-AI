@@ -35,18 +35,19 @@ public class QuantumResetUI : MonoBehaviour
 
     // FIX: Flag per evitare la chiusura istantanea al primo avvio
     private bool _isOpenedByClick = false;
+    
+    // --- NUOVO: La "Memoria" del pannello ---
+    private bool _returnToPlanetStatusOnClose = false;
 
     private void Start()
     {
-        // 1. Inizializzazione Pannello
         if (menuPanel != null)
         {
-            if (!_isOpenedByClick) menuPanel.SetActive(false); // La modifica è qui!
+            if (!_isOpenedByClick) menuPanel.SetActive(false);
             
             if (UIManager.Instance != null) UIManager.Instance.RegisterMenu(menuPanel);
         }
 
-        // 2. Collegamento Eventi Bottoni
         if (closeButton != null)
         {
             closeButton.onClick.AddListener(ToggleMenu);
@@ -57,12 +58,10 @@ public class QuantumResetUI : MonoBehaviour
             performResetButton.onClick.AddListener(OnResetClicked);
         }
 
-        // 3. Iscrizione all'aggiornamento dell'economia per avere i numeri sempre freschi
         if (GameManager.Instance != null)
         {
             GameManager.Instance.OnEconomyUpdated += RefreshUI;
             
-            // Impostiamo una volta sola il testo descrittivo del singolo nodo
             if (singleNodeBonusDescText != null)
             {
                 double bonusPercent = GameManager.Instance.nodesBonusPerUnit * 100;
@@ -79,11 +78,21 @@ public class QuantumResetUI : MonoBehaviour
         }
     }
 
+    // --- NUOVO: Apriamo il pannello sapendo da dove veniamo ---
+    public void OpenFromPlanetStatus()
+    {
+        _returnToPlanetStatusOnClose = true; // Accendiamo la memoria!
+        if (menuPanel != null && !menuPanel.activeSelf)
+        {
+            ToggleMenu();
+        }
+    }
+
     public void ToggleMenu()
     {
         if (menuPanel == null) return;
         
-        _isOpenedByClick = true; // Segnaliamo che stiamo forzando l'apertura
+        _isOpenedByClick = true; 
 
         bool opening = !menuPanel.activeSelf;
 
@@ -91,16 +100,42 @@ public class QuantumResetUI : MonoBehaviour
         {
             if (UIManager.Instance != null) UIManager.Instance.CloseAllMenusExcept(menuPanel);
             menuPanel.SetActive(true);
-            PlanetOrbitCamera.IsInputBlocked = true; // Blocca input dietro il pannello
+            PlanetOrbitCamera.IsInputBlocked = true; 
             RefreshUI();
         }
         else
         {
             UIPopupEffect effect = menuPanel.GetComponent<UIPopupEffect>();
-            if (effect != null) effect.Close();
-            else menuPanel.SetActive(false);
+            if (effect != null) 
+            {
+                // IL TRUCCO È QUI: Se dobbiamo tornare al pianeta, diciamo al popup di 
+                // NON scatenare l'evento di chiusura dell'Inspector (che aprirebbe le opzioni).
+                bool triggerInspectorEvent = !_returnToPlanetStatusOnClose;
+                effect.Close(triggerInspectorEvent);
+                
+                // Se la memoria è accesa, richiamiamo la nostra funzione
+                if (_returnToPlanetStatusOnClose) Invoke(nameof(OnFullyClosed), 0.25f);
+            }
+            else 
+            {
+                menuPanel.SetActive(false);
+                OnFullyClosed();
+            }
             
             PlanetOrbitCamera.IsInputBlocked = false;
+        }
+    }
+
+    // --- NUOVO: La funzione chiamata quando il pannello ha finito di chiudersi ---
+    public void OnFullyClosed()
+    {
+        if (_returnToPlanetStatusOnClose)
+        {
+            _returnToPlanetStatusOnClose = false; // Spegniamo la memoria
+            
+            // Cerchiamo il pannello del pianeta e lo forziamo ad aprirsi
+            PlanetStatusPopup planetPopup = FindFirstObjectByType<PlanetStatusPopup>(FindObjectsInactive.Include);
+            if (planetPopup != null) planetPopup.OpenPopup();
         }
     }
 
@@ -108,40 +143,32 @@ public class QuantumResetUI : MonoBehaviour
     {
         if (GameManager.Instance == null || !menuPanel.activeSelf) return;
 
-        // 1. Aggiorna Nodi Posseduti
         if (ownedNodesText != null)
         {
             ownedNodesText.text = FormatNumber(GameManager.Instance.ScientificNodes);
         }
 
-        // 2. Aggiorna Manipolatori Posseduti
         if (ownedManipulatorsText != null)
         {
             ownedManipulatorsText.text = FormatNumber(GameManager.Instance.QuantumManipulators);
         }
 
-        // 3. Aggiorna Bonus Totale
         if (totalEarningBonusText != null)
         {
-            // EarningsBonus parte da 1 (che significa 100% della produzione, nessun bonus). 
-            // Se ho 1 nodo, diventa 1.5 (+50% bonus). Calcoliamo solo il "plus".
             BigDouble extraBonusPercent = (GameManager.Instance.EarningsBonus - 1) * 100;
             totalEarningBonusText.text = $"+{FormatNumber(extraBonusPercent)}%";
         }
 
-        // 4. Aggiorna Bottone di Reset e Guadagno Potenziale (Modificato)
         BigDouble potentialNodes = GameManager.Instance.CalculatePotentialNodes();
         
         if (gainNodesText != null)
         {
             if (potentialNodes > 0)
             {
-                // Mostra solo il numero in azzurro con il "+"
                 gainNodesText.text = $"<color=#00FFFF>+{FormatNumber(potentialNodes)}</color>";
             }
             else
             {
-                // Se non si guadagna nulla, mostra uno 0 rosso
                 gainNodesText.text = "<color=red>0</color>";
             }
         }
@@ -152,7 +179,6 @@ public class QuantumResetUI : MonoBehaviour
         }
     }
 
-    // Helper per formattare i grandi numeri
     private string FormatNumber(BigDouble number)
     {
         if (number < 1000) return number.ToString("F0");
@@ -170,7 +196,11 @@ public class QuantumResetUI : MonoBehaviour
     {
         if (GameManager.Instance != null)
         {
-            ToggleMenu(); // Chiudiamo il pannello per goderci l'animazione visiva
+            // Se il giocatore preme il tasto di reset effettivo, disattiviamo il ritorno automatico 
+            // perché il gioco verrà riavviato e l'animazione verrebbe interrotta brutalmente.
+            _returnToPlanetStatusOnClose = false; 
+            
+            ToggleMenu(); 
             GameManager.Instance.PerformQuantumReset();
         }
     }

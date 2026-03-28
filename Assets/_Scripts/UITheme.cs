@@ -1,3 +1,4 @@
+// --- File: _Scripts\UITheme.cs ---
 using UnityEngine;
 using TMPro;
 

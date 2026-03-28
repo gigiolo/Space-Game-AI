@@ -14,13 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PhysicalTheorySO
   id: Theory_02
   theoryName: Teoria del Tutto
-  discoveryLog: La matematica perfetta. Tutte le forze fondamentali vibrano in un'unica
-    armonia a 11 dimensioni. L'universo stesso ci cede la sua energia.
-  icon: {fileID: 0}
+  discoveryLog: La matematica perfetta.
+  icon: {fileID: 21300000, guid: fa57bf975ea520941974104c7e3cb5b5, type: 3}
   rarity: 3
   dropWeight: 2
   baseDataRequired: 12
   baseIridiumCost: 150
   bonusType: 2
-  baseBonusValue: 4
+  baseBonusValue: 3
   bonusPerLevel: 1
