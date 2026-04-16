@@ -105,14 +105,22 @@ public class GameManager : MonoBehaviour
     private float _uiRefreshTimer = 0f;
     private float _uiRefreshRate = 0.05f;
 
-    private enum EnergyButtonState { Idle, RampingUp, HoldingMax, RampingDown, Cooldown }
+    // --- ENERGY BUTTON STATE (Reso Pubblico per la UI) ---
+    public enum EnergyButtonState { Idle, RampingUp, HoldingMax, RampingDown, Cooldown }
     private EnergyButtonState _energyButtonState = EnergyButtonState.Idle;
+    public EnergyButtonState CurrentEnergyButtonState => _energyButtonState;
+    
     public float CurrentEnergyMultiplier { get; private set; } = 1.0f;
+    
+    // --- VARIABILI GRAFICHE E TIMER ENERGY BUTTON ---
+    public float EnergyButtonFillAmount { get; private set; } = 1f;
     private float _energyButtonTimer = 0.0f;
     private float _timeSpentAtMax = 0.0f;
     private float _cooldownTimer = 0.0f;
     private float _rampDownStartMultiplier = 1.0f;
     private float _currentRampDownDuration = 0.0f;
+    private float _fillAtRelease = 1f;
+    private float _totalRecoveryTime = 1f;
 
     public string StoredLaunchSitePosition { get; set; } = "";
     public float StoredSunRotation { get; set; } = 0f;
@@ -238,7 +246,7 @@ public class GameManager : MonoBehaviour
                 int toAdd = (int)_emitterAccumulator; 
                 int spaceLeft = EmitterCap - EmitterCount;
                 int actualAdd = Mathf.Min(toAdd, spaceLeft);
-                _emitterAccumulator -= actualAdd;                                                                                                                                           
+                _emitterAccumulator -= actualAdd;                                                                                                             
                 if (actualAdd < toAdd) _emitterAccumulator = 0;
 
                 if (actualAdd > 0)
@@ -255,44 +263,84 @@ public class GameManager : MonoBehaviour
     {
         float deltaTime = Time.deltaTime;
         float targetMax = EffectiveMaxMultiplier;
+        float maxHoldDuration = energyButton_RampUpDuration + energyButton_MaxHoldDuration;
 
         switch (_energyButtonState)
         {
             case EnergyButtonState.RampingUp:
                 _energyButtonTimer += deltaTime;
-                CurrentEnergyMultiplier = Mathf.Lerp(1.0f, targetMax, _energyButtonTimer / energyButton_RampUpDuration);
                 
-                if (_energyButtonTimer >= energyButton_RampUpDuration) {
-                    CurrentEnergyMultiplier = targetMax;
+                // IL FIX PER IL MOLTIPLICATORE: Sale progressivamente dal valore attuale usando MoveTowards
+                float rampUpSpeed = (targetMax - 1.0f) / energyButton_RampUpDuration;
+                CurrentEnergyMultiplier = Mathf.MoveTowards(CurrentEnergyMultiplier, targetMax, rampUpSpeed * deltaTime);
+                
+                // Aggiorna la UI della stamina (scende progressivamente)
+                EnergyButtonFillAmount = 1f - (_energyButtonTimer / maxHoldDuration);
+                
+                // Passa alla fase HoldingMax solo quando il moltiplicatore è fisicamente arrivato al massimo
+                // E il tempo base dedicato al RampUp è terminato
+                if (CurrentEnergyMultiplier >= targetMax && _energyButtonTimer >= energyButton_RampUpDuration) 
+                {
                     _energyButtonState = EnergyButtonState.HoldingMax;
-                    _energyButtonTimer = 0.0f; 
+                    // Calcoliamo quanto tempo siamo GIA' stati in HoldingMax (se il giocatore aveva cliccato prima che scendesse del tutto)
+                    _energyButtonTimer = _energyButtonTimer - energyButton_RampUpDuration; 
+                }
+
+                // Sgancio forzato di sicurezza se la stamina finisce mentre sta ancora salendo il moltiplicatore
+                if (_energyButtonTimer >= maxHoldDuration)
+                {
+                    OnEnergyButtonRelease();
                 }
                 break;
+
             case EnergyButtonState.HoldingMax:
                 _energyButtonTimer += deltaTime;
                 _timeSpentAtMax += deltaTime;
                 CurrentEnergyMultiplier = targetMax;
+                
+                // Aggiorna la UI della stamina
+                EnergyButtonFillAmount = 1f - ((energyButton_RampUpDuration + _energyButtonTimer) / maxHoldDuration);
+
                 if (_energyButtonTimer >= energyButton_MaxHoldDuration) {
-                    _energyButtonState = EnergyButtonState.RampingDown;
-                    _energyButtonTimer = 0.0f; 
+                    OnEnergyButtonRelease(); // Sgancio forzato se tenuto troppo a lungo
                 }
                 break;
+
             case EnergyButtonState.RampingDown:
                 _energyButtonTimer += deltaTime;
                 if (_currentRampDownDuration > 0) {
                     float normalizedTime = _energyButtonTimer / _currentRampDownDuration;
                     CurrentEnergyMultiplier = Mathf.Lerp(_rampDownStartMultiplier, 1.0f, normalizedTime);
-                } else { CurrentEnergyMultiplier = 1.0f; }
+                    
+                    // Recupero visivo della stamina
+                    float recoveryProgress = _energyButtonTimer / Mathf.Max(0.01f, _totalRecoveryTime);
+                    EnergyButtonFillAmount = Mathf.Lerp(_fillAtRelease, 1f, recoveryProgress);
+                } else { 
+                    CurrentEnergyMultiplier = 1.0f; 
+                }
+
                 if (_energyButtonTimer >= _currentRampDownDuration) {
                     CurrentEnergyMultiplier = 1.0f;
                     _energyButtonState = EnergyButtonState.Cooldown;
                     _cooldownTimer = _timeSpentAtMax * energyButton_CooldownMultiplier;
-                    _timeSpentAtMax = 0; _energyButtonTimer = 0;
+                    _timeSpentAtMax = 0; 
+                    _energyButtonTimer = 0;
                 }
                 break;
+
             case EnergyButtonState.Cooldown:
                 _cooldownTimer -= deltaTime;
-                if (_cooldownTimer <= 0) _energyButtonState = EnergyButtonState.Idle;
+                
+                // Continuo del recupero visivo della stamina
+                float expectedCooldown = _totalRecoveryTime - _currentRampDownDuration;
+                float currentRecovery = _currentRampDownDuration + (expectedCooldown - _cooldownTimer);
+                float progress = currentRecovery / Mathf.Max(0.01f, _totalRecoveryTime);
+                EnergyButtonFillAmount = Mathf.Lerp(_fillAtRelease, 1f, progress);
+
+                if (_cooldownTimer <= 0) {
+                    _energyButtonState = EnergyButtonState.Idle;
+                    EnergyButtonFillAmount = 1f; // Assicuriamoci che sia pieno
+                }
                 break;
         }
     }
@@ -309,12 +357,9 @@ public class GameManager : MonoBehaviour
     {
         double theoryStorageBonus = DroneManager.Instance != null ? DroneManager.Instance.GetTheoryBonus(TheoryBonusType.StorageCapacity) : 0;
         
-        // RECUPERIAMO IL MOLTIPLICATORE DEL PIANETA
         BigDouble planetMultiplier = PlanetManager.Instance?.GetCurrentPlanetData()?.productionMultiplier ?? 1;
-
         BigDouble baseLogistics = initialLogisticsCap + (LogisticsLevel * 5) + LogisticsResearchBonus;
         
-        // APPLICHIAMO IL BONUS TEORIE ALLA LOGISTICA
         double theoryLogisticsBonus = DroneManager.Instance != null ? DroneManager.Instance.GetTheoryBonus(TheoryBonusType.LogisticsCap) : 0;
         LogisticsCap = baseLogistics * LogisticsMultiplier * planetMultiplier * (1.0 + theoryLogisticsBonus);
 
@@ -716,11 +761,23 @@ public class GameManager : MonoBehaviour
 
     public void OnEnergyButtonPress()
     {
-        if (_energyButtonState == EnergyButtonState.Idle) {
+        if (_energyButtonState == EnergyButtonState.Idle || 
+            _energyButtonState == EnergyButtonState.RampingDown || 
+            _energyButtonState == EnergyButtonState.Cooldown) 
+        {
+            float maxHoldDuration = energyButton_RampUpDuration + energyButton_MaxHoldDuration;
+            
+            // Leggiamo la Stamina attuale e la convertiamo in secondi virtuali
+            float virtualTimeSpent = (1.0f - EnergyButtonFillAmount) * maxHoldDuration;
+
+            // FIX: Indipendentemente da dove si trova la stamina, ripartiamo sempre dalla fase 
+            // di RampingUp. In questo modo il moltiplicatore ha il tempo di salire progressivamente.
+            // La transizione a HoldingMax avverrà in automatico nell'Update quando raggiungerà il massimo.
             _energyButtonState = EnergyButtonState.RampingUp;
-            _energyButtonTimer = 0.0f;
+            _energyButtonTimer = virtualTimeSpent;
         }
 
+        // --- Logica Audio e Avvio ---
         if (AudioManager.Instance != null && energyClickSound != null)
         {
             AudioManager.Instance.PlaySFX(energyClickSound, 1.0f, 0.05f);
@@ -740,21 +797,29 @@ public class GameManager : MonoBehaviour
 
     public void OnEnergyButtonRelease()
     {
+        // Se l'abbiamo già rilasciato o siamo in idle, non facciamo nulla
+        if (_energyButtonState == EnergyButtonState.Idle || 
+            _energyButtonState == EnergyButtonState.RampingDown || 
+            _energyButtonState == EnergyButtonState.Cooldown) return;
+
         float maxMult = EffectiveMaxMultiplier;
 
         if (_energyButtonState == EnergyButtonState.RampingUp) {
             _rampDownStartMultiplier = CurrentEnergyMultiplier;
             float multiplierRatio = (_rampDownStartMultiplier - 1.0f) / (maxMult - 1.0f);
             _currentRampDownDuration = energyButton_RampDownDuration * multiplierRatio;
-            _energyButtonState = EnergyButtonState.RampingDown;
-            _energyButtonTimer = 0.0f;
         }
         else if (_energyButtonState == EnergyButtonState.HoldingMax) {
             _rampDownStartMultiplier = maxMult;
             _currentRampDownDuration = energyButton_RampDownDuration;
-            _energyButtonState = EnergyButtonState.RampingDown;
-            _energyButtonTimer = 0.0f;
         }
+
+        // Salviamo lo stato visivo per il recupero della Stamina UI
+        _fillAtRelease = EnergyButtonFillAmount;
+        _totalRecoveryTime = _currentRampDownDuration + (_timeSpentAtMax * energyButton_CooldownMultiplier);
+
+        _energyButtonState = EnergyButtonState.RampingDown;
+        _energyButtonTimer = 0.0f;
     }
 
     public bool TrySpend(BigDouble amount)
