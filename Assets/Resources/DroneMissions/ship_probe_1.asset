@@ -15,7 +15,7 @@ MonoBehaviour:
   id: ship_probe_1
   missionName: Scansione Orbitale LEO
   description: 
-  fixedEnergyCost: 0.5
+  fixedEnergyCost: 10
   durationSeconds: 30
   minRewardMult: 0.8
   maxRewardMult: 1.2

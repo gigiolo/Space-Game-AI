@@ -27,7 +27,7 @@ public class DroneMissionSlotUI : MonoBehaviour
         _onClaimClick = onClaim;
 
         if (titleText != null) titleText.text = mission.missionName;
-        if (descText != null) descText.text = mission.description; // Potresti voler aggiungere 'cargoCapacity' nella descrizione testuale
+        if (descText != null) descText.text = mission.description; 
 
         RefreshState();
     }
@@ -41,7 +41,6 @@ public class DroneMissionSlotUI : MonoBehaviour
 
         if (_activeDroneData != null)
         {
-            // 1. STATO: A TERRA E PRONTA (Il giocatore deve solo leggere il log)
             if (_activeDroneData.isCompleted)
             {
                 statusText.text = "<color=#00FF00>ANALISI PRONTA</color>";
@@ -51,7 +50,6 @@ public class DroneMissionSlotUI : MonoBehaviour
                 
                 if (speedText != null) speedText.gameObject.SetActive(false); 
             }
-            // 2. STATO: IN ATTERRAGGIO (Timer scaduto, animazione in corso)
             else if (_activeDroneData.isLanding)
             {
                 statusText.text = "<color=orange>IN ATTERRAGGIO...</color>";
@@ -60,7 +58,6 @@ public class DroneMissionSlotUI : MonoBehaviour
                 
                 if (speedText != null) speedText.gameObject.SetActive(false); 
             }
-            // 3. STATO: IN VIAGGIO (Timer attivo)
             else
             {
                 TimeSpan remaining = _activeDroneData.returnTime - DateTime.UtcNow;
@@ -101,18 +98,17 @@ public class DroneMissionSlotUI : MonoBehaviour
         }
         else
         {
-            // --- STATO: DISPONIBILE PER IL LANCIO (MODIFICATO PER IL COSTO FISSO) ---
+            BigDouble baseCost = BigDouble.Parse(_mission.fixedEnergyCost);
             
-            // 1. Legge la stringa dal SO e la converte nel numero gigante
-            BigDouble cost = BigDouble.Parse(_mission.fixedEnergyCost);
+            // --- APPLICAZIONE BONUS TEORIA: Sconto Visivo in UI specifico per le Sonde ---
+            double discount = DroneManager.Instance.GetTheoryBonus(TheoryBonusType.DroneCostDiscount);
+            discount = System.Math.Min(discount, 0.99); // Max 99%
+            BigDouble finalCost = baseCost * (1.0 - discount);
             
-            bool canAfford = GameManager.Instance.CurrentEnergy >= cost;
+            bool canAfford = GameManager.Instance.CurrentEnergy >= finalCost;
             bool hasFreeDrones = DroneManager.Instance.activeDrones.Count < DroneManager.Instance.unlockedSlots;
 
-            // 2. Mostra il numero usando il tuo metodo di formattazione
-            statusText.text = $"Costo Lancio: {FormatNumber(cost)} Energy";
-            
-            // Colora il testo (Bianco se hai i soldi, Rosso se sei povero)
+            statusText.text = $"Costo Lancio: {FormatNumber(finalCost)} Energy";
             statusText.color = canAfford ? Color.white : Color.red;
             
             if (speedText != null) speedText.gameObject.SetActive(false); 

@@ -1,3 +1,4 @@
+// --- File: _Scripts\AsteroidEvent.cs ---
 using UnityEngine;
 using BreakInfinity; 
 
@@ -13,14 +14,12 @@ public class AsteroidEvent : MonoBehaviour
     [Tooltip("Se vero, questo asteroide darà premi doppi!")]
     [SerializeField] private bool isGolden = false;
 
-    // --- VARIABILI INTERNE CURVA ---
     private Vector3 _p0; 
     private Vector3 _p1; 
     private Vector3 _p2; 
     private float _duration;
     private float _timeElapsed;
-     
-    // --- STATI ---
+      
     private bool _isInitialized = false;
     private bool _hasBeenHit = false; 
     private System.Action<AsteroidEvent> _onDespawnCallback;
@@ -111,26 +110,25 @@ public class AsteroidEvent : MonoBehaviour
     {
         if (GameManager.Instance == null) return;
         
-        // --- 1. Calcolo Base Energia ---
         BigDouble energyReward = GameManager.Instance.EffectiveIncomePerSec * rewardMultiplier;
         if (energyReward <= 0) energyReward = 10;
 
-        // --- 2. Calcolo Base Iridio (2-10) ---
-        int iridiumReward = Random.Range(2, 11);
+        // Iridio Base
+        int baseIridium = Random.Range(2, 11);
+        
+        // --- APPLICAZIONE BONUS TEORIA: Ricompensa Iridio ---
+        float iridiumBonus = DroneManager.Instance != null ? (float)DroneManager.Instance.GetTheoryBonus(TheoryBonusType.AsteroidIridiumReward) : 0f;
+        int iridiumReward = Mathf.RoundToInt(baseIridium * (1f + iridiumBonus));
 
-        // --- 3. Bonus Golden ---
         if (isGolden)
         {
             energyReward *= 5;
             iridiumReward *= 2;
         }
 
-        // Assegnazione valute
         GameManager.Instance.AddEnergy(energyReward);
         GameManager.Instance.AddPureIridium(iridiumReward);
 
-        // --- 4. FEEDBACK VISIVO NEL TESTO UI ---
-        // Chiama il metodo che modifica il testo "Pure Iridium" nella UI per 2 secondi
         if (UIManager.Instance != null)
         {
             UIManager.Instance.ShowPureIridiumFeedback(iridiumReward);

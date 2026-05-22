@@ -10,16 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 23c696683cacd1a479bb2c1bdb790287, type: 3}
-  m_Name: Theory_03
+  m_Name: Theory_Income_01
   m_EditorClassIdentifier: Assembly-CSharp::PhysicalTheorySO
-  id: Theory_02
-  theoryName: Risonanza della Materia Oscura
-  discoveryLog: "Ci\xF2 che non possiamo vedere tiene unita la galassia."
+  id: Theory_Income_01
+  theoryName: Gravitazione di base
+  discoveryLog: La comprensione di base della gravitazione dei corpi celesti.
   icon: {fileID: 21300000, guid: 788ab55ce3329e34bbb8582f24506beb, type: 3}
-  rarity: 2
-  dropWeight: 10
-  baseDataRequired: 8
-  baseIridiumCost: 40
+  rarity: 0
+  dropWeight: 100
+  baseDataRequired: 3
+  baseIridiumCost: 5
   bonusType: 2
-  baseBonusValue: 1
-  bonusPerLevel: 0.25
+  baseBonusValue: 0.1
+  bonusPerLevel: 0.05

@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 23c696683cacd1a479bb2c1bdb790287, type: 3}
+  m_Name: Theory_Income_03
+  m_EditorClassIdentifier: Assembly-CSharp::PhysicalTheorySO
+  id: Theory_Income_03
+  theoryName: Gravitazione rivoluzionaria
+  discoveryLog: "Rappresenta la connessone tra gravit\xE0 e fisica delle particelle"
+  icon: {fileID: 21300000, guid: 788ab55ce3329e34bbb8582f24506beb, type: 3}
+  rarity: 2
+  dropWeight: 10
+  baseDataRequired: 8
+  baseIridiumCost: 40
+  bonusType: 2
+  baseBonusValue: 1
+  bonusPerLevel: 0.25

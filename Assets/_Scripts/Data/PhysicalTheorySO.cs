@@ -7,7 +7,14 @@ public enum TheoryBonusType
     StorageCapacity,
     EmitterGrowthSpeed,
     GlobalIncome,
-    LogisticsCap
+    LogisticsCap,
+    ScientificNodesGain,
+    OfflineProduction,
+    AsteroidFrequency,
+    AsteroidIridiumReward,
+    ResearchCostDiscount,
+    SpacecraftAndTravelDiscount,
+    DroneCostDiscount // <--- NUOVO BONUS SPECIFICO PER LE SONDE
 }
 
 public enum TheoryRarity
@@ -43,10 +50,8 @@ public class PhysicalTheorySO : ScriptableObject
     public double baseBonusValue; 
     public double bonusPerLevel;
 
-    // --- FUNZIONI MATEMATICHE AGGIORNATE PER IL LIVELLO 0 ---
     public int GetDataRequiredForLevel(int currentLevel)
     {
-        // Livello 0 costa x1, Livello 1 costa x2, ecc.
         return baseDataRequired * (currentLevel + 1);
     }
 
@@ -57,7 +62,7 @@ public class PhysicalTheorySO : ScriptableObject
 
     public double GetBonusAtLevel(int level)
     {
-        if (level <= 0) return 0; // Livello 0 = Nessun bonus!
+        if (level <= 0) return 0; 
         return baseBonusValue + (bonusPerLevel * (level - 1));
     }
 }

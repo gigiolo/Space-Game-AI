@@ -10,16 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 23c696683cacd1a479bb2c1bdb790287, type: 3}
-  m_Name: Theory_04
+  m_Name: Theory_Spacecraft_Discount_04
   m_EditorClassIdentifier: Assembly-CSharp::PhysicalTheorySO
-  id: Theory_02
-  theoryName: Teoria del Tutto
-  discoveryLog: La matematica perfetta.
-  icon: {fileID: 21300000, guid: fa57bf975ea520941974104c7e3cb5b5, type: 3}
+  id: Theory_Spacecraft_Discount_04
+  theoryName: Ingegneria spaziale unificata
+  discoveryLog: "Permette le tecnologie pi\xF9 avanzate nei viaggi spaziali"
+  icon: {fileID: 21300000, guid: b9aa1cbfb7a5c754fb4bd0caea4529cc, type: 3}
   rarity: 3
   dropWeight: 2
   baseDataRequired: 12
   baseIridiumCost: 150
-  bonusType: 2
+  bonusType: 9
   baseBonusValue: 3
   bonusPerLevel: 1

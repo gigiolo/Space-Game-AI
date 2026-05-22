@@ -10,12 +10,12 @@ Usalo per comprendere l'architettura attuale, le dipendenze e lo stato di avanza
 ---
 
 ## 1. 🎯 Obiettivo del Progetto
-Sviluppare **"Space Inc."**, un videogioco Mobile (Android/iOS) di tipo **Idle/Clicker** ambientato nello spazio.
+Sviluppare **"Space Inc."**, un videogioco Mobile (Android/iOS) di tipo **Idle/Clicker** ambientato nello spazio, gioco premium (si paga l'acquisto e non comprende all'interno pubblicità o acquisti in app).
 
 * **Core Loop:**
     1.  Il giocatore produce **Energy** tramite **Emitters**.
     2.  L'energia è limitata da **Logistica** (flusso/sec) e **Storage** (capacità max).
-    3.  L'energia si spende per upgrade e **Ricerche**.
+    3.  L'energia si spende per upgrade, **Ricerche** e mandare sonde d'esplorazione nello spazio.
     4.  **Prestigio Soft (Quantum):** Accumulo `ScientificNodes` per bonus permanenti.
     5.  **Prestigio Hard (Viaggio Planetario):** Accumulo energia per "Launch Prep", viaggio verso nuovi pianeti (Scene diverse), reset delle strutture ma mantenimento dei nodi.
 
@@ -105,7 +105,6 @@ Struttura JSON complessa che include:
 * [x] **Energy Button:** Meccanica Ramp-Up e Cooldown visualizzata in UI.
 * [x] **Planet System:** Preparazione lancio, barra progresso, viaggio tra scene, caricamento dati per pianeta.
 * [x] **Offline System:** Popup riassuntivo con calcolo guadagni e warning batteria scarica.
-* [x] **Daily Rewards:** Sistema 28 giorni con persistenza.
 * [x] **Notification System:** Manager generico per eventi e rewards.
 * [x] **Visuals:** Luci procedurali sul pianeta salvate tra le sessioni.
 * [x] **UI Themes:** Sistema di skinning (`ThemedUIElement`).
@@ -114,9 +113,8 @@ Struttura JSON complessa che include:
 1.  **Content Expansion:**
     * Creare scene Unity specifiche per i pianeti successivi (Marte, Giove, ecc.) configurate in `PlanetData`.
     * Espandere il database delle Ricerche (attualmente limitato).
-2.  **Audio:** Manca completamente il comparto audio (SFX click, Music, Ambient, Notification sounds).
-3.  **Monetizzazione (Placeholder):** I bottoni "Ads" e "Premium Currency" sono presenti nel codice ma logica vuota (`Debug.Log`).
-4.  **Tutorial:** Un sistema guidato per il primo avvio (attualmente il giocatore inizia senza guida).
+2.  **Audio:** Ottimizzare il comparto audio (soprattutto trovare suoni adeguati).
+4.  **Tutorial:** Un sistema guidato per il primo avvio è stato implementato. Manca un tutorial per le meccaniche avanzate (teorie fisiche, viaggi spaziali).
 
 ## 7. Procedura Operativa per Gemini
 

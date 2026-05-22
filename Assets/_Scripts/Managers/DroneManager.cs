@@ -154,16 +154,18 @@ public class DroneManager : MonoBehaviour
         return false;
     }
 
-    // --- METODO AGGIORNATO: LANCIO A COSTO FISSO ---
     public void LaunchDrone(int slotIndex, DroneMissionSO mission)
     {
         if (GameManager.Instance == null) return;
         
-        // 1. Legge il costo fisso dal SO e lo converte in BigDouble
-        BigDouble cost = BigDouble.Parse(mission.fixedEnergyCost);
+        BigDouble baseCost = BigDouble.Parse(mission.fixedEnergyCost);
+
+        // --- APPLICAZIONE BONUS TEORIA: Sconto specifico per le Sonde ---
+        double discount = GetTheoryBonus(TheoryBonusType.DroneCostDiscount);
+        discount = System.Math.Min(discount, 0.99); // Max 99%
+        BigDouble finalCost = baseCost * (1.0 - discount);
         
-        // 2. Tenta di spendere l'energia
-        if (!GameManager.Instance.TrySpend(cost)) return;
+        if (!GameManager.Instance.TrySpend(finalCost)) return;
 
         ActiveDrone newDrone = new ActiveDrone
         {
@@ -178,24 +180,12 @@ public class DroneManager : MonoBehaviour
 
         SpawnVisualDroneLaunch();
         GameManager.Instance.SaveGame();
-        
-        if (LocalNotificationController.Instance != null)
-        {
-            LocalNotificationController.Instance.ScheduleNotification(
-                "Sonda Rientrata! 🛰️", 
-                $"La spedizione {mission.missionName} ha completato l'analisi.", 
-                newDrone.returnTime, 
-                4000 + slotIndex 
-            );
-        }
     }
 
-    // --- MODIFICA: Ora restituisce un DIZIONARIO di risultati ---
     public void ClaimDrone(ActiveDrone drone, Action<string, Dictionary<PhysicalTheorySO, int>> onLogReadyCallback)
     {
         if (!drone.isCompleted) return;
 
-        // La ricompensa in energia è basata sul costo fisso della missione
         BigDouble investedEnergy = BigDouble.Parse(drone.missionData.fixedEnergyCost);
         float mult = UnityEngine.Random.Range(drone.missionData.minRewardMult, drone.missionData.maxRewardMult);
         BigDouble energyReward = investedEnergy * mult;
@@ -208,7 +198,6 @@ public class DroneManager : MonoBehaviour
             GameManager.Instance.AddRawIridium(iridium);
         }
 
-        // Il "Bagagliaio" della sonda
         Dictionary<PhysicalTheorySO, int> foundTheories = new Dictionary<PhysicalTheorySO, int>();
         
         int capacity = drone.missionData.cargoCapacity > 0 ? drone.missionData.cargoCapacity : 1;
@@ -323,7 +312,6 @@ public class DroneManager : MonoBehaviour
         drone.BeginLanding(spacePos, landPos, (pos) => { onLandedCallback?.Invoke(); });
     }
 
-    // --- MODIFICA: Il log genera uno scontrino se ci sono più dati ---
     private string GenerateFlightLog(ActiveDrone drone, Dictionary<PhysicalTheorySO, int> foundTheories, BigDouble energyGained)
     {
         float distLY = UnityEngine.Random.Range(drone.missionData.minLightYears, drone.missionData.maxLightYears);

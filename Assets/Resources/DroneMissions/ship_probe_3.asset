@@ -15,7 +15,7 @@ MonoBehaviour:
   id: ship_probe_3
   missionName: Attraversamento Wormhole
   description: 
-  fixedEnergyCost: 15
+  fixedEnergyCost: 1000
   durationSeconds: 300
   minRewardMult: 5
   maxRewardMult: 10

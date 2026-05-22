@@ -10,17 +10,16 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 23c696683cacd1a479bb2c1bdb790287, type: 3}
-  m_Name: Theory_01
+  m_Name: Theory_Logistic_02
   m_EditorClassIdentifier: Assembly-CSharp::PhysicalTheorySO
-  id: Theory_01
-  theoryName: Termodinamica Stellare
-  discoveryLog: L'osservazione delle nane brune ha rivelato pattern di dispersione
-    termica ottimizzabili.
-  icon: {fileID: 21300000, guid: 788ab55ce3329e34bbb8582f24506beb, type: 3}
-  rarity: 0
-  dropWeight: 100
-  baseDataRequired: 3
-  baseIridiumCost: 5
-  bonusType: 2
-  baseBonusValue: 0.1
-  bonusPerLevel: 0.05
+  id: Theory_Logistic_02
+  theoryName: Logistica avanzata
+  discoveryLog: Rappresenta l'evoluzione dell'elettronica circuitale di base.
+  icon: {fileID: 21300000, guid: 73e93e96c7527ce4ba9915fba434dd8f, type: 3}
+  rarity: 1
+  dropWeight: 40
+  baseDataRequired: 5
+  baseIridiumCost: 15
+  bonusType: 3
+  baseBonusValue: 0.3
+  bonusPerLevel: 0.1

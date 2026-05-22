@@ -1,3 +1,4 @@
+// --- File: _Scripts\Managers\PlanetManager.cs ---
 using UnityEngine;
 using System; 
 using System.Collections.Generic;
@@ -8,49 +9,32 @@ public class PlanetManager : MonoBehaviour
 {
     public static PlanetManager Instance { get; private set; }
 
-    // --- EVENTI ---
     public event Action OnLaunchPrepStarted;
     public event Action OnTravelStarted;
 
     [Header("Planet Configuration")]
-    [Tooltip("The list of all planets available in the game, in order of progression.")]
     public List<PlanetData> planets;
 
-    [HideInInspector]
-    public int currentPlanetIndex = 0;
+    [HideInInspector] public int currentPlanetIndex = 0;
 
-    // --- TRAVEL STATE ---
     [HideInInspector] public bool isPreparingForLaunch = false;
     [HideInInspector] public BigDouble launchPreparationProgress = 0;
-    
-    // Costo fisso bloccato all'inizio del lancio
     [HideInInspector] public BigDouble lockedLaunchRequirement = 0; 
 
     [HideInInspector] public bool isTraveling = false;
     [HideInInspector] public DateTime travelStartTime;
 
-    // Durata fissata al momento della partenza
     [HideInInspector] public double currentLockedDuration = 0f;
-
-    // Flag per indicare alla prossima scena di suonare l'animazione di atterraggio
     [HideInInspector] public bool pendingLanding = false; 
 
     private void Awake()
     {
-        if (Instance != null && Instance != this)
-        {
-            Destroy(gameObject);
-        }
-        else
-        {
-            Instance = this;
-        }
+        if (Instance != null && Instance != this) Destroy(gameObject);
+        else Instance = this;
     }
 
-    // --- NUOVO: Gestione Musica ---
     private void Start()
     {
-        // Avvia la musica del pianeta corrente all'inizio del gioco
         UpdatePlanetMusic();
     }
 
@@ -59,11 +43,9 @@ public class PlanetManager : MonoBehaviour
         var currentData = GetCurrentPlanetData();
         if (currentData != null && AudioManager.Instance != null && currentData.planetThemeMusic != null)
         {
-            // Usa il crossfade per un passaggio fluido
             AudioManager.Instance.PlayMusic(currentData.planetThemeMusic);
         }
     }
-    // ----------------------------
 
     private void Update()
     {
@@ -73,19 +55,13 @@ public class PlanetManager : MonoBehaviour
 
     public PlanetData GetCurrentPlanetData()
     {
-        if (planets != null && planets.Count > currentPlanetIndex)
-        {
-            return planets[currentPlanetIndex];
-        }
+        if (planets != null && planets.Count > currentPlanetIndex) return planets[currentPlanetIndex];
         return null;
     }
 
     public PlanetData GetNextPlanetData()
     {
-        if (planets != null && planets.Count > currentPlanetIndex + 1)
-        {
-            return planets[currentPlanetIndex + 1];
-        }
+        if (planets != null && planets.Count > currentPlanetIndex + 1) return planets[currentPlanetIndex + 1];
         return null;
     }
 
@@ -95,11 +71,7 @@ public class PlanetManager : MonoBehaviour
         if (destination == null || destination.travelDistance <= 0) return 3.0f; 
 
         BigDouble speed = 0;
-        if (SpaceshipManager.Instance != null)
-        {
-            speed = SpaceshipManager.Instance.GetTotalSpaceshipSpeed();
-        }
-        
+        if (SpaceshipManager.Instance != null) speed = SpaceshipManager.Instance.GetTotalSpaceshipSpeed();
         if (speed <= 0) speed = 10; 
 
         BigDouble durationBig = destination.travelDistance / speed;
@@ -108,22 +80,16 @@ public class PlanetManager : MonoBehaviour
 
     public double GetTotalTravelDuration()
     {
-        if (isTraveling && currentLockedDuration > 0)
-        {
-            return currentLockedDuration;
-        }
+        if (isTraveling && currentLockedDuration > 0) return currentLockedDuration;
         return CalculateTheoreticalDuration();
     }
 
     public BigDouble CalculatePlanetValue()
     {
         if (GameManager.Instance == null) return 0;
-
         BigDouble currentEnergyProduction = GameManager.Instance.EffectiveStableIncomePerSec;
         BigDouble maxEmitters = GameManager.Instance.EmitterCap;
-
         if (maxEmitters <= 0) maxEmitters = 1;
-
         BigDouble balanceFactor = GetCurrentPlanetData()?.balanceFactor ?? 1;
         if (balanceFactor <= 0) balanceFactor = 1;
 
@@ -139,7 +105,13 @@ public class PlanetManager : MonoBehaviour
             return lockedLaunchRequirement;
         }
 
-        return GameManager.Instance.EffectiveStableIncomePerSec * 60;
+        BigDouble baseReq = GameManager.Instance.EffectiveStableIncomePerSec * 60;
+        
+        // --- APPLICAZIONE BONUS TEORIA: Sconto Veicoli e Viaggi ---
+        double discount = DroneManager.Instance != null ? DroneManager.Instance.GetTheoryBonus(TheoryBonusType.SpacecraftAndTravelDiscount) : 0;
+        discount = System.Math.Min(discount, 0.99);
+
+        return baseReq * (1.0 - discount);
     }
 
     private void UpdateLaunchPreparation()
@@ -174,11 +146,7 @@ public class PlanetManager : MonoBehaviour
     private void UpdateTravel()
     {
         TimeSpan travelTime = DateTime.UtcNow - travelStartTime;
-        
-        if (travelTime.TotalSeconds >= GetTotalTravelDuration())
-        {
-            CompleteTravel();
-        }
+        if (travelTime.TotalSeconds >= GetTotalTravelDuration()) CompleteTravel();
     }
 
     public void StartLaunchPreparation()
@@ -186,10 +154,7 @@ public class PlanetManager : MonoBehaviour
         if (isPreparingForLaunch || isTraveling) return;
 
         PlanetData currentPlanet = GetCurrentPlanetData();
-        if (currentPlanet == null || CalculatePlanetValue() < currentPlanet.requiredPlanetValue)
-        {
-            return;
-        }
+        if (currentPlanet == null || CalculatePlanetValue() < currentPlanet.requiredPlanetValue) return;
 
         isPreparingForLaunch = true;
         launchPreparationProgress = 0;
@@ -198,7 +163,6 @@ public class PlanetManager : MonoBehaviour
         if (lockedLaunchRequirement <= 0) lockedLaunchRequirement = 100;
         
         GameManager.Instance.SaveGame();
-
         OnLaunchPrepStarted?.Invoke();
     }
 
@@ -210,28 +174,18 @@ public class PlanetManager : MonoBehaviour
         currentLockedDuration = CalculateTheoreticalDuration();
         travelStartTime = DateTime.UtcNow;
         GameManager.Instance.SaveGame();
-
         OnTravelStarted?.Invoke();
     }
 
     public void CompleteTravel()
     {
-        // 1. Reset stato Viaggio
         isTraveling = false;
         currentLockedDuration = 0; 
-        
-        // 2. Reset stato Preparazione
         isPreparingForLaunch = false;
         launchPreparationProgress = 0;
         lockedLaunchRequirement = 0;
-
-        // 3. Incremento Indice Pianeta
         currentPlanetIndex++;
-
-        // --- NUOVO: Aggiorna musica per il nuovo pianeta ---
         UpdatePlanetMusic();
-        // ---------------------------------------------------
-
         pendingLanding = true;
 
         if (planets == null || currentPlanetIndex >= planets.Count)
@@ -243,14 +197,10 @@ public class PlanetManager : MonoBehaviour
         PlanetData nextPlanet = GetCurrentPlanetData();
         string nextSceneName = nextPlanet.sceneName;
 
-        // Reset dati
         GameManager.Instance.PerformPlanetChangeReset();
         GameManager.Instance.OverrideEmitterCount(0);
 
-        if (GameManager.Instance.planetVisuals != null)
-        {
-            GameManager.Instance.planetVisuals.ResetVisuals();
-        }
+        if (GameManager.Instance.planetVisuals != null) GameManager.Instance.planetVisuals.ResetVisuals();
         
         GameManager.Instance.SaveGame();
 

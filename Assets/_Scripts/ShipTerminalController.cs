@@ -1,3 +1,4 @@
+// --- File: _Scripts\ShipTerminalController.cs ---
 using UnityEngine;
 using TMPro;
 using System.Collections;
@@ -50,6 +51,11 @@ public class ShipTerminalController : MonoBehaviour
     public float messageStayTime = 4.0f;
     public float intervalMin = 20f;
     public float intervalMax = 45f;
+
+    [Header("Audio")]
+    [Tooltip("Il suono riprodotto all'arrivo di una nuova notifica sul terminale.")]
+    public AudioClip newLogSound;
+    [Range(0f, 1f)] public float logSoundVolume = 1.0f;
 
     private float _currentPanelHeight;
     private float _targetPanelHeight;
@@ -188,6 +194,12 @@ public class ShipTerminalController : MonoBehaviour
                 if (_currentRoutine != null) StopCoroutine(_currentRoutine);
             }
             else return;
+        }
+
+        // --- RIPRODUZIONE AUDIO NOTIFICA ---
+        if (AudioManager.Instance != null && newLogSound != null)
+        {
+            AudioManager.Instance.PlaySFX(newLogSound, logSoundVolume, 0.05f);
         }
 
         // SE È UN TUTORIAL, LO RENDIAMO AUTOMATICAMENTE PERSISTENTE

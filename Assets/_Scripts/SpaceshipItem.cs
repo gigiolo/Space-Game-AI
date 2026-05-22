@@ -1,3 +1,4 @@
+// --- File: _Scripts\SpaceshipItem.cs ---
 using UnityEngine;
 using BreakInfinity;
 
@@ -13,10 +14,6 @@ public class SpaceshipItem
         currentLevel = 0;
     }
 
-    // --- CALCOLO VELOCITÀ ---
-    // Livello 0 = 0 Velocità
-    // Livello 1 = Velocità Base
-    // Livello > 1 = Velocità Base + Bonus
     public BigDouble GetCurrentSpeed()
     {
         if (info == null || currentLevel == 0) return 0;
@@ -25,7 +22,7 @@ public class SpaceshipItem
 
         if (currentLevel > 1)
         {
-            int upgrades = currentLevel - 1; // Il livello 1 è l'acquisto, dal 2 in poi sono upgrade
+            int upgrades = currentLevel - 1;
 
             if (info.upgradeType == SpaceshipUpgradeType.Additive)
             {
@@ -43,29 +40,39 @@ public class SpaceshipItem
     {
         if (info == null) return 0;
 
+        BigDouble finalCost;
+
         if (info.manualCosts != null && currentLevel < info.manualCosts.Count)
         {
-            return info.manualCosts[currentLevel];
-        }
-
-        BigDouble startValue;
-        int levelsBeyondManual;
-
-        if (info.manualCosts != null && info.manualCosts.Count > 0)
-        {
-            startValue = info.manualCosts[info.manualCosts.Count - 1];
-            levelsBeyondManual = currentLevel - (info.manualCosts.Count - 1);
+            finalCost = info.manualCosts[currentLevel];
         }
         else
         {
-            startValue = info.baseCost;
-            levelsBeyondManual = currentLevel;
+            BigDouble startValue;
+            int levelsBeyondManual;
+
+            if (info.manualCosts != null && info.manualCosts.Count > 0)
+            {
+                startValue = info.manualCosts[info.manualCosts.Count - 1];
+                levelsBeyondManual = currentLevel - (info.manualCosts.Count - 1);
+            }
+            else
+            {
+                startValue = info.baseCost;
+                levelsBeyondManual = currentLevel;
+            }
+
+            if (info.costCurveType == CostCurve.Exponential)
+                finalCost = startValue * BigDouble.Pow(info.costFactor, levelsBeyondManual);
+            else 
+                finalCost = startValue + (info.costFactor * levelsBeyondManual);
         }
 
-        if (info.costCurveType == CostCurve.Exponential)
-            return startValue * BigDouble.Pow(info.costFactor, levelsBeyondManual);
-        else 
-            return startValue + (info.costFactor * levelsBeyondManual);
+        // --- APPLICAZIONE BONUS TEORIA: Sconto Veicoli e Viaggi ---
+        double discount = DroneManager.Instance != null ? DroneManager.Instance.GetTheoryBonus(TheoryBonusType.SpacecraftAndTravelDiscount) : 0;
+        discount = System.Math.Min(discount, 0.99);
+        
+        return finalCost * (1.0 - discount);
     }
 
     public bool IsMaxed() => info.maxLevel > 0 && currentLevel >= info.maxLevel;

@@ -4,7 +4,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 [RequireComponent(typeof(ArtifactSlotUI))]
-public class DraggableTheoryUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler
+public class DraggableTheoryUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerClickHandler, IPointerDownHandler
 {
     public PhysicalTheorySO theory;
     
@@ -12,17 +12,33 @@ public class DraggableTheoryUI : MonoBehaviour, IBeginDragHandler, IDragHandler,
     private GameObject _ghostIcon;
     private Canvas _mainCanvas;
 
+    // --- NUOVE VARIABILI PER RISOLVERE IL CONFLITTO ---
+    private ScrollRect _scrollRect;
+    private bool _isScrolling;
+    private float _pointerDownTime;
+    private const float HOLD_TO_DRAG_TIME = 0.2f; // Tempo in secondi da attendere per "staccare" l'artefatto
+
     public void Setup(PhysicalTheorySO t, ArtifactsMenuUI manager, Canvas canvas)
     {
         theory = t;
         _menuManager = manager;
         _mainCanvas = canvas;
+        
+        // Cerchiamo automaticamente la Scroll View in cui ci troviamo
+        _scrollRect = GetComponentInParent<ScrollRect>();
+    }
+
+    // Registra il momento in cui il dito tocca lo schermo
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        _pointerDownTime = Time.unscaledTime;
     }
 
     // GESTIONE TAP: Apre il popup dei dettagli
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (!eventData.dragging && theory != null)
+        // Ignoriamo il click se stavamo scrollando la lista
+        if (!eventData.dragging && theory != null && !_isScrolling)
         {
             _menuManager.OpenDetailsPopup(theory);
         }
@@ -31,7 +47,20 @@ public class DraggableTheoryUI : MonoBehaviour, IBeginDragHandler, IDragHandler,
     // GESTIONE TRASCINAMENTO
     public void OnBeginDrag(PointerEventData eventData)
     {
-        // Se DroneManager o il database non sono pronti, usciamo
+        if (_scrollRect == null) _scrollRect = GetComponentInParent<ScrollRect>();
+
+        // 1. CONTROLLO INTENZIONE DELL'UTENTE
+        // Se si inizia a trascinare quasi subito (sotto gli 0.2s), passiamo l'evento alla Scroll View
+        if (Time.unscaledTime - _pointerDownTime < HOLD_TO_DRAG_TIME)
+        {
+            _isScrolling = true;
+            if (_scrollRect != null) _scrollRect.OnBeginDrag(eventData);
+            return;
+        }
+
+        _isScrolling = false;
+
+        // 2. LOGICA ORIGINALE DI DRAG & DROP
         if (DroneManager.Instance == null || !DroneManager.Instance.theoryDatabase.ContainsKey(theory.id)) return;
 
         var state = DroneManager.Instance.theoryDatabase[theory.id];
@@ -56,17 +85,31 @@ public class DraggableTheoryUI : MonoBehaviour, IBeginDragHandler, IDragHandler,
 
     public void OnDrag(PointerEventData eventData)
     {
+        // Se stiamo scrollando, aggiorniamo la Scroll View
+        if (_isScrolling)
+        {
+            if (_scrollRect != null) _scrollRect.OnDrag(eventData);
+            return;
+        }
+
+        // Altrimenti muoviamo l'icona fantasma
         if (_ghostIcon != null) UpdateGhostPosition(eventData);
     }
 
     public void OnEndDrag(PointerEventData eventData)
     {
+        // Se stavamo scrollando, chiudiamo l'evento della Scroll View (Serve per l'inerzia)
+        if (_isScrolling)
+        {
+            if (_scrollRect != null) _scrollRect.OnEndDrag(eventData);
+            _isScrolling = false;
+            return;
+        }
+
+        // Altrimenti distruggiamo il fantasma (il drop viene intercettato da TheoryDropZoneUI)
         if (_ghostIcon != null) Destroy(_ghostIcon);
     }
 
-    // --- NUOVO: RETE DI SICUREZZA ---
-    // Se l'oggetto viene distrutto dal Refresh della UI mentre stiamo trascinando,
-    // assicuriamoci di pulire il fantasma rimasto in sospeso!
     private void OnDestroy()
     {
         if (_ghostIcon != null) Destroy(_ghostIcon);

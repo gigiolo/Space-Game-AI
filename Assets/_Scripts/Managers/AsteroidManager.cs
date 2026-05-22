@@ -1,3 +1,4 @@
+// --- File: _Scripts\Managers\AsteroidManager.cs ---
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -39,7 +40,6 @@ public class AsteroidManager : MonoBehaviour
 
     private void Start()
     {
-        // Se non assegnata, cerca la camera (ma potrebbe cambiare se cambi scena)
         if (mainCamera == null) mainCamera = Camera.main;
         ResetTimer();
     }
@@ -57,52 +57,49 @@ public class AsteroidManager : MonoBehaviour
 
     private void ResetTimer()
     {
-        _spawnTimer = Random.Range(minSpawnInterval, maxSpawnInterval);
+        float baseInterval = Random.Range(minSpawnInterval, maxSpawnInterval);
+        
+        // --- APPLICAZIONE BONUS TEORIA: Frequenza Asteroidi ---
+        float frequencyBonus = DroneManager.Instance != null ? (float)DroneManager.Instance.GetTheoryBonus(TheoryBonusType.AsteroidFrequency) : 0f;
+        
+        // Dividiamo per (1 + bonus) affinché un bonus del +100% dimezzi il tempo d'attesa
+        _spawnTimer = baseInterval / (1f + frequencyBonus);
     }
 
     private void SpawnAsteroid()
     {
         if (asteroidPrefab == null) return;
 
-        // --- FIX 1: Aggiornamento Camera Persistente ---
-        // Se la camera è nulla (o è stata distrutta nel cambio scena), cerchiamo quella nuova
         if (mainCamera == null) 
         {
             mainCamera = Camera.main;
         }
 
-        // --- FIX 2: Controllo Validità Camera ---
-        // Se non c'è camera, o se la camera non ha ancora dimensioni (loading screen), usciamo
         if (mainCamera == null || mainCamera.pixelRect.width <= 0 || mainCamera.pixelRect.height <= 0) 
         {
             return;
         }
 
-        // 1. CALCOLO DELL'ANGOLO DI MOVIMENTO
         float currentAngle = trajectoryAngle + Random.Range(-angleVariance, angleVariance);
         
         float rad = currentAngle * Mathf.Deg2Rad;
         Vector2 direction = new Vector2(Mathf.Sin(rad), Mathf.Cos(rad)); 
         
-        // 2. CALCOLO PUNTI VIEWPORT (Fuori schermo)
         Vector2 center = new Vector2(0.5f, 0.5f);
         float spawnRadius = 1.0f; 
         
         Vector2 startViewport = center - (direction * spawnRadius);
         Vector2 endViewport = center + (direction * spawnRadius);
 
-        // 3. PROFONDITA' 3D
         float startDepth = baseDistance + Random.Range(-depthVariance, depthVariance);
         float endDepth = baseDistance + Random.Range(-depthVariance, depthVariance);
 
         Vector3 startView3D = new Vector3(startViewport.x, startViewport.y, startDepth);
         Vector3 endView3D = new Vector3(endViewport.x, endViewport.y, endDepth);
 
-        // 4. CONVERSIONE IN WORLD SPACE (Qui avveniva l'errore)
         Vector3 worldStart = mainCamera.ViewportToWorldPoint(startView3D);
         Vector3 worldEnd = mainCamera.ViewportToWorldPoint(endView3D);
 
-        // 5. CALCOLO PUNTO DI CONTROLLO
         Vector3 midPoint = (worldStart + worldEnd) * 0.5f;
         
         Vector3 pathDir = (worldEnd - worldStart).normalized;
@@ -112,10 +109,8 @@ public class AsteroidManager : MonoBehaviour
         float randomSide = Random.value > 0.5f ? 1f : -1f; 
         Vector3 controlPoint = midPoint + (perpendicular * curveAmount * randomSide);
 
-        // 6. VELOCITA'
         float chosenSpeed = Random.Range(minSpeed, maxSpeed);
 
-        // 7. SPAWN
         AsteroidEvent newAsteroid = Instantiate(asteroidPrefab, transform);
         newAsteroid.Setup(worldStart, worldEnd, controlPoint, chosenSpeed, OnAsteroidDespawn);
         _spawnedAsteroids.Add(newAsteroid);

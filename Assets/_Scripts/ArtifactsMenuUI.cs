@@ -4,12 +4,19 @@ using TMPro;
 using System.Collections.Generic;
 using UnityEngine.UI;
 using BreakInfinity;
+using System.Linq;
 
 public class ArtifactsMenuUI : MonoBehaviour
 {
     [Header("Riferimenti Root")]
     public GameObject panelRoot;
     public Canvas mainCanvas; 
+
+    [Header("Colori Rarità Teorie")]
+    [SerializeField] private Color colorBase = Color.white;
+    [SerializeField] private Color colorAvanzata = Color.cyan;
+    [SerializeField] private Color colorRivoluzionaria = new Color(0.62f, 0.12f, 0.94f); // Viola
+    [SerializeField] private Color colorUnificata = new Color(1f, 0.84f, 0f); // Oro
 
     [Header("Matrice Attiva (Drop Zones)")]
     public Transform[] topMatrixSlots; 
@@ -53,6 +60,17 @@ public class ArtifactsMenuUI : MonoBehaviour
         {
             closePopupButton.onClick.RemoveAllListeners();
             closePopupButton.onClick.AddListener(CloseDetailsPopup);
+        }
+    }
+
+    public Color GetColorForRarity(TheoryRarity rarity)
+    {
+        switch (rarity)
+        {
+            case TheoryRarity.Avanzata: return colorAvanzata;
+            case TheoryRarity.Rivoluzionaria: return colorRivoluzionaria;
+            case TheoryRarity.Unificata: return colorUnificata;
+            default: return colorBase;
         }
     }
 
@@ -113,22 +131,38 @@ public class ArtifactsMenuUI : MonoBehaviour
             Destroy(archiveGridContent.GetChild(i).gameObject);
         }
 
+        var sortedTheories = new List<(PhysicalTheorySO theory, DroneManager.RuntimeTheory state, int sortCategory)>();
+
         foreach (var kvp in DroneManager.Instance.theoryDatabase)
         {
             string theoryId = kvp.Key;
             var state = kvp.Value;
-
             PhysicalTheorySO theory = DroneManager.Instance.allTheories.Find(t => t.id == theoryId);
+
             if (theory != null)
             {
-                bool isEquipped = DroneManager.Instance.activeTheoryIDs.Contains(theoryId);
-                
-                DraggableTheoryUI newDraggable = Instantiate(draggableSlotPrefab, archiveGridContent);
-                newDraggable.transform.localScale = Vector3.one;
-                
-                newDraggable.Setup(theory, this, mainCanvas);
-                newDraggable.GetComponent<ArtifactSlotUI>().Setup(theory, state, isEquipped);
+                int category = state.level == 0 ? 4 : 3 - (int)theory.rarity;
+                sortedTheories.Add((theory, state, category));
             }
+        }
+
+        sortedTheories = sortedTheories
+            .OrderBy(x => x.sortCategory)
+            .ThenByDescending(x => (int)x.theory.rarity)
+            .ToList();
+
+        for (int i = 0; i < sortedTheories.Count; i++)
+        {
+            var item = sortedTheories[i];
+
+            bool isEquipped = DroneManager.Instance.activeTheoryIDs.Contains(item.theory.id);
+            Color rarityColor = GetColorForRarity(item.theory.rarity);
+
+            DraggableTheoryUI newDraggable = Instantiate(draggableSlotPrefab, archiveGridContent);
+            newDraggable.transform.localScale = Vector3.one;
+            
+            newDraggable.Setup(item.theory, this, mainCanvas);
+            newDraggable.GetComponent<ArtifactSlotUI>().Setup(item.theory, item.state, isEquipped, rarityColor);
         }
     }
 
@@ -147,10 +181,11 @@ public class ArtifactsMenuUI : MonoBehaviour
             {
                 PhysicalTheorySO theory = DroneManager.Instance.allTheories.Find(t => t.id == activeList[i]);
                 var state = DroneManager.Instance.theoryDatabase[theory.id];
+                Color rarityColor = GetColorForRarity(theory.rarity); 
 
                 ArtifactSlotUI equippedSlot = Instantiate(matrixSlotPrefab, topMatrixSlots[i]);
                 equippedSlot.transform.localScale = Vector3.one;
-                equippedSlot.Setup(theory, state, false); 
+                equippedSlot.Setup(theory, state, false, rarityColor); 
                 
                 Button btn = equippedSlot.gameObject.GetComponent<Button>();
                 if (btn == null) btn = equippedSlot.gameObject.AddComponent<Button>();
@@ -225,10 +260,8 @@ public class ArtifactsMenuUI : MonoBehaviour
             detailsIconImage.color = state.level == 0 ? new Color(0.1f, 0.1f, 0.1f, 0.8f) : Color.white;
         }
         
-        string colorHex = "#FFFFFF"; 
-        if (_selectedTheory.rarity == TheoryRarity.Avanzata) colorHex = "#00FFFF";
-        if (_selectedTheory.rarity == TheoryRarity.Rivoluzionaria) colorHex = "#A020F0";
-        if (_selectedTheory.rarity == TheoryRarity.Unificata) colorHex = "#FFD700";
+        Color titleColor = GetColorForRarity(_selectedTheory.rarity);
+        string colorHex = "#" + ColorUtility.ToHtmlStringRGB(titleColor); 
 
         if (detailsNameText) 
         {
@@ -261,7 +294,6 @@ public class ArtifactsMenuUI : MonoBehaviour
 
         if (upgradeButton != null && upgradeCostText != null)
         {
-            // --- MODIFICA: Logica di controllo per i pacchetti dati ---
             if (!hasEnoughData)
             {
                 upgradeCostText.text = "Insufficient data";

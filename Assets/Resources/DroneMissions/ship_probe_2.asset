@@ -15,7 +15,7 @@ MonoBehaviour:
   id: ship_probe_2
   missionName: Mappatura Spazio Profondo
   description: 
-  fixedEnergyCost: 2
+  fixedEnergyCost: 100
   durationSeconds: 120
   minRewardMult: 1.5
   maxRewardMult: 2.5
